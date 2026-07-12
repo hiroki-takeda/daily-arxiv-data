@@ -1,36 +1,16 @@
 {
-  "name": "daily-arxiv-dashboard",
-  "version": "1.0.0",
+  "name": "daily-arxiv-data",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "dev": "vinext dev",
-    "build": "vinext build && node scripts/prepare-sites.mjs",
-    "start": "vinext start",
-    "merge:today": "node scripts/merge_category_reports.mjs",
-    "merge:qualified": "node scripts/merge_category_reports.mjs --require-model-policy",
-    "test:v2": "node scripts/test_merge_v2.mjs",
-    "test:model-policy": "node scripts/test_model_policy.mjs",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "lucide-react": "1.24.0",
-    "next": "16.2.10",
-    "react": "19.2.7",
-    "react-dom": "19.2.7"
-  },
-  "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.44.0",
-    "@types/node": "^24.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vinext/cloudflare": "0.2.1",
-    "@vitejs/plugin-react": "^6.0.3",
-    "@vitejs/plugin-rsc": "^0.5.27",
-    "react-server-dom-webpack": "^19.2.7",
-    "typescript": "^5.9.0",
-    "vinext": "0.2.1",
-    "vite": "^8.1.4",
-    "wrangler": "^4.110.0"
+    "prepare:worktree": "node scripts/prepare-worktree.mjs",
+    "test": "node --test test/*.test.mjs",
+    "validate": "node scripts/validate.mjs",
+    "merge": "node scripts/merge_category_reports.mjs",
+    "publish": "node scripts/publish-edition.mjs"
   }
 }

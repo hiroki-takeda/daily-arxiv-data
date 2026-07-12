@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta http-equiv="refresh" content="300">
   <title>Daily arXiv</title>
   <style>
     :root{color-scheme:dark;--bg:#07111b;--panel:#0d1d2b;--line:#244055;--text:#eef7fb;--muted:#a9becb;--cyan:#50d6ff;--green:#71e2b2;--gold:#ffd269}
@@ -11,7 +10,7 @@
     header{position:sticky;top:0;z-index:5;background:#07111beF;border-bottom:1px solid var(--line);backdrop-filter:blur(12px);padding:18px 3vw}
     .head{display:flex;gap:24px;align-items:center;justify-content:space-between}.brand{font-size:clamp(28px,3vw,46px);font-weight:850;letter-spacing:-.04em}.brand span{color:var(--cyan)}
     .meta{text-align:right;color:var(--muted);font-size:15px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}button,select{border:1px solid var(--line);border-radius:999px;background:#102535;color:var(--text);padding:10px 18px;font:inherit;font-weight:700;cursor:pointer}button.active{background:var(--cyan);color:#02111a;border-color:var(--cyan)}
-    main{width:min(1560px,94vw);margin:28px auto 80px}.status{border:1px solid var(--line);border-left:5px solid var(--green);border-radius:12px;background:#0b1b28;padding:14px 18px;color:var(--muted)}
+    main{width:min(1560px,94vw);margin:28px auto 80px}.status{border:1px solid var(--line);border-left:5px solid var(--green);border-radius:12px;background:#0b1b28;padding:14px 18px;color:var(--muted)}.status.cached{border-left-color:var(--gold);color:#f5ddb0}.status .original-status{display:block;margin-top:4px;color:var(--muted)}
     .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.metric{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}.metric b{display:block;font-size:28px;color:var(--cyan)}
     .paper{display:grid;grid-template-columns:96px 1fr;gap:20px;background:linear-gradient(135deg,#0e2130,#0a1824);border:1px solid var(--line);border-radius:18px;padding:22px;margin:16px 0;box-shadow:0 12px 35px #0003}.rank{text-align:center}.rank b{display:block;font-size:44px;color:var(--gold)}.score{font-size:22px;font-weight:800;color:var(--green)}
     h2{font-size:32px;margin:30px 0 8px}h3{font-size:25px;margin:0 0 6px;line-height:1.3}a{color:var(--cyan);text-decoration:none}.authors{color:#c7d8e1}.badges{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.badge{font-size:14px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--muted)}.badge.full{color:var(--green);border-color:#347c61}.badge.star{color:var(--gold);border-color:#8a6d2c}
@@ -25,36 +24,73 @@
   <header><div class="head"><div class="brand">Daily <span>arXiv</span></div><div class="meta" id="meta">データを読み込んでいます…</div></div><div class="controls"><span id="tabs"></span><select id="dates" aria-label="日付"></select></div></header>
   <main id="app"><div class="status">最新の評価データを読み込んでいます…</div></main>
   <script>
-    const cats=['hep-th','gr-qc','quant-ph']; let data,active='hep-th';
+    const cats=['hep-th','gr-qc','quant-ph'];
+    const DATA_CACHE_PREFIX='daily-arxiv:data:';
+    const LAST_GOOD_CACHE='daily-arxiv:last-known-good';
+    const INDEX_CACHE='daily-arxiv:index';
+    let data,active='hep-th',dataLoadNotice='',indexLoadNotice='';
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const lines=a=>(a||[]).map(x=>esc(x)).join('<br>');
-    async function load(file='current.json'){
-      try{const r=await fetch('./data/'+file+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(r.status);data=await r.json();render();await loadDates()}catch(e){document.querySelector('#app').innerHTML='<div class="error">データを読み込めませんでした。前回正常データを確認してください。</div>'}
+    const validData=x=>Boolean(x&&typeof x==='object'&&!Array.isArray(x)&&x.categories&&typeof x.categories==='object');
+    const validIndex=x=>Boolean(x&&typeof x==='object'&&Array.isArray(x.availableDates));
+    function readCache(key,validate){try{const value=JSON.parse(localStorage.getItem(key));return validate(value)?value:null}catch{return null}}
+    function writeCache(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
+    function safeExternalUrl(value){try{const url=new URL(String(value??''));return url.protocol==='https:'||url.protocol==='http:'?url.href:'#'}catch{return '#'}}
+    function eminentAuthorName(value){
+      if(typeof value==='string'||typeof value==='number')return String(value);
+      if(!value||typeof value!=='object')return'';
+      for(const name of [value.authorName,value.name])if(typeof name==='string'||typeof name==='number')return String(name);
+      return'';
     }
-    async function loadDates(){try{const r=await fetch('./data/index.json?v='+Date.now(),{cache:'no-store'});const x=await r.json();const dates=x.availableDates||data.availableDates||[data.date];const el=document.querySelector('#dates');el.innerHTML=dates.map(d=>`<option ${d===data.date?'selected':''}>${esc(d)}</option>`).join('')}catch{}}
+    async function load(file='current.json'){
+      try{
+        const r=await fetch('./data/'+file+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(r.status);
+        const next=await r.json();if(!validData(next))throw Error('invalid data');
+        data=next;dataLoadNotice='';writeCache(DATA_CACHE_PREFIX+file,next);if(file==='current.json')writeCache(LAST_GOOD_CACHE,next);
+      }catch(e){
+        if(validData(data)){
+          dataLoadNotice='通信に失敗したため、現在表示中の正常データを保持しています。';
+        }else{
+          const cached=readCache(DATA_CACHE_PREFIX+file,validData)||readCache(LAST_GOOD_CACHE,validData);
+          if(cached){data=cached;dataLoadNotice='通信に失敗したため、この端末に保存された最終正常データを表示しています。'}
+          else{document.querySelector('#app').innerHTML='<div class="error">データを読み込めず、この端末に保存された正常データもありません。</div>';return}
+        }
+      }
+      await loadDates();render();
+    }
+    async function loadDates(){
+      let index;
+      try{const r=await fetch('./data/index.json?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(r.status);index=await r.json();if(!validIndex(index))throw Error('invalid index');writeCache(INDEX_CACHE,index);indexLoadNotice=''}
+      catch{index=readCache(INDEX_CACHE,validIndex);indexLoadNotice=index?'日付一覧は、この端末に保存された情報を使用しています。':'日付一覧を取得できないため、表示中の日付のみ選択できます。'}
+      const dates=index?.availableDates||data.availableDates||[data.date];
+      const uniqueDates=[...new Set(dates.filter(d=>typeof d==='string'))];if(data.date&&!uniqueDates.includes(data.date))uniqueDates.unshift(data.date);
+      const el=document.querySelector('#dates');el.innerHTML=uniqueDates.map(d=>`<option ${d===data.date?'selected':''}>${esc(d)}</option>`).join('');
+    }
     document.querySelector('#dates').onchange=e=>load(e.target.value+'.json');
     function render(){
-      const run=data.evaluationRun||data.pipeline?.evaluationRun;const model=run?.modelDisplayName||'未記録（旧データ）';
+      const run=data.evaluationRun||data.pipeline?.evaluationRun;const model=run?`${run.modelDisplayName||run.modelId||'モデル未記録'} / ${run.reasoningEffort==='ultra'?'Ultra':run.reasoningEffort||'推論設定未記録'}`:'未記録（旧データ）';
       document.querySelector('#meta').innerHTML=`評価日 ${esc(data.date)}<br>最終更新 ${esc(data.generatedAtJst||'—')}<br>前回正常更新 ${esc(data.lastSuccessfulAtJst||'—')}<br>評価モデル ${esc(model)}`;
       document.querySelector('#tabs').innerHTML=cats.map(c=>`<button class="${c===active?'active':''}" data-cat="${c}">${c}</button>`).join(' ');
       document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{active=b.dataset.cat;render()});
       const c=data.categories?.[active];if(!c){document.querySelector('#app').innerHTML='<div class="error">カテゴリデータがありません。</div>';return}
       const papers=c.topPapers||[];
+      const notices=[dataLoadNotice,indexLoadNotice].filter(Boolean);const cached=notices.length>0;
       document.querySelector('#app').innerHTML=`
-        <div class="status">${esc(data.statusMessage||'正常に更新されました。')}</div>
+        <div class="status${cached?' cached':''}">${cached?`<b>キャッシュ／オフライン表示：</b> ${notices.map(esc).join(' ')}`:esc(data.statusMessage||'正常に更新されました。')}${cached?`<span class="original-status">${esc(data.statusMessage||'最後に取得した正常データです。')}</span>`:''}</div>
         <div class="summary"><div class="metric"><b>${c.totalNew??'—'}</b>新着 primary</div><div class="metric"><b>${c.evaluatedCount??'—'}</b>一次評価</div><div class="metric"><b>${c.fullTextEvaluatedCount??'—'}</b>全文評価</div><div class="metric"><b>${c.crosslistsExcluded??'—'}</b>cross-list除外</div></div>
         <h2>${active} 上位10件</h2>${papers.map(paper).join('')}${others(c.otherPapers||[])}`;
     }
-    function paper(p){const s=p.scores||{};const stars=p.eminentAuthors||[];return `<article class="paper">
+    function paper(p){const s=p.scores||{};const stars=(p.eminentAuthors||[]).map(eminentAuthorName).filter(Boolean);return `<article class="paper">
       <div class="rank"><b>#${p.rank}</b><div class="score">${p.totalScore}/100</div></div><div>
       <h3>${esc(p.titleJa||p.title)}</h3><div>${esc(p.title)}</div><div class="authors">${esc((p.authors||[]).join(', '))}</div>
-      <div><a href="${esc(p.url)}" target="_blank" rel="noreferrer">${esc(p.arxivId)} ↗</a></div>
-      <div class="badges"><span class="badge">${esc(p.paperType||'未分類')}</span>${p.fullTextEvaluated?'<span class="badge full">全文確認済み</span>':''}${stars.map(x=>`<span class="badge star">★ ${esc(x.name||x)}</span>`).join('')}</div>
+      <div><a href="${esc(safeExternalUrl(p.url))}" target="_blank" rel="noreferrer">${esc(p.arxivId)} ↗</a></div>
+      <div class="badges"><span class="badge">${esc(p.paperType||'未分類')}</span>${p.fullTextEvaluated?'<span class="badge full">全文確認済み</span>':''}${stars.map(name=>`<span class="badge star">★ ${esc(name)}</span>`).join('')}</div>
       <div class="scores"><div><b>${s.broadImpact??'—'}/25</b>物理全体への影響</div><div><b>${s.categoryImpact??'—'}/25</b>カテゴリ内の重要度</div><div><b>${s.originality??'—'}/25</b>独創性</div><div><b>${s.technicalStrength??'—'}/25</b>方法・結果の説得力</div></div>
       <dl><dt>Abstract</dt><dd>${lines(p.abstractLines)}</dd><dt>Curiosity</dt><dd>${esc(p.curiosity)}</dd><dt>Concept</dt><dd>${esc(p.concept)}</dd><dt>Conclusion</dt><dd>${esc(p.conclusion)}</dd></dl>
       <div class="assessment"><b>評定：</b>${esc(p.assessment)}</div>${p.fullTextReviewStatus?`<p class="authors"><b>全文確認範囲：</b>${esc(p.fullTextReviewStatus)}</p>`:''}</div></article>`}
-    function others(a){if(!a.length)return'';return `<details><summary>上位外の論文（${a.length}件）</summary>${a.map(p=>`<div class="other"><b>#${p.rank}</b><b>${p.totalScore}/100</b><span><a href="${esc(p.url)}" target="_blank">${esc(p.arxivId)}</a>　${esc(p.title)} — ${esc((p.authors||[]).join(', '))}</span></div>`).join('')}</details>`}
+    function others(a){if(!a.length)return'';return `<details><summary>上位外の論文（${a.length}件）</summary>${a.map(p=>`<div class="other"><b>#${p.rank}</b><b>${p.totalScore}/100</b><span><a href="${esc(safeExternalUrl(p.url))}" target="_blank" rel="noreferrer">${esc(p.arxivId)}</a>　${esc(p.title)} — ${esc((p.authors||[]).join(', '))}</span></div>`).join('')}</details>`}
     load();
+    setInterval(()=>load(),300000);
   </script>
 </body>
 </html>

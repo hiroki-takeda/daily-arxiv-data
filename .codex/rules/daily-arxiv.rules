@@ -1,0 +1,25 @@
+prefix_rule(
+    pattern = ["node", "scripts/prepare-worktree.mjs"],
+    decision = "allow",
+    justification = "Synchronize only an isolated Daily arXiv Scheduled-task worktree with origin/main.",
+    match = [
+        "node scripts/prepare-worktree.mjs",
+    ],
+    not_match = [
+        "node scripts/publish-edition.mjs 2026-07-13 .automation/staging/example",
+        "node scripts/validate.mjs",
+    ],
+)
+
+prefix_rule(
+    pattern = ["node", "scripts/publish-edition.mjs"],
+    decision = "allow",
+    justification = "Run the fixed Daily arXiv validator and six-file publisher without an unattended approval prompt.",
+    match = [
+        "node scripts/publish-edition.mjs 2026-07-13 .automation/staging/daily-arxiv-2026-07-13-example",
+    ],
+    not_match = [
+        "node scripts/prepare-worktree.mjs",
+        "node scripts/merge_category_reports.mjs 2026-07-13",
+    ],
+)

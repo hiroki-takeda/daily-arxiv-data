@@ -3,10 +3,6 @@ name: Publish Daily arXiv data
 on:
   push:
     branches: [main]
-    paths:
-      - "public/data/**"
-      - "public/index.html"
-      - ".github/workflows/pages-data.yml"
   workflow_dispatch:
 
 permissions:
@@ -16,10 +12,23 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm test
+      - run: npm run validate
+
   deploy:
+    needs: validate
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
