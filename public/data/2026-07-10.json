@@ -1,0 +1,2591 @@
+{
+  "schemaVersion": "1.2",
+  "sourceMode": "live",
+  "date": "2026-07-10",
+  "status": "ok",
+  "statusMessage": "全116件を一次評価し、各カテゴリ上位10件はPDF全文を確認して4項目100点満点で最終評価しました。著名著者マーク1件は順位に加点していません。",
+  "generatedAtJst": "2026-07-10T20:01:44+09:00",
+  "lastSuccessfulAtJst": "2026-07-10T20:01:44+09:00",
+  "availableDates": [
+    "2026-07-10"
+  ],
+  "categories": {
+    "hep-th": {
+      "schemaVersion": "1.2",
+      "slug": "hep-th",
+      "label": "hep-th",
+      "totalNew": 18,
+      "crosslistsExcluded": 26,
+      "evaluatedCount": 18,
+      "fullTextEvaluatedCount": 10,
+      "audit": {
+        "listingUrl": "https://arxiv.org/list/hep-th/new",
+        "announcementDate": "2026-07-10",
+        "selectionRule": "arXivのNew submissions欄に掲載されたv1のうちprimary categoryがhep-thのものだけを採用。同一arXiv IDは一度だけ扱い、Cross submissions欄の26件とReplacementsは除外。",
+        "sourceCounts": {
+          "newPrimaryHepTh": 18,
+          "crosslistsExcluded": 26,
+          "titleAuthorAbstractEvaluated": 18
+        },
+        "evaluationPolicy": "全件をtitle・authors・abstractで一次評価し、暫定順位から必要なPDFを確認して最終top 10全件を全文再評価。著者の知名度・権威は非採点。",
+        "scoreRubric": "broadImpact、categoryImpact、originality、technicalStrengthを各0〜25点、合計100点。",
+        "fullTextPolicy": "最終top 10は導入、設定・仮定、方法・導出、主要結果、検証、結論・限界、関連付録を確認。独立再計算の範囲はpaperごとのfullTextReviewStatusに記録。",
+        "fullTextEvaluatedCount": 10,
+        "authorPolicy": "著者の知名度・所属・経歴・引用指標は採点に使用しない。著名著者マークはregistry一致による非加点表示。",
+        "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv ID昇順。",
+        "generatedAtJst": "2026-07-10T20:01:44+09:00"
+      },
+      "topPapers": [
+        {
+          "rank": 1,
+          "arxivId": "2607.07785",
+          "url": "https://arxiv.org/abs/2607.07785",
+          "title": "Quantization of Gravity on Null Hypersurfaces",
+          "titleJa": "ヌル超曲面上の重力の量子化",
+          "authors": [
+            "Luca Ciambelli",
+            "Marc S. Klinger"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 23,
+            "categoryImpact": 24,
+            "originality": 24,
+            "technicalStrength": 21
+          },
+          "totalScore": 92,
+          "abstractLines": [
+            "空間的超曲面のADM形式に対し、交差する二枚のヌル超曲面で定式化される一般相対論の特性初期値問題（CIVP）を作用素代数として量子化した。",
+            "各ヌル面をcorner symmetryに沿って量子化し、superboost・superrotation・supertranslationを含む完全なcorner symmetry (semi)groupの内部作用を構成した。",
+            "supertranslationを量子チャネルとしてStinespring dilationで代数へ組み込み、局所的でcausticのない領域における重力部分領域のon-shell候補代数を得た。"
+          ],
+          "curiosity": "一般相対論の標準的な初期値定式化は空間的超曲面を用いるが、放射や地平面を扱うには交差するヌル超曲面上のCIVPが自然である。二つの面のデータと共有cornerでのgluingを保った量子代数をどう構成するかが問題である。",
+          "concept": "二つのヌル超曲面をまず別々にcorner symmetryを指針として量子化し、共有する初期cutで貼り合わせる。superboost・superrotationは重力拘束を代数上に実装し、代数保存写像にならないsupertranslationは量子チャネルと一般化Stinespring dilationで取り込む。",
+          "conclusion": "完全なcorner symmetry (semi)groupが内部作用するCIVP量子代数を構成し、局所的caustic-free領域の重力部分領域に対するon-shell候補を提示した。要旨は候補かつ局所構成と明記しており、causticを含む大域化や最終的な物理代数としての確立は残る。",
+          "assessment": "総合92/100。物理全体23点：量子重力の基本問題に直接関わる。hep-th内24点：ヌル初期値・corner symmetry・重力部分領域を統合する中核的提案である。独創性24点：supertranslationを量子チャネルとして扱い二面をglueする構図が非自明である。方法・結果21点：対称性とEinstein拘束まで具体化する一方、本文確認では局所的caustic-free領域の候補代数である。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07785",
+            "https://arxiv.org/pdf/2607.07785"
+          ],
+          "fullTextReviewStatus": "PDF全文をテキスト抽出し、全章構成、主要構成式、Discussionと未解決点を確認。式の独立再導出と全図の視覚的検証は未実施。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 2,
+          "arxivId": "2607.07786",
+          "url": "https://arxiv.org/abs/2607.07786",
+          "title": "Chiral Tube Algebras I: Topological Defect Lines, Twisted Modules, and Finite Gauging",
+          "titleJa": "カイラル・チューブ代数 I：トポロジカル欠陥線、twisted module、有限ゲージ化",
+          "authors": [
+            "Nathan Benjamin",
+            "Ho Tat Lam",
+            "Conghuan Luo"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 20,
+            "categoryImpact": 23,
+            "originality": 24,
+            "technicalStrength": 22
+          },
+          "totalScore": 89,
+          "abstractLines": [
+            "2次元CFTのchiral algebraとtopological defect line（TDL）を統合・拡張するchiral tube algebraを導入した。",
+            "局所Hilbert空間に加えてTDLでtwistされた欠陥Hilbert空間へ作用し、有限gaugingで非局所化したchiral currentも扱える。",
+            "Kac–Moody・W・超共形代数とorbifold／bosonizationの例で既約moduleを構成し、対応するtwisted moduleとの同型を示した。"
+          ],
+          "curiosity": "chiral algebraとTDLは2次元CFTの相補的な対称性概念だが、欠陥Hilbert空間への作用や、有限gaugingで局所currentが非局所化した後の像を一つの代数で記述する枠組みが必要だった。",
+          "concept": "TDLでtwistされた空間を含み、TDLを伴う非局所chiral currentが異なる欠陥Hilbert空間の間を写せるようにchiral algebraを拡張する。複数の既知代数・orbifold・bosonizationを例に、既約表現とtwisted moduleの対応を評価した。",
+          "conclusion": "chiral tube algebraが局所・欠陥Hilbert空間を統一的に組織し、有限gauging後のchiral algebra像を記述できることを多様な例で示した。fractional spinを持つ非局所currentは続編の対象とされ、一般理論の射程は今後さらに検証される。",
+          "assessment": "総合89/100。物理全体20点：CFT・量子物質・数学物理へ横断的な可能性がある。hep-th内23点：欠陥・非可逆対称性・gaugingの活発な領域へ新しい共通言語を与える。独創性24点：chiral tube algebraという新構造の導入が明確である。方法・結果22点：複数の主要代数で既約moduleまで構成する一方、fractional-spin sectorは続編に残る。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07786",
+            "https://arxiv.org/pdf/2607.07786"
+          ],
+          "fullTextReviewStatus": "PDF全文とarXiv HTMLを確認し、各具体例、module構成、Discussion/Outlookまで確認。全てのOPE計算は独立再計算していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 3,
+          "arxivId": "2607.07799",
+          "url": "https://arxiv.org/abs/2607.07799",
+          "title": "No off-diagonal quantum focusing for Rényi divergences",
+          "titleJa": "Rényi divergenceにはoff-diagonal量子フォーカシングは存在しない",
+          "authors": [
+            "Tanay Kibe",
+            "Pratik Roy"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 21,
+            "categoryImpact": 22,
+            "originality": 23,
+            "technicalStrength": 20
+          },
+          "totalScore": 86,
+          "abstractLines": [
+            "量子フォーカシング予想のoff-diagonal部分は、異なるnull generator上のrelative entropyの二重shape変分に対する単調性条件である。",
+            "diagonal Rényi QNECの証明を受け、完全なRényi版focusing statementが成立するかを検討した。",
+            "data processing・tensor additivity・matched classical–quantum conditioningを満たす任意のRényi型divergenceについて、答えは否定的だと示した。"
+          ],
+          "curiosity": "通常のoff-diagonal quantum focusingはrelative entropyとstrong subadditivityに結び付く。diagonal Rényi QNECが成立するなら、異なるnull generatorまで含む完全なRényi版へ拡張できるかが自然な問いとなる。",
+          "concept": "候補divergenceにdata processing、tensor additivity、matched classical–quantum conditioningという三条件を課し、そのクラス全体でoff-diagonal focusingが成立し得るかを判定するno-go型の設定を採る。",
+          "conclusion": "指定した広いRényi型divergenceのクラスに対し、普遍的なoff-diagonal focusing statementは存在しないと結論した。要旨からは否定結果の適用条件は明確だが、証明構成や条件を外した情報量への拡張可能性は確認できない。",
+          "assessment": "総合86/100。物理全体21点：半古典重力と量子情報の接点にある普遍性問題である。hep-th内22点：QFCの一般化可能性を直接制約する。独創性23点：肯定的なdiagonal結果に対して広いno-goを与える問いと結論が非自明である。方法・結果20点：三つの公理で適用クラスを明確化するが、本文確認でも証明の具体的検証手順が示されない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07799",
+            "https://arxiv.org/pdf/2607.07799"
+          ],
+          "fullTextReviewStatus": "PDF全文とHTMLを確認し、公理、no-go証明、反例構成、Discussionの適用範囲を確認。定理の代数計算は独立再証明していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 4,
+          "arxivId": "2607.08737",
+          "url": "https://arxiv.org/abs/2607.08737",
+          "title": "The mini-Page Curve in Cosmology",
+          "titleJa": "宇宙論におけるmini-Page curve",
+          "authors": [
+            "Ricardo Espíndola",
+            "Shoichiro Miyashita"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 21,
+            "categoryImpact": 21,
+            "originality": 21,
+            "technicalStrength": 21
+          },
+          "totalScore": 84,
+          "abstractLines": [
+            "AdS2境界とdS2 static patchを結ぶ2次元flow geometryで、単一Hawking pairが宇宙論的地平面からいつ情報を運び始めるかを調べた。",
+            "local operatorとmodular conjugateからpair stateを作り、crossed productで観測量代数をType II∞ factorへ拡張して参照状態とのentropy differenceを計算した。",
+            "差はτ≈β/8で極小となり、microcanonical generalized entropyとの一致とrelative modular flowのLyapunov指数2π/βも得た。"
+          ],
+          "curiosity": "black hole情報問題で問われる情報流出時刻を、observer-dependentなde Sitter宇宙論的地平面と個々のHawking pairに対して定義・計算できるかが問題である。",
+          "concept": "AdS2からdS2へ流れるgeometry上でHawking-pair probe stateを構成し、crossed-product代数によりentropy differenceを評価する。canonical ensembleの曲線に加え、microcanonical ensembleのentanglement-wedge cutとrelative modular flowも比較する。",
+          "conclusion": "entropy differenceの極小τ≈β/8を情報が地平面から流出し始める時刻と解釈し、scrambling scaleに対応する最大Lyapunov指数を得た。要旨が扱うのは2次元flow geometryとprobe stateであり、より一般の宇宙論への普遍性は未確立である。",
+          "assessment": "総合84/100。物理全体21点：宇宙論的地平面の情報問題という広い問いを扱う。hep-th内21点：重力・作用素代数・entanglement wedgeを接続する。独創性21点：単一pairのmini-Page curveという観点が新しい。方法・結果21点：二つのensemble、generalized entropy、Lyapunov指数まで整合的な結果を示すが、2次元模型への依存がある。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08737",
+            "https://arxiv.org/pdf/2607.08737"
+          ],
+          "fullTextReviewStatus": "PDF全文をテキスト抽出し、flow geometry、crossed product、二点関数、entropy計算、modular flow、Discussionを確認。数値図の全点再計算は未実施。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 5,
+          "arxivId": "2607.08426",
+          "url": "https://arxiv.org/abs/2607.08426",
+          "title": "Gauge-Invariant Off-Shell Mass",
+          "titleJa": "ゲージ不変なoff-shell質量",
+          "authors": [
+            "Kang-Sin Choi",
+            "Hyeseon Im"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 20,
+            "categoryImpact": 21,
+            "originality": 23,
+            "technicalStrength": 20
+          },
+          "totalScore": 84,
+          "abstractLines": [
+            "通常はoff-shellでゲージ依存なself-energyを一般化し、ゲージ不変・renormalized・process-independentなoff-shell mass functionを定義した。",
+            "pinch techniqueを任意長のfermion lineへ拡張し、各vertexのWard–Takahashi identityでゲージ依存項が局所的に相殺してFeynman-gauge self-energyが残ることを示した。",
+            "on-shell renormalization後はpoleで物理質量に一致し、赤外有限scalar mass functionも得て、最小off-shell Compton amplitudeで明示した。"
+          ],
+          "curiosity": "pole massはゲージ不変でも、運動量に依存する従来のoff-shell self-energyはゲージ依存である。内部fermion segmentごとに物理的で過程非依存なmass functionを定義できるかが問題である。",
+          "concept": "pinch techniqueを任意個の外部photonを持つfermion lineへ延長し、Ward–Takahashi identityによる局所相殺を利用する。得たself-energyをon-shell renormalizeし、Compton amplitudeでoff-shell構成を具体的に評価する。",
+          "conclusion": "全virtualityでゲージ不変かつscheme-independentでpole massに一致するmass functionと、赤外有限なscalar版を提示した。要旨では任意長lineへの一般性を主張する一方、明示計算として挙げられるのは最小Compton amplitudeであり、非摂動的適用は今後の検証対象である。",
+          "assessment": "総合84/100。物理全体20点：ゲージ理論のoff-shell量という基礎的課題に関わる。hep-th内21点：摂動的QFTの実用的定義として価値がある。独創性23点：pinch techniqueを局所segmentへ拡張してoff-shell massを定義する発想が強い。方法・結果20点：恒等式による厳密相殺とCompton例を示すが、本文で確認した明示検証は限定される。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08426",
+            "https://arxiv.org/pdf/2607.08426"
+          ],
+          "fullTextReviewStatus": "PDF全文をテキスト抽出し、QED one-loop、任意多重度、QCD拡張、all-order議論、Discussionを確認。diagramごとの積分は再計算していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 6,
+          "arxivId": "2607.07872",
+          "url": "https://arxiv.org/abs/2607.07872",
+          "title": "The Energy-Momentum-News Complex near Future Null Infinity",
+          "titleJa": "未来ヌル無限遠近傍のenergy–momentum–news complex",
+          "authors": [
+            "Jelle Hartong",
+            "Emil Have",
+            "Vijay Nenmeli",
+            "Gerben Oling"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 20,
+            "categoryImpact": 22,
+            "originality": 20,
+            "technicalStrength": 22
+          },
+          "totalScore": 84,
+          "abstractLines": [
+            "最一般のCarroll metric dataから、3・4次元漸近平坦真空重力の未来null infinity近傍の漸近解をCarroll共変Bondi–Sachs gaugeで構成した。",
+            "renormalized Einstein–Hilbert作用を境界Carroll metricとshearで変分し、future null infinityのenergy–momentum–news complexを定義した。",
+            "diffeomorphism・WeylのWard型関係とCarroll boost anomalyを導き、Carroll共変なBondi loss equationの一般化を得た。"
+          ],
+          "curiosity": "漸近平坦時空のnull infinityで、境界幾何・energy momentum・重力波news・Bondi lossを一つの変分原理と共変形式で統合できるかが課題である。",
+          "concept": "一般Carroll境界dataからEinstein方程式の漸近解を構成し、cutoff面の境界項を加えた作用をrenormalizeする。境界metricとshearへの応答をenergy–momentum–news complexとして定義し、残余対称性から三種のWard型関係を評価する。",
+          "conclusion": "境界complexの関係式からCarroll共変Bondi loss equationを導き、Carroll boostにはanomalyがあることを示した。要旨は3・4次元真空重力に限定され、物質、量子補正、完全なflat-space holographyへの接続は射程外である。",
+          "assessment": "総合84/100。物理全体20点：重力波と漸近平坦境界の基盤に関わる。hep-th内22点：flat holography・Carroll幾何・Bondi fluxを統合する体系性が高い。独創性20点：新しい境界complexとboost anomalyの整理がある。方法・結果22点：一般境界data、renormalized action、三つのWard関係まで構成する強い本文で確認した裏付けがある。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07872",
+            "https://arxiv.org/pdf/2607.07872"
+          ],
+          "fullTextReviewStatus": "203頁PDFを全文テキスト抽出し、全章構成、主要定義、Ward identity、作用導出、Discussionを確認。全付録の式を逐一再導出せず、図の視覚検証も未実施。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 7,
+          "arxivId": "2607.08684",
+          "url": "https://arxiv.org/abs/2607.08684",
+          "title": "Entanglement Wedge Reconstruction without Holographic Quantum Error Correction",
+          "titleJa": "ホログラフィック量子誤り訂正を仮定しないエンタングルメント・ウェッジ再構成",
+          "authors": [
+            "Seiji Terashima"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 22,
+            "categoryImpact": 22,
+            "originality": 22,
+            "technicalStrength": 17
+          },
+          "totalScore": 83,
+          "abstractLines": [
+            "有限NのAdS/CFTでは、一つの領域非依存な論理bulk演算子が複数の境界領域にcode-preservingな代表を持つという強いHQEC解釈は成立しないと論じた。",
+            "共通再構成は補領域のcode-preserving局所代数と可換である必要があるが、通常の有限N holographic CFTには超重力場を隠す保護sectorがないとする。",
+            "EWR自体は、各境界領域が固有の低エネルギー代数と領域適応bulk解釈を持つsubregion complementarityとして残ると提案した。"
+          ],
+          "curiosity": "entanglement wedge reconstruction（EWR）はしばしばholographic quantum error correction（HQEC）として解釈される。有限Nの重力理論でも、同一の論理bulk演算子を複数領域から再構成できるという強い主張が本当に成り立つかが問題である。",
+          "concept": "境界局所性から、複数領域に共通する再構成演算子は各補領域のcode-preserving局所代数と可換でなければならないと論じる。通常の有限N CFTではstress tensorを含む低エネルギー観測量がbulk演算子の支持と重力ドレッシングを検出するため、保護された不可視sectorはないとする。",
+          "conclusion": "強いHQEC解釈を退けつつ、領域ごとに異なるcode-preserving代数とbulk解釈を対応させるEWRをsubregion complementarityとして残した。要旨ではcenterやsuperselection dataを例外候補としており、主張の一般性は有限N CFTの不可視sectorに関する物理的前提に依存する。",
+          "assessment": "総合83/100。物理全体22点：ホログラフィーと量子情報の標準的解釈を問い直す波及性がある。hep-th内22点：有限Nのbulk reconstructionに直結する。独創性22点：EWRと強いHQECを分離する再定式化が概念的に新しい。方法・結果17点：簡潔な局所性論証は明瞭だが、本文で確認できる根拠は有限N CFTに保護不可視sectorがないという物理的入力を含む。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08684",
+            "https://arxiv.org/pdf/2607.08684"
+          ],
+          "fullTextReviewStatus": "PDF全文をテキスト抽出し、定義、有限次元lemma、AdS/CFT解釈、finite-Nの留保を確認。引用先の全反例計算は再検証していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 8,
+          "arxivId": "2607.08482",
+          "url": "https://arxiv.org/abs/2607.08482",
+          "title": "Quantum corrections to the near-extremal thermodynamics of (warped) BTZ black holes",
+          "titleJa": "（warped）BTZブラックホールの近極限熱力学への量子補正",
+          "authors": [
+            "Emilie Despontin",
+            "Stéphane Detournay",
+            "Robinson Mancilla",
+            "Chiara Toldo"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "解析",
+          "scores": {
+            "broadImpact": 19,
+            "categoryImpact": 21,
+            "originality": 19,
+            "technicalStrength": 21
+          },
+          "totalScore": 80,
+          "abstractLines": [
+            "Topologically Massive GravityでBTZおよびwarped BTZ black holeの近極限熱力学に対するone-loop効果と、extremal throatでzero modeになる固有modeを調べた。",
+            "BTZではnear-horizon計算とfull-geometry固有値問題を比較し、Schwarzianとrotational sectorが小温度でどうliftされるかを同定した。",
+            "同じ戦略をwarped BTZへ拡張し、rotational modeは両者で本質的で、境界条件を指定せず除外できないと示した。"
+          ],
+          "curiosity": "近極限black holeの量子熱力学では、throatでzero modeとなる揺らぎが有限温度とfull geometryでどうliftされ、どの境界条件で寄与するかが問題となる。",
+          "concept": "3次元TMGとNewman–Penrose形式を用い、near-horizonのmode計算をfull-geometry固有値問題と比較する。BTZでSchwarzian・回転sectorを追跡し、同じ評価をwarped BTZへ移す。",
+          "conclusion": "rotational modeはBTZとwarped BTZの一貫した近極限処理に不可欠で、境界条件なしに捨てられないと結論した。要旨はmodeのliftと比較を示すが、完全なone-loop partition functionや境界条件ごとの熱力学量までは報告していない。",
+          "assessment": "総合80/100。物理全体19点：black hole量子熱力学に関わるが3次元模型である。hep-th内21点：near-horizon普遍性とfull geometryの接続に重要である。独創性19点：warped BTZとrotational sectorへの拡張がある。方法・結果21点：二つのgeometryを比較しmodeの役割を特定するが、本文確認では完全な熱力学計算までは示されない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08482",
+            "https://arxiv.org/pdf/2607.08482"
+          ],
+          "fullTextReviewStatus": "PDF全文をテキスト抽出し、gauge fixing、near/far mode解析、境界条件、結論と留保を確認。固有関数の正規化積分は再計算していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 9,
+          "arxivId": "2607.07810",
+          "url": "https://arxiv.org/abs/2607.07810",
+          "title": "Relative entropy for λϕ^4 in the Rindler wedge",
+          "titleJa": "Rindler wedgeにおけるλϕ^4理論のrelative entropy",
+          "authors": [
+            "Markus B. Fröb",
+            "Albert Much",
+            "Kyriakos Papadopoulos"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 18,
+            "categoryImpact": 20,
+            "originality": 19,
+            "technicalStrength": 20
+          },
+          "totalScore": 77,
+          "abstractLines": [
+            "相互作用λϕ4理論のRindler wedgeで、真空とcoherent stateのrelative entropyをλ一次まで計算した。",
+            "摂動的interacting Weyl algebraを構成し、Tomita–Takesaki modular theoryとAraki–Uhlmann公式を適用した。",
+            "relative entropyが自由理論と同様に古典的interacting boost Noether chargeへ還元され、Bekenstein boundを満たすことを確認した。"
+          ],
+          "curiosity": "QFTのrelative entropyとBekenstein boundの関係が、自由理論を越えた相互作用場でも具体的に保たれるかが問題である。",
+          "concept": "Rindler wedgeのλϕ4理論に摂動的Weyl algebraを構成し、modular theoryとAraki–Uhlmann公式でvacuum／coherent-state relative entropyを一次まで評価し、古典boost chargeと比較する。",
+          "conclusion": "λ一次でrelative entropyは古典的interacting boost Noether chargeに還元され、Bekenstein boundも成立した。適用範囲は要旨上、特定のwedge・coherent state・一次摂動に限られ、高次や一般状態での成立は未確認である。",
+          "assessment": "総合77/100。物理全体18点：量子情報とQFT・重力境界に関係する。hep-th内20点：相互作用理論での明示計算は有用である。独創性19点：代数的QFT手法をλϕ4へ適用する非自明さがある。方法・結果20点：二つの厳密なmodular手法で既知構造とboundを確認するが、λ一次に限定される。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07810",
+            "https://arxiv.org/pdf/2607.07810"
+          ],
+          "fullTextReviewStatus": "38頁PDFを全文テキスト抽出し、古典解、量子代数、relative entropy計算、Bekenstein bound、Conclusionを確認。renormalizationの全中間式は再計算していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 10,
+          "arxivId": "2607.08329",
+          "url": "https://arxiv.org/abs/2607.08329",
+          "title": "Carroll supergravities",
+          "titleJa": "Carroll超重力理論",
+          "authors": [
+            "Marc Henneaux"
+          ],
+          "primaryCategory": "hep-th",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 17,
+            "categoryImpact": 19,
+            "originality": 17,
+            "technicalStrength": 18
+          },
+          "totalScore": 71,
+          "abstractLines": [
+            "4次元時空のN=1超重力についてelectric Carroll極限を明示的に導出した。",
+            "同じ理論のmagnetic Carroll極限も明示的に導出した。",
+            "用いた方法は一般的であり、extended supergravity modelにも適用できると述べた。"
+          ],
+          "curiosity": "重力理論で現れるelectric／magnetic Carroll極限を、局所超対称性を持つ4次元N=1超重力へどう拡張するかが問題である。",
+          "concept": "N=1, D=4超重力から二種類のCarroll極限を明示的に導き、同じ手順が拡張超重力にも一般化できることを示す。要旨は導出の詳細や独立な検証項目までは記載していない。",
+          "conclusion": "electricとmagneticのCarroll超重力をともに導出し、extended modelへの適用可能性を提示した。要旨が非常に簡潔なため、作用・拘束代数・適用条件の詳細は本文なしには判定できず、ここでは主張範囲に限定して評価した。",
+          "assessment": "総合71/100。物理全体17点：Carroll極限は重力・ヌル境界に関係するが対象は専門的である。hep-th内19点：超重力への二極限の明示化は有用である。独創性17点：既知のCarroll極限の超重力拡張として新規性がある。方法・結果18点：両極限を明示導出し一般化可能性を述べるが、本文確認でも検証の詳細を確認できない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08329",
+            "https://arxiv.org/pdf/2607.08329"
+          ],
+          "fullTextReviewStatus": "PDF全文をテキスト抽出し、Hamilton導出、二極限、拘束代数、共変化、結論を確認。符号規約の全計算は再導出していない。",
+          "eminentAuthors": [
+            {
+              "authorName": "Marc Henneaux",
+              "label": "著名著者",
+              "reason": "Francqui Prize、Humboldt Research Award、Royal Academy of Belgium会員。Brown–Henneaux境界対称性やBRST・拘束量子化の基礎的貢献で知られる。",
+              "identityEvidence": "Collège de France公式略歴の氏名・現職・主要業績と完全一致。",
+              "evidenceUrls": [
+                "https://www.college-de-france.fr/fr/chaire/marc-henneaux-champs-cordes-et-gravite-chaire-statutaire/biography"
+              ]
+            }
+          ]
+        }
+      ],
+      "otherPapers": [
+        {
+          "rank": 11,
+          "arxivId": "2607.08747",
+          "url": "https://arxiv.org/abs/2607.08747",
+          "title": "Decoupling Limit of Quiver Theories and the Angular Spectra of Extreme C-metrics",
+          "authors": [
+            "Peng Yang",
+            "Kilar Zhang"
+          ],
+          "paperType": "解析",
+          "totalScore": 71,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 12,
+          "arxivId": "2607.07938",
+          "url": "https://arxiv.org/abs/2607.07938",
+          "title": "Scalar Charges in a Self-Dual Background",
+          "authors": [
+            "Seth Grable",
+            "Jamison Barcelona"
+          ],
+          "paperType": "理論",
+          "totalScore": 69,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 13,
+          "arxivId": "2607.07924",
+          "url": "https://arxiv.org/abs/2607.07924",
+          "title": "2-Group global symmetry in the compactified M2-brane",
+          "authors": [
+            "F. Caro-Pérez",
+            "M.P. García del Moral",
+            "A. Restuccia"
+          ],
+          "paperType": "理論",
+          "totalScore": 67,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 14,
+          "arxivId": "2607.07954",
+          "url": "https://arxiv.org/abs/2607.07954",
+          "title": "Ghosts Hunting in the Yang-Mills Vacuum",
+          "authors": [
+            "Seth Grable"
+          ],
+          "paperType": "理論",
+          "totalScore": 62,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 15,
+          "arxivId": "2607.07949",
+          "url": "https://arxiv.org/abs/2607.07949",
+          "title": "More on Majorana fields, modular localization and near saturation of the Tsirelson bound",
+          "authors": [
+            "J. G.A. Caribé",
+            "J. R. A. Quispe",
+            "S. P. Sorella"
+          ],
+          "paperType": "理論",
+          "totalScore": 59,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 16,
+          "arxivId": "2607.08752",
+          "url": "https://arxiv.org/abs/2607.08752",
+          "title": "Phase-dependent kink collisions and dual critical-velocity branches in the complex sine-Gordon model",
+          "authors": [
+            "Mohammad Mohammadi",
+            "Farnaz Eizadbaksh",
+            "Vahideh Bagheri"
+          ],
+          "paperType": "解析",
+          "totalScore": 58,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 17,
+          "arxivId": "2607.08481",
+          "url": "https://arxiv.org/abs/2607.08481",
+          "title": "Gram--Wishart--Stiefel formulation of the N=2, large--d gauge theory in 1D",
+          "authors": [
+            "Badis Ydri"
+          ],
+          "paperType": "理論",
+          "totalScore": 56,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 18,
+          "arxivId": "2607.08661",
+          "url": "https://arxiv.org/abs/2607.08661",
+          "title": "The Remnant of an Evaporating Rotating Regular Black Hole from the Generalized Entropy in the Final Stage of Evaporation",
+          "authors": [
+            "Shingo Takeuchi"
+          ],
+          "paperType": "理論",
+          "totalScore": 42,
+          "eminentAuthors": []
+        }
+      ],
+      "eminentAuthorPaperCount": 1
+    },
+    "gr-qc": {
+      "schemaVersion": "1.2",
+      "slug": "gr-qc",
+      "label": "gr-qc",
+      "totalNew": 25,
+      "crosslistsExcluded": 15,
+      "evaluatedCount": 25,
+      "fullTextEvaluatedCount": 10,
+      "audit": {
+        "listingUrl": "https://arxiv.org/list/gr-qc/new",
+        "announcementDate": "2026-07-10",
+        "selectionRule": "公式new listingのNew submissions 25件のみ。arXiv IDはversionを除去し、primary categoryがgr-qcのv1に限定。Cross submissions 15件とReplacement submissions 28件は除外。",
+        "sourceCounts": {
+          "newSubmissions": 25,
+          "crosslistsExcluded": 15
+        },
+        "evaluationPolicy": "全件をtitle・authors・abstractで一次評価し、暫定順位から必要なPDFを確認して最終top 10全件を全文再評価。著者の知名度・権威は非採点。",
+        "scoreRubric": "broadImpact、categoryImpact、originality、technicalStrengthを各0〜25点、合計100点。",
+        "fullTextPolicy": "最終top 10は導入、設定・仮定、方法・導出、主要結果、検証、結論・限界、関連付録を確認。独立再計算の範囲はpaperごとのfullTextReviewStatusに記録。",
+        "fullTextEvaluatedCount": 10,
+        "authorPolicy": "著者の知名度・所属・経歴・引用指標は採点に使用しない。著名著者マークはregistry一致による非加点表示。",
+        "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv ID昇順。",
+        "generatedAtJst": "2026-07-10T20:01:44+09:00"
+      },
+      "topPapers": [
+        {
+          "rank": 1,
+          "arxivId": "2607.08228",
+          "url": "https://arxiv.org/abs/2607.08228",
+          "title": "Static regular black holes in Horndeski theories: analytic no-go and nonanalytic obstructions",
+          "titleJa": "Horndeski理論の静的正則ブラックホール：解析的no-goと非解析的障害",
+          "authors": [
+            "Antonio De Felice",
+            "Shinji Tsujikawa"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 22,
+            "categoryImpact": 24,
+            "originality": 23,
+            "technicalStrength": 23
+          },
+          "totalScore": 92,
+          "abstractLines": [
+            "静的・球対称・漸近平坦で時間非依存scalarを持つHorndeski正則ブラックホールの存在条件を分類した。",
+            "解析的shift-symmetric理論では非摂動的current no-hair定理によりSchwarzschildしか残らず、中心正則性を満たせない。",
+            "周辺的非解析項ではscalar–Gauss–Bonnet鎖だけが共変的に正則だが、そのhairy解も中心特異である。"
+          ],
+          "curiosity": "修正重力で正則ブラックホールを構成しても、地平面安定性と中心正則性を同時に満たせるとは限らない。Horndeski全体でどこまで一般的な排除が可能かが問題である。",
+          "concept": "地平面でscalar kinetic term Xが非零の枝と零の枝を分け、ghost・勾配安定性、漸近平坦端点でのTaylor展開、Noether currentを解析した。さらにlog・分数冪など非解析的逃げ道を共変正則性から分類した。",
+          "conclusion": "仮定した解析的枝では正則ブラックホールは非存在であり、許される唯一の周辺的非解析完成も中心特異性を回避しない。時間依存scalar、DHOST、hedgehog hair、切断された大結合枝は定理の外である。",
+          "assessment": "総合92/100（物理全体22、カテゴリ24、独創性23、方法・結果23）。正則ブラックホール構成全般へ制約を与える広いno-goであり、gr-qc内の波及性が高い。解析枝と非解析的な逃げ道を分け、安定性・中心正則性まで本文で具体的に追っているため、独創性と論証の強さをともに高く評価した。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "8ページPDFを全文テキスト抽出し、地平面解析、解析枝、非解析完成、結論、付録を確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08228",
+            "https://arxiv.org/pdf/2607.08228"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 2,
+          "arxivId": "2607.08445",
+          "url": "https://arxiv.org/abs/2607.08445",
+          "title": "Signal-to-Noise Ratio Contours for LISA",
+          "titleJa": "LISAの信号対雑音比コンター",
+          "authors": [
+            "Kai Schmitz",
+            "Joseph D. Romano"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "解析",
+          "scores": {
+            "broadImpact": 22,
+            "categoryImpact": 23,
+            "originality": 23,
+            "technicalStrength": 23
+          },
+          "totalScore": 91,
+          "abstractLines": [
+            "弱い確率的重力波背景だけに有効な標準SNR式を、任意の信号強度へ一般化した。",
+            "背景自身のself-noiseを含めるとLISA自己相関SNRには帯域と観測時間で決まる上限がある。",
+            "一般化PLI曲線をSNR contourとして与え、強信号で従来予測が過大になる領域を宇宙紐で例示した。"
+          ],
+          "curiosity": "LISA forecastで広く使われる弱信号SNR式を強い背景へ外挿すると、非常に大きなSNRを誤って報告する。信号自身の統計揺らぎを含む正しい指標が必要である。",
+          "concept": "LISA TDI自己相関のGaussian尤度からsignal self-noiseを含む最適SNRを導き、任意強度のPLI contourと解析的上限を構成し、宇宙紐背景へ適用した。",
+          "conclusion": "典型的missionでSNRは概ね1万未満、contour終端はおよそ雑音曲線のe倍で抑えられる。検出器networkの相互相関や他の観測器への一般化が次の課題である。",
+          "assessment": "総合91/100（物理全体22、カテゴリ23、独創性23、方法・結果23）。LISAの多数の確率背景予測を横断的に修正し得るため波及範囲が広い。任意信号強度の最適SNR式、解析的上限、PLI contour、公開数値という相互に補強する結果が本文にあり、概念的新規性と検証可能性を高く評価した。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "26ページPDFを全文テキスト抽出し、尤度、一般SNR式、contour構成、宇宙紐例、結論を確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08445",
+            "https://arxiv.org/pdf/2607.08445"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 3,
+          "arxivId": "2607.07790",
+          "url": "https://arxiv.org/abs/2607.07790",
+          "title": "Regular Black Holes in Nonlocal Quasitopological Gravity",
+          "titleJa": "非局所準トポロジカル重力における正則ブラックホール",
+          "authors": [
+            "Pablo Bueno",
+            "Pablo A. Cano",
+            "Robie A. Hennigar",
+            "Ángel J. Murcia"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 22,
+            "categoryImpact": 24,
+            "originality": 23,
+            "technicalStrength": 21
+          },
+          "totalScore": 90,
+          "abstractLines": [
+            "準トポロジカル重力に対し、無限微分を含む非局所的な完成を構成した。",
+            "その完成はghostを生まず、強結合不安定性を避けると要旨で報告されている。",
+            "球対称な真空正則ブラックホールを厳密解として保ち、摂動的Birkhoff定理も満たす。"
+          ],
+          "curiosity": "正則ブラックホールを許す高曲率重力を、ghostや強結合を避けた非局所理論として完成できるかが問題である。",
+          "concept": "要旨では、準トポロジカル重力の無限微分完成を構成し、ghost、強結合、球対称真空解という三つの条件を同時に評価している。",
+          "conclusion": "ghost-freeかつ強結合不安定性を避け、真空正則ブラックホールと摂動的Birkhoff性を両立する完成を得た。物質や動的形成まで成立するかは要旨からは未解決である。",
+          "assessment": "総合90/100（物理全体22、カテゴリ24、独創性23、方法・結果21）。重力特異点と量子重力に波及する主題、gr-qcでの高い重要性、複数の理論要請を同時に満たす構成を高く評価した。本文は主要性質を明記する一方、検証の詳細や適用範囲は示さないため方法・結果は21点とした。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "9ページPDFを全文テキスト抽出し、導入、作用構成、線形化、Newton極限、結論、付録を確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07790",
+            "https://arxiv.org/pdf/2607.07790"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 4,
+          "arxivId": "2607.07943",
+          "url": "https://arxiv.org/abs/2607.07943",
+          "title": "Nonlinear hydrodynamics in spinning neutron stars: Theoretical universal relations and equilibrium solutions",
+          "titleJa": "回転中性子星の非線形流体力学：理論的普遍関係と平衡解",
+          "authors": [
+            "Hang Yu",
+            "Giorgio Nicolini",
+            "Shu Yan Lau",
+            "K.J. Kwon",
+            "Tejaswi Venumadhav",
+            "Nils Andersson",
+            "Pantelis Pnigouras",
+            "Fabian Gittins",
+            "Amlan Nanda"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 22,
+            "categoryImpact": 23,
+            "originality": 22,
+            "technicalStrength": 22
+          },
+          "totalScore": 89,
+          "abstractLines": [
+            "回転星を楕円体として扱うaffine模型で、f-modeとradial modeの結合を4-wave次数まで解析的に導出した。",
+            "3-wave結合は線形潮汐量だけで決まり新しい物性を運ばない一方、無視すると単独星で合体時約1.7 radの位相誤差を生む。",
+            "高速回転では4-wave非調和性が内部浮力の断熱指数を探る窓になるが、f-mode resonance lockingは起こらない。"
+          ],
+          "curiosity": "BNS波形で非線形潮汐がEOS推定をどれほど汚染し、どの非線形結合が本当に新しい中性子星物理を測るかが未整理である。",
+          "concept": "Hamiltonianを4-waveまで構成し、第一原理の普遍関係、Newton流体のmode resonance、相対論的低周波展開を接続したhybrid模型で位相差を評価した。",
+          "conclusion": "3-wave潮汐の波形補正は無視できず、高速回転時のみ高次非線形性が新しい内部情報を持ち得る。相対論的affine模型、EOB実装、NR校正、3PN境界項の不定性が残る。",
+          "assessment": "総合89/100（物理全体22、カテゴリ23、独創性22、方法・結果22）。BNS波形と中性子星内部物理へ直結し、3-wave係数の情報内容を切り分けた点が独創的である。4-waveまでの解析導出、相対論的低周波とNewton的共鳴をつなぐ評価、約1.7 radという定量結果が本文にあり、方法・結果も強い。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "37ページPDFを全文テキスト抽出し、Hamiltonian構成、普遍関係、位相評価、Discussionを確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07943",
+            "https://arxiv.org/pdf/2607.07943"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 5,
+          "arxivId": "2607.08466",
+          "url": "https://arxiv.org/abs/2607.08466",
+          "title": "Search for strong lensing of gravitational waves in the binary black hole events from O1-O4a",
+          "titleJa": "O1–O4a連星ブラックホール事象における重力波強レンズ探索",
+          "authors": [
+            "Ankur Barsode",
+            "Koustav N. Maity",
+            "Parameswaran Ajith"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "解析",
+          "scores": {
+            "broadImpact": 22,
+            "categoryImpact": 23,
+            "originality": 20,
+            "technicalStrength": 24
+          },
+          "totalScore": 89,
+          "abstractLines": [
+            "LVK・IAS・OGCのO1–O4a BBH事象を統合し、同一信号の強レンズ像対を探索した。",
+            "Posterior Overlap 2.0と現実的なforeground/background simulationから個別確率とcatalog purityを定義した。",
+            "有意な候補はなく、強レンズfractionに90%で1.4%の上限を与え、O5で3σ検出確率を約67%と予測した。"
+          ],
+          "curiosity": "強レンズ重力波は宇宙論・レンズ天体を探るが、波形類似だけでは偶然一致が多く、複数catalogを含む統計的に校正された探索が必要である。",
+          "concept": "高速Bayesian posterior-overlap pipelineを207事象規模へ適用し、注入simulationでforeground/backgroundを構築、pair-levelとpopulation-levelの二つの有意度を評価した。",
+          "conclusion": "現データに証拠はなくfraction上限を更新した。catalogごとのselection functionを混合したこと、レンズ・源population priorの不確実性、連続prior marginalizationの計算費用が残る。",
+          "assessment": "総合89/100（物理全体22、カテゴリ23、独創性20、方法・結果24）。強レンズ重力波は宇宙論にも波及し、複数catalogを横断する現時点で重要な実データ探索である。新規性は解析枠組みの改良として評価し、207事象規模、現実的simulation、非検出上限、将来検出確率まで本文に揃うため方法・結果を最も高くした。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "14ページPDFを全文テキスト抽出し、pipeline、simulation、候補表、population推定、結論を確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08466",
+            "https://arxiv.org/pdf/2607.08466"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 6,
+          "arxivId": "2607.08619",
+          "url": "https://arxiv.org/abs/2607.08619",
+          "title": "Beyond black hole spectroscopy: Quasinormal mode contamination by massless scalars",
+          "titleJa": "ブラックホール分光を超えて：質量なしscalarによる準固有モード混入",
+          "authors": [
+            "Miguel Yulo Asuncion",
+            "Giovanni D'Addario",
+            "Thomas P. Sotiriou"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 21,
+            "categoryImpact": 23,
+            "originality": 22,
+            "technicalStrength": 20
+          },
+          "totalScore": 86,
+          "abstractLines": [
+            "shift-symmetric Horndeskiのhairy black hole ringdownをscalar charge qで摂動展開した。",
+            "scalar–Gauss–Bonnet結合は周波数shiftとscalar QNM混入の双方をq²次数で生む。",
+            "scalar振幅がqで抑制されなければ混入はq一次に現れ、通常の分光shiftより支配的になり得る。"
+          ],
+          "curiosity": "beyond-GR ringdown探索はKerr QNMの周波数shiftに集中するが、新しい場自身のQNMがmetric信号へ混入する効果を同じ摂動次数で扱う必要がある。",
+          "concept": "一般shift-symmetric Horndeski作用をscalar chargeと場摂動の二重展開で整理し、各結合がmetric QNM shiftとscalar-frequency contaminationのどの次数へ入るかを導出した。",
+          "conclusion": "小chargeでは少数のEFT結合だけで両効果を記述でき、混入を無視した分光は不完全になり得る。scalar振幅の初期条件、非線形合体での増幅、非shift-symmetric理論への拡張は未解決である。",
+          "assessment": "総合86/100（物理全体21、カテゴリ23、独創性22、方法・結果20）。beyond-GR ringdown探索の設計へ直接関わり、周波数shiftだけでなく新しい場のQNM混入を同じ摂動次数で整理した点が重要である。本文は寄与する結合と次数を明示するが、実波形・合体計算や観測感度までは示さないため方法・結果は20点とした。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "8ページPDFを全文テキスト抽出し、二重摂動展開、作用別寄与、ringdown ansatz、Discussionを確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08619",
+            "https://arxiv.org/pdf/2607.08619"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 7,
+          "arxivId": "2607.08280",
+          "url": "https://arxiv.org/abs/2607.08280",
+          "title": "5d Schwarzschild-Tangherlini spacetime: MST-like formalism for a Reduced Confluent Heun Equation",
+          "titleJa": "5次元Schwarzschild–Tangherlini時空：Reduced Confluent Heun方程式のMST型形式",
+          "authors": [
+            "Donato Bini",
+            "Giorgio Di Russo",
+            "Veronica Fantini"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 18,
+            "categoryImpact": 21,
+            "originality": 23,
+            "technicalStrength": 23
+          },
+          "totalScore": 85,
+          "abstractLines": [
+            "5次元Schwarzschild–Tangherlini時空の測地線・散乱角・臨界軌道をPN/PM展開と超幾何再和で解析した。",
+            "massless scalar radial方程式に対し、Reduced Confluent Heun方程式用のMST型級数形式を新たに構成した。",
+            "renormalized angular momentumを量子Seiberg–Witten法と照合し、円軌道energy fluxを2.5PNまで得た。"
+          ],
+          "curiosity": "4次元Kerr/Schwarzschildで強力なMST法を、異なる特異点構造を持つ高次元Heun方程式へ拡張できるかが技術的課題である。",
+          "concept": "geodesic probeとscalar waveを分離し、両側の級数解をmatchingするMST類似形式、独立なSW照合、円軌道fluxのPN benchmarkで検証した。",
+          "conclusion": "Reduced Confluent HeunへのMST拡張を明示し、高次元摂動計算の基盤を作った。spin場一般化、extremal RNのDoubly Confluent Heun、より高次fluxは今後の課題である。",
+          "assessment": "総合85/100（物理全体18、カテゴリ21、独創性23、方法・結果23）。高次元という専門領域のため広域点は抑えたが、Reduced Confluent Heun方程式へのMST拡張は再利用性のある技術的新規性が高い。独立なSeiberg–Witten法との一致と2.5PN fluxまで本文で示すため方法・結果も高く評価した。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "26ページPDFを全文テキスト抽出し、測地線、Heun方程式、MST構成、SW照合、flux、結論を確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08280",
+            "https://arxiv.org/pdf/2607.08280"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 8,
+          "arxivId": "2607.07815",
+          "url": "https://arxiv.org/abs/2607.07815",
+          "title": "Causal Horizons, Geodesic Completeness and Stability in Slow Contraction Cosmology",
+          "titleJa": "緩慢収縮宇宙論における因果地平面・測地線完全性・安定性",
+          "authors": [
+            "Mariam Khaldieh",
+            "Anna I. Rosenzweig",
+            "Paul J. Steinhardt"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 23,
+            "categoryImpact": 22,
+            "originality": 19,
+            "technicalStrength": 20
+          },
+          "totalScore": 84,
+          "abstractLines": [
+            "半無限のekpyrotic slow contractionが粒子地平面を持たず、過去にMinkowski attractorへ近づくことを示した。",
+            "平坦・開宇宙では過去測地線完全で、追加物質やscalarに対しても収縮attractorが安定である。",
+            "平均膨張率が非正のためBGV定理の仮定を満たさず、収縮de Sitterとの因果構造の差を明確化した。"
+          ],
+          "curiosity": "初期条件・地平面・過去不完全性を同時に避ける宇宙論が可能か、また測地線完全性だけで地平面問題を解けるかが問われる。",
+          "concept": "粒子地平面の共形時間積分、timelike/null測地線のaffine長、摂動安定性、BGV境界項をslow contractionとcontracting de Sitterで比較した。",
+          "conclusion": "十分長いslow contractionは因果接続・過去完全性・安定attractorを同時に実現する。非特異bounceの微視的実現と観測的識別はこの論文では解かれていない。",
+          "assessment": "総合84/100（物理全体23、カテゴリ22、独創性19、方法・結果20）。地平面問題・初期条件・過去完全性という宇宙論の根幹を同時に扱うため広域インパクトを高くした。slow contraction自体は既存枠組みだが、因果構造、attractor、BGV回避を一つの本文で結び付ける点は強い一方、bounce実現や観測検証は範囲外である。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "9ページPDFを全文テキスト抽出し、因果積分、安定性、測地線、BGV節、結論を確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07815",
+            "https://arxiv.org/pdf/2607.07815"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 9,
+          "arxivId": "2607.07806",
+          "url": "https://arxiv.org/abs/2607.07806",
+          "title": "Singularity resolution and unitarity in two-dimensional dilaton black holes with negative central charge",
+          "titleJa": "負の中心電荷を持つ二次元dilatonブラックホールの特異点解消とunitarity",
+          "authors": [
+            "César García-Pérez",
+            "F. Javier Marañón-González",
+            "José Navarro-Salas",
+            "Silvia Pla"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 21,
+            "categoryImpact": 21,
+            "originality": 23,
+            "technicalStrength": 19
+          },
+          "totalScore": 84,
+          "abstractLines": [
+            "one-loop CGHS模型にmatter Polyakov項、FP ghost用補助metric項、局所countertermを組み込んだ可解模型を構成した。",
+            "全中心電荷が負の領域では曲率特異点が消え、地平面内部に漸近平坦領域が現れる。",
+            "外向きHawking fluxと内部の一時的負energy fluxの相関はunitarityを示唆するが、完全なenergy balanceは未完成である。"
+          ],
+          "curiosity": "半古典black-hole evaporationで特異点が情報を終端させる問題を、量子ghost backreactionを含む可解二次元模型で回避できるかが問われる。",
+          "concept": "Strominger機構でFP ghostを放射から分離しつつbackreactionへ残し、厳密なcollapse解、左右null infinityのflux相関、affine distance、energy balanceを解析した。",
+          "conclusion": "負中心電荷で特異点を除き、有限affine distanceの観測者にはunitaryな相関構造を得た。ただし左右chiral sectorを結合しない現模型では全体のenergy conservationを確立できない。",
+          "assessment": "総合84/100（物理全体21、カテゴリ21、独創性23、方法・結果19）。特異点とunitarityという広い問題に、負中心電荷と内部・外部flux相関を使う独創性を高く評価した。一方で二次元模型であり、要旨自身が完全なenergy balance未確立と明記するため方法・結果は抑えた。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "25ページPDFを全文テキスト抽出し、作用、collapse解、flux、相関、energy balance、結論を確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07806",
+            "https://arxiv.org/pdf/2607.07806"
+          ],
+          "eminentAuthors": []
+        },
+        {
+          "rank": 10,
+          "arxivId": "2607.07831",
+          "url": "https://arxiv.org/abs/2607.07831",
+          "title": "Charging up regular black holes",
+          "titleJa": "正則ブラックホールへの電荷導入",
+          "authors": [
+            "Raúl Carballo-Rubio",
+            "Chiara Coviello",
+            "Vania Vellucci"
+          ],
+          "primaryCategory": "gr-qc",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 19,
+            "categoryImpact": 22,
+            "originality": 21,
+            "technicalStrength": 20
+          },
+          "totalScore": 82,
+          "abstractLines": [
+            "球対称で二階微分までの恒等的保存tensorを用い、一般化Einstein–Maxwell方程式の荷電正則解を構成した。",
+            "非荷電解の正則条件だけでは不十分で、標準Bardeen・Haywardの荷電化は中心特異になることを示した。",
+            "正則性を保つ改良Bardeen・Hayward型を提案し、より現実的な正則解に必要な条件を示した。"
+          ],
+          "curiosity": "真空で正則化されたblack holeが電荷や回転を加えても正則とは限らない。現実的な正則compact objectへ進む際の追加条件を一般的に知る必要がある。",
+          "concept": "一般の保存変形Einstein tensorとMaxwell源から球対称方程式を解き、中心展開で正則条件を導出し、Bardeen/Hayward型と新familyを比較した。",
+          "conclusion": "荷電正則化は真空正則化より厳しく、既知の代表解が破綻することを示した。回転系でも同様の障害が予想され、core matterまたは別の重力変形が必要になる。",
+          "assessment": "総合82/100（物理全体19、カテゴリ22、独創性21、方法・結果20）。正則ブラックホール模型の現実性へ一般的な注意を与え、gr-qc内の設計指針として重要である。代表的二模型の破綻と改良案を本文で示す点は強いが、球対称・特定方程式クラスに限られるため広域点と方法点は抑えた。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "fullTextReviewStatus": "6ページPDFを全文テキスト抽出し、一般方程式、中心条件、例、物質源、結論を確認。",
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07831",
+            "https://arxiv.org/pdf/2607.07831"
+          ],
+          "eminentAuthors": []
+        }
+      ],
+      "otherPapers": [
+        {
+          "rank": 11,
+          "arxivId": "2607.08333",
+          "url": "https://arxiv.org/abs/2607.08333",
+          "title": "Gravito-Electromagnetic perturbation of higher derivative corrected Kerr-Newman black hole",
+          "authors": [
+            "Yuanyuan Ji",
+            "Zheng-wen Long"
+          ],
+          "paperType": "理論",
+          "totalScore": 80,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 12,
+          "arxivId": "2607.08258",
+          "url": "https://arxiv.org/abs/2607.08258",
+          "title": "Quasi-bound states and late-time evolution of a massive fermion around a Reissner-Nordström black hole",
+          "authors": [
+            "Guang-Shang Chen",
+            "Cheng-Bo Yang",
+            "Shou-Shan Bao",
+            "Yue-Liang Wu",
+            "Hong Zhang"
+          ],
+          "paperType": "理論",
+          "totalScore": 80,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 13,
+          "arxivId": "2607.08088",
+          "url": "https://arxiv.org/abs/2607.08088",
+          "title": "An analytic model for a total process of gravitational collapse: From star to Schwarzschild black hole",
+          "authors": [
+            "Sinya Aoki",
+            "Jorge Ovalle"
+          ],
+          "paperType": "理論",
+          "totalScore": 78,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 14,
+          "arxivId": "2607.08570",
+          "url": "https://arxiv.org/abs/2607.08570",
+          "title": "Horizon-redshift transfer in black-hole direct-wave damping",
+          "authors": [
+            "Wen-Biao Han",
+            "Ye Jiang"
+          ],
+          "paperType": "解析",
+          "totalScore": 77,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 15,
+          "arxivId": "2607.08030",
+          "url": "https://arxiv.org/abs/2607.08030",
+          "title": "Acceleration in 3D Einstein-Gauss-Bonnet Gravity",
+          "authors": [
+            "Cendikiawan Suryaatmadja",
+            "Dong-han Yeom",
+            "Robert Mann"
+          ],
+          "paperType": "理論",
+          "totalScore": 70,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 16,
+          "arxivId": "2607.07839",
+          "url": "https://arxiv.org/abs/2607.07839",
+          "title": "Finite mass two throat wormholes: global light rings, branch resolved strong lensing, and scalar transmission",
+          "authors": [
+            "Anirudh Pradhan",
+            "K. Ghaderi",
+            "M. Zeyauddin",
+            "K. Karimizadeh"
+          ],
+          "paperType": "理論",
+          "totalScore": 68,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 17,
+          "arxivId": "2607.08650",
+          "url": "https://arxiv.org/abs/2607.08650",
+          "title": "Shadows and lensing signatures of a rotating black hole in a Hernquist dark matter halo",
+          "authors": [
+            "A. A. Araújo Filho",
+            "Arun Kumar",
+            "N. Heidari",
+            "C. F. S. Pereira",
+            "Amilcar R. Queiroz",
+            "V. B. Bezerra"
+          ],
+          "paperType": "解析",
+          "totalScore": 66,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 18,
+          "arxivId": "2607.07715",
+          "url": "https://arxiv.org/abs/2607.07715",
+          "title": "Gravitational perturbations of a regular T-duality inspired black hole: Quasinormal modes, excitation factors, and time-domain evolution",
+          "authors": [
+            "Bekir Can Lütfüoğlu",
+            "Mardon Abdullaev",
+            "Javlon Rayimbaev",
+            "Shokhzod Jumaniyozov",
+            "Shavkat Karshiboev"
+          ],
+          "paperType": "理論",
+          "totalScore": 65,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 19,
+          "arxivId": "2607.07752",
+          "url": "https://arxiv.org/abs/2607.07752",
+          "title": "Observational Limits on Einasto Dark Matter Parameters from Event Horizon Telescope Images of Sgr A* and M87*",
+          "authors": [
+            "A. Errehymy",
+            "S. Hansraj",
+            "C. Hansraj"
+          ],
+          "paperType": "解析",
+          "totalScore": 64,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 20,
+          "arxivId": "2607.08343",
+          "url": "https://arxiv.org/abs/2607.08343",
+          "title": "Chaplygin and Polytropic Kantowski--Sachs Solutions in Teleparallel F(T) Gravity",
+          "authors": [
+            "Alexandre Landry"
+          ],
+          "paperType": "理論",
+          "totalScore": 61,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 21,
+          "arxivId": "2607.07955",
+          "url": "https://arxiv.org/abs/2607.07955",
+          "title": "Wave and particle probes of a regular T-duality-inspired black hole with gravitational self-energy",
+          "authors": [
+            "Alexey Dubinsky"
+          ],
+          "paperType": "理論",
+          "totalScore": 59,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 22,
+          "arxivId": "2607.08134",
+          "url": "https://arxiv.org/abs/2607.08134",
+          "title": "Field Theoretic Aspects of Gravity From Direct Action to Quantum Fields",
+          "authors": [
+            "Ghanashyam Date"
+          ],
+          "paperType": "レビュー",
+          "totalScore": 58,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 23,
+          "arxivId": "2607.07741",
+          "url": "https://arxiv.org/abs/2607.07741",
+          "title": "Systematic Light Propagation Bias from the Heliosphere and Its Impact on the Hubble Tension",
+          "authors": [
+            "Behnam Pourhassan",
+            "İzzet Sakallı",
+            "Sudhaker Upadhyay",
+            "Kairat Myrzakulov"
+          ],
+          "paperType": "解析",
+          "totalScore": 55,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 24,
+          "arxivId": "2607.08148",
+          "url": "https://arxiv.org/abs/2607.08148",
+          "title": "Spectroscopic structure of Non-Hermitian PT-Symmetric Klein--Gordon Fields in a Magnetized Cosmic String Spacetime",
+          "authors": [
+            "Omar Mustafa",
+            "Abdullah Guvendi"
+          ],
+          "paperType": "理論",
+          "totalScore": 53,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 25,
+          "arxivId": "2607.07736",
+          "url": "https://arxiv.org/abs/2607.07736",
+          "title": "Deformed Compact Objects in General Relativity and Modified Gravity",
+          "authors": [
+            "Jonathan Tejeda Quartuccio"
+          ],
+          "paperType": "理論",
+          "totalScore": 50,
+          "eminentAuthors": []
+        }
+      ],
+      "eminentAuthorPaperCount": 0
+    },
+    "quant-ph": {
+      "schemaVersion": "1.2",
+      "slug": "quant-ph",
+      "label": "quant-ph",
+      "totalNew": 73,
+      "crosslistsExcluded": 23,
+      "evaluatedCount": 73,
+      "fullTextEvaluatedCount": 10,
+      "reportDate": "2026-07-10",
+      "status": "ok",
+      "statusMessage": "primary categoryがquant-phのv1新着73件を、タイトル・著者・要旨から4項目100点満点で全件評価。cross-list 23件とreplacement 45件は除外。著者の知名度・権威は採点に使用していない。",
+      "audit": {
+        "listingUrl": "https://arxiv.org/list/quant-ph/new?show=2000",
+        "announcementDate": "2026-07-10",
+        "selectionRule": "New submissionsのprimary category一致v1のみ。cross-list、replacement、重複base IDを除外。",
+        "sourceCounts": {
+          "newSubmissions": 73,
+          "crosslistsExcluded": 23
+        },
+        "evaluationPolicy": "全件をtitle・authors・abstractで一次評価し、暫定順位から必要なPDFを確認して最終top 10全件を全文再評価。著者の知名度・権威は非採点。",
+        "scoreRubric": "broadImpact、categoryImpact、originality、technicalStrengthを各0〜25点、合計100点。",
+        "fullTextPolicy": "最終top 10は導入、設定・仮定、方法・導出、主要結果、検証、結論・限界、関連付録を確認。独立再計算の範囲はpaperごとのfullTextReviewStatusに記録。",
+        "fullTextEvaluatedCount": 10,
+        "authorPolicy": "著者の知名度・所属・経歴・引用指標は採点に使用しない。著名著者マークはregistry一致による非加点表示。",
+        "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv ID昇順。",
+        "generatedAtJst": "2026-07-10T20:01:44+09:00"
+      },
+      "topPapers": [
+        {
+          "rank": 1,
+          "arxivId": "2607.07798",
+          "url": "https://arxiv.org/abs/2607.07798",
+          "title": "Observation of coherent flux-charge interaction in a gate-tunable fluxonium",
+          "titleJa": "ゲート可変フラクソニウムにおけるコヒーレントな磁束–電荷相互作用の観測",
+          "authors": [
+            "Brian D. Isakov",
+            "Shikhar Singh",
+            "Adrian Parra-Rodriguez",
+            "David Feldstein-Bofill",
+            "Zhenhai Sun",
+            "Anders Kringhøj",
+            "Svend Krøjer",
+            "Alexandre Blais",
+            "Morten Kjaergaard",
+            "András Gyenis"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "実験・観測",
+          "scores": {
+            "broadImpact": 24,
+            "categoryImpact": 25,
+            "originality": 24,
+            "technicalStrength": 22
+          },
+          "totalScore": 95,
+          "abstractLines": [
+            "超伝導回路には共役変数である磁束と電荷を直接結合する標準的二端子素子がなかった。",
+            "電圧可変Josephson接合の臨界電流をパラメトリック変調し、寄生容量結合を選択則で分離して交差quadrature制御を測定した。",
+            "駆動振幅に線形で、ゲート電圧に一次不感な磁束–電荷結合を実証したが、二つの量子演算子間の完全量子結合は今後の実装課題である。"
+          ],
+          "curiosity": "超伝導回路には共役変数である磁束と電荷を直接結合する標準的二端子素子がなかった。",
+          "concept": "電圧可変Josephson接合の臨界電流をパラメトリック変調し、寄生容量結合を選択則で分離して交差quadrature制御を測定した。",
+          "conclusion": "駆動振幅に線形で、ゲート電圧に一次不感な磁束–電荷結合を実証したが、二つの量子演算子間の完全量子結合は今後の実装課題である。",
+          "assessment": "総合95/100。物理学全体への重要度・波及24/25：『ゲート可変フラクソニウムにおけるコヒーレントな磁束–電荷相互作用の観測』は量子科学の外側を含む複数分野への波及が見込まれる。quant-ph内の重要度・インパクト25/25：quant-phの中心課題に対する大きな前進候補である。独創性24/25：問いまたは概念の組み立てが特に非自明である。方法・結果の説得力22/25：本文に具体的な導出・実験・数値検証と結果が示されるが、適用範囲の検証は残る。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07798",
+            "https://arxiv.org/pdf/2607.07798"
+          ],
+          "fullTextReviewStatus": "全12ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 2,
+          "arxivId": "2607.08767",
+          "url": "https://arxiv.org/abs/2607.08767",
+          "title": "Plaquette: A hardware-aware design platform for fault-tolerant quantum computers",
+          "titleJa": "Plaquette：fault-tolerant量子computerのhardware-aware設計platform",
+          "authors": [
+            "Raul Conchello Vendrell",
+            "Carlos Díaz López",
+            "Ish Dhand",
+            "Kshitij Kapoor",
+            "Davide Laureti",
+            "Marcello Massaro",
+            "Pranjal Nayak",
+            "Ivan Ogloblin",
+            "Martin B. Plenio",
+            "Shreya Prasanna Kumar",
+            "Matteo Santandrea",
+            "Varun Seshadri",
+            "Antal Száva",
+            "Trevor Vincent",
+            "Raphael Weber"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "解析",
+          "scores": {
+            "broadImpact": 24,
+            "categoryImpact": 25,
+            "originality": 23,
+            "technicalStrength": 23
+          },
+          "totalScore": 95,
+          "abstractLines": [
+            "現実hardwareのleakage・coherent error・scattering・heatingをPauli noiseへ潰さず論理性能へ接続する。",
+            "Kraus、Hamiltonian–Lindblad、実験channelを四種samplerへ自動compileし、三platformのerror模型をfull-state基準と比較した。",
+            "Pauli twirlingが外す領域を示しdevice物理からthreshold・error budget・overheadへの一貫経路を公開したが、大code規模でaccuracyとcostのtradeoff検証が残る。"
+          ],
+          "curiosity": "現実hardwareのleakage・coherent error・scattering・heatingをPauli noiseへ潰さず論理性能へ接続する。",
+          "concept": "Kraus、Hamiltonian–Lindblad、実験channelを四種samplerへ自動compileし、三platformのerror模型をfull-state基準と比較した。",
+          "conclusion": "Pauli twirlingが外す領域を示しdevice物理からthreshold・error budget・overheadへの一貫経路を公開したが、大code規模でaccuracyとcostのtradeoff検証が残る。",
+          "assessment": "総合95/100。物理学全体への重要度・波及24/25：『Plaquette：fault-tolerant量子computerのhardware-aware設計platform』は量子科学の外側を含む複数分野への波及が見込まれる。quant-ph内の重要度・インパクト25/25：quant-phの中心課題に対する大きな前進候補である。独創性23/25：既存概念を新しい構成・接続へ展開している。方法・結果の説得力23/25：本文に複数系統の検証と定量比較が明示され、主張と証拠の対応が強い。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08767",
+            "https://arxiv.org/pdf/2607.08767"
+          ],
+          "fullTextReviewStatus": "全22ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 3,
+          "arxivId": "2607.07801",
+          "url": "https://arxiv.org/abs/2607.07801",
+          "title": "Topology from Decoherence",
+          "titleJa": "デコヒーレンスから生じるトポロジー",
+          "authors": [
+            "Alexandre Chaduteau",
+            "Derek Lee",
+            "Frank Schindler",
+            "Abhinav Prem"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 23,
+            "categoryImpact": 24,
+            "originality": 25,
+            "technicalStrength": 21
+          },
+          "totalScore": 93,
+          "abstractLines": [
+            "デコヒーレンスは通常トポロジカル相を壊すが、相関雑音自体が相を生成できるかを問う。",
+            "密度と電流の相関測定に由来するLindblad格子模型を構成し、多体生成子の点ギャップ・巻き数・skin effectを解析した。",
+            "相関雑音が向き可逆な非対称拡散を生み、postselectionでは消える真の開放系トポロジーを示したが、より一般の相互作用・実装への拡張が残る。"
+          ],
+          "curiosity": "デコヒーレンスは通常トポロジカル相を壊すが、相関雑音自体が相を生成できるかを問う。",
+          "concept": "密度と電流の相関測定に由来するLindblad格子模型を構成し、多体生成子の点ギャップ・巻き数・skin effectを解析した。",
+          "conclusion": "相関雑音が向き可逆な非対称拡散を生み、postselectionでは消える真の開放系トポロジーを示したが、より一般の相互作用・実装への拡張が残る。",
+          "assessment": "総合93/100。物理学全体への重要度・波及23/25：『デコヒーレンスから生じるトポロジー』は量子情報と隣接する物理領域の双方へ波及し得る。quant-ph内の重要度・インパクト24/25：quant-phの中心課題に対する大きな前進候補である。独創性25/25：問いまたは概念の組み立てが特に非自明である。方法・結果の説得力21/25：本文に具体的な導出・実験・数値検証と結果が示されるが、適用範囲の検証は残る。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07801",
+            "https://arxiv.org/pdf/2607.07801"
+          ],
+          "fullTextReviewStatus": "全26ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 4,
+          "arxivId": "2607.08686",
+          "url": "https://arxiv.org/abs/2607.08686",
+          "title": "Instability of the undecidable behavior of the spectral gap in 1D",
+          "titleJa": "一次元spectral-gap非決定性の不安定性",
+          "authors": [
+            "Laura Castilla-Castellano",
+            "Angelo Lucia"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 23,
+            "categoryImpact": 24,
+            "originality": 24,
+            "technicalStrength": 22
+          },
+          "totalScore": 93,
+          "abstractLines": [
+            "1D local Hamiltonianのspectral gapが非決定となる既知構成は物理的摂動に対して頑健かを問う。",
+            "marker Hamiltonianと計算sectorのenergyを解析し、任意に小さい1-local rank-1摂動を明示した。",
+            "そのO(epsilon)摂動で既知familyのgap問題が決定可能になると証明し、非決定性結果のfine-tuningを示したが、頑健な非決定構成の可能性は残る。"
+          ],
+          "curiosity": "1D local Hamiltonianのspectral gapが非決定となる既知構成は物理的摂動に対して頑健かを問う。",
+          "concept": "marker Hamiltonianと計算sectorのenergyを解析し、任意に小さい1-local rank-1摂動を明示した。",
+          "conclusion": "そのO(epsilon)摂動で既知familyのgap問題が決定可能になると証明し、非決定性結果のfine-tuningを示したが、頑健な非決定構成の可能性は残る。",
+          "assessment": "総合93/100。物理学全体への重要度・波及23/25：『一次元spectral-gap非決定性の不安定性』は量子情報と隣接する物理領域の双方へ波及し得る。quant-ph内の重要度・インパクト24/25：quant-phの中心課題に対する大きな前進候補である。独創性24/25：問いまたは概念の組み立てが特に非自明である。方法・結果の説得力22/25：本文に具体的な導出・実験・数値検証と結果が示されるが、適用範囲の検証は残る。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08686",
+            "https://arxiv.org/pdf/2607.08686"
+          ],
+          "fullTextReviewStatus": "全18ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 5,
+          "arxivId": "2607.07857",
+          "url": "https://arxiv.org/abs/2607.07857",
+          "title": "Multi-agent Autoformalization of Tensor Network Theory",
+          "titleJa": "Tensor network理論のmulti-agent自動形式化",
+          "authors": [
+            "Sirui Lu",
+            "Erickson Tjoa",
+            "J. Ignacio Cirac"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "解析",
+          "scores": {
+            "broadImpact": 24,
+            "categoryImpact": 24,
+            "originality": 23,
+            "technicalStrength": 21
+          },
+          "totalScore": 92,
+          "abstractLines": [
+            "研究水準の理論物理をLeanで形式化する作業をLLM agentsがどこまで自律実行できるかを問う。",
+            "数学blueprint、専門agent、共有memory、定期的人間reviewを組み合わせ、MPS基本定理と周辺operator algebraを形式化した。",
+            "TNLeanと12章blueprintを公開し新しい証明経路も得たが、数学的意図の保持、context制限、人間監督依存が主要bottleneckである。"
+          ],
+          "curiosity": "研究水準の理論物理をLeanで形式化する作業をLLM agentsがどこまで自律実行できるかを問う。",
+          "concept": "数学blueprint、専門agent、共有memory、定期的人間reviewを組み合わせ、MPS基本定理と周辺operator algebraを形式化した。",
+          "conclusion": "TNLeanと12章blueprintを公開し新しい証明経路も得たが、数学的意図の保持、context制限、人間監督依存が主要bottleneckである。",
+          "assessment": "総合92/100。物理学全体への重要度・波及24/25：『Tensor network理論のmulti-agent自動形式化』は量子科学の外側を含む複数分野への波及が見込まれる。quant-ph内の重要度・インパクト24/25：quant-phの中心課題に対する大きな前進候補である。独創性23/25：既存概念を新しい構成・接続へ展開している。方法・結果の説得力21/25：本文に具体的な導出・実験・数値検証と結果が示されるが、適用範囲の検証は残る。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.07857",
+            "https://arxiv.org/pdf/2607.07857"
+          ],
+          "fullTextReviewStatus": "全42ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 6,
+          "arxivId": "2607.08396",
+          "url": "https://arxiv.org/abs/2607.08396",
+          "title": "Efficiently simulable quantum circuits with large entanglement, magic, and non-Gaussianity via code-compiled tensor networks",
+          "titleJa": "高entanglement・magic・非Gaussian性を持ちながら効率模擬可能なcode-compiled回路",
+          "authors": [
+            "Aydin Deger",
+            "Stergios Koutsioumpas",
+            "Mark Webster",
+            "Hasan Sayginel",
+            "Joschka Roffe",
+            "Dan E. Browne"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 24,
+            "categoryImpact": 24,
+            "originality": 23,
+            "technicalStrength": 21
+          },
+          "totalScore": 92,
+          "abstractLines": [
+            "高entanglement、magic、非Gaussian性という個別resource指標が古典模擬困難性を保証するかを問い直す。",
+            "高rate CSS codeのautomorphismとtransversal diagonal gateを使い、MPS bond dimensionを増やさず論理non-Clifford回路をcompileした。",
+            "回路depthに依らずencoding costでbond dimensionが抑えられる無限族とfidelity推定応用を示し、hardnessにはresource量以外の構造が重要と結論した。"
+          ],
+          "curiosity": "高entanglement、magic、非Gaussian性という個別resource指標が古典模擬困難性を保証するかを問い直す。",
+          "concept": "高rate CSS codeのautomorphismとtransversal diagonal gateを使い、MPS bond dimensionを増やさず論理non-Clifford回路をcompileした。",
+          "conclusion": "回路depthに依らずencoding costでbond dimensionが抑えられる無限族とfidelity推定応用を示し、hardnessにはresource量以外の構造が重要と結論した。",
+          "assessment": "総合92/100。物理学全体への重要度・波及24/25：『高entanglement・magic・非Gaussian性を持ちながら効率模擬可能なcode-compiled回路』は量子科学の外側を含む複数分野への波及が見込まれる。quant-ph内の重要度・インパクト24/25：quant-phの中心課題に対する大きな前進候補である。独創性23/25：既存概念を新しい構成・接続へ展開している。方法・結果の説得力21/25：本文に具体的な導出・実験・数値検証と結果が示されるが、適用範囲の検証は残る。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08396",
+            "https://arxiv.org/pdf/2607.08396"
+          ],
+          "fullTextReviewStatus": "全23ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 7,
+          "arxivId": "2607.08513",
+          "url": "https://arxiv.org/abs/2607.08513",
+          "title": "Metropolitan entanglement distribution between an atom and a near-visible photon",
+          "titleJa": "原子と近可視光子の都市圏entanglement配信",
+          "authors": [
+            "Maya Büki",
+            "Pooja Malik",
+            "Florian Fertig",
+            "Tobias Frank",
+            "Marvin Scholz",
+            "Tommy Block",
+            "Gianvito Chiarella",
+            "Yiru Zhou",
+            "Emanuele Distante",
+            "Pau Farrera",
+            "Gerhard Rempe",
+            "Harald Weinfurter"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "実験・観測",
+          "scores": {
+            "broadImpact": 24,
+            "categoryImpact": 24,
+            "originality": 21,
+            "technicalStrength": 22
+          },
+          "totalScore": 91,
+          "abstractLines": [
+            "可視域で動くatomic nodeを既設telecom fiberへ高忠実度接続するbidirectional frequency conversionが必要である。",
+            "Rb原子–780 nm光子entanglementを1514 nmへ変換し、24 km商用fiber伝送後に780 nmへ戻してtomographyした。",
+            "transfer効率1.7%ながらentanglement fidelity劣化を1%未満に抑えたが、heralded atom–atom entanglementとrate向上が次の課題である。"
+          ],
+          "curiosity": "可視域で動くatomic nodeを既設telecom fiberへ高忠実度接続するbidirectional frequency conversionが必要である。",
+          "concept": "Rb原子–780 nm光子entanglementを1514 nmへ変換し、24 km商用fiber伝送後に780 nmへ戻してtomographyした。",
+          "conclusion": "transfer効率1.7%ながらentanglement fidelity劣化を1%未満に抑えたが、heralded atom–atom entanglementとrate向上が次の課題である。",
+          "assessment": "総合91/100。物理学全体への重要度・波及24/25：『原子と近可視光子の都市圏entanglement配信』は量子科学の外側を含む複数分野への波及が見込まれる。quant-ph内の重要度・インパクト24/25：quant-phの中心課題に対する大きな前進候補である。独創性21/25：明確な新規要素がある一方、既存枠組みとの連続性も大きい。方法・結果の説得力22/25：本文に具体的な導出・実験・数値検証と結果が示されるが、適用範囲の検証は残る。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08513",
+            "https://arxiv.org/pdf/2607.08513"
+          ],
+          "fullTextReviewStatus": "全7ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 8,
+          "arxivId": "2607.08713",
+          "url": "https://arxiv.org/abs/2607.08713",
+          "title": "Approaching Carnot Efficiency at Finite Power in an Experimentally Feasible Quantum Heat Engine",
+          "titleJa": "実装可能な量子heat engineで有限powerのままCarnot効率へ近づく",
+          "authors": [
+            "Shogo Toma",
+            "Atsushi Noguchi",
+            "Ken Funo",
+            "Hiroyasu Tajima"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 24,
+            "categoryImpact": 24,
+            "originality": 23,
+            "technicalStrength": 19
+          },
+          "totalScore": 90,
+          "abstractLines": [
+            "local classical Markov engineのpower–efficiency tradeoffを実装可能な量子機構で回避できるかを問う。",
+            "二cavityとdriven qubitのcoupler-assisted multi-photon swapでcollective jumpとsuperlinear activityをemulateした。",
+            "固定回路でphoton数を増やすと有限powerのままCarnot効率へ漸近できると導いたが、高order coupling、parasitic loss、parameter scalingの実験検証が残る。"
+          ],
+          "curiosity": "local classical Markov engineのpower–efficiency tradeoffを実装可能な量子機構で回避できるかを問う。",
+          "concept": "二cavityとdriven qubitのcoupler-assisted multi-photon swapでcollective jumpとsuperlinear activityをemulateした。",
+          "conclusion": "固定回路でphoton数を増やすと有限powerのままCarnot効率へ漸近できると導いたが、高order coupling、parasitic loss、parameter scalingの実験検証が残る。",
+          "assessment": "総合90/100。物理学全体への重要度・波及24/25：『実装可能な量子heat engineで有限powerのままCarnot効率へ近づく』は量子科学の外側を含む複数分野への波及が見込まれる。quant-ph内の重要度・インパクト24/25：quant-phの中心課題に対する大きな前進候補である。独創性23/25：既存概念を新しい構成・接続へ展開している。方法・結果の説得力19/25：方法と主要結果は具体的だが、本文確認でも頑健性・規模・実装性の検証範囲が限られる。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08713",
+            "https://arxiv.org/pdf/2607.08713"
+          ],
+          "fullTextReviewStatus": "全20ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 9,
+          "arxivId": "2607.08431",
+          "url": "https://arxiv.org/abs/2607.08431",
+          "title": "Global Precision Limits in Critical Quantum Metrology: From Cramér-Rao to Ziv-Zakai",
+          "titleJa": "臨界量子metrologyのglobal精度限界：Cramér–RaoからZiv–Zakaiへ",
+          "authors": [
+            "Neng Zeng",
+            "Tao Liu",
+            "Yu-Ran Zhang"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 21,
+            "categoryImpact": 24,
+            "originality": 23,
+            "technicalStrength": 21
+          },
+          "totalScore": 89,
+          "abstractLines": [
+            "criticalityで予測されるsuper-Heisenberg感度が、実は精密なprior knowledgeによる見かけではないかを問う。",
+            "有限priorを含むquantum Ziv–Zakai boundを導き、一般の二次相転移とXY鎖でQCRBとの関係を解析した。",
+            "critical sensorの改善はprior標準偏差に対しsystem size非依存の定数倍に留まると示し、一次・topological転移や多parameter問題を今後に残した。"
+          ],
+          "curiosity": "criticalityで予測されるsuper-Heisenberg感度が、実は精密なprior knowledgeによる見かけではないかを問う。",
+          "concept": "有限priorを含むquantum Ziv–Zakai boundを導き、一般の二次相転移とXY鎖でQCRBとの関係を解析した。",
+          "conclusion": "critical sensorの改善はprior標準偏差に対しsystem size非依存の定数倍に留まると示し、一次・topological転移や多parameter問題を今後に残した。",
+          "assessment": "総合89/100。物理学全体への重要度・波及21/25：『臨界量子metrologyのglobal精度限界：Cramér–RaoからZiv–Zakaiへ』は主な意義は量子科学にあるが、隣接領域にも応用余地がある。quant-ph内の重要度・インパクト24/25：quant-phの中心課題に対する大きな前進候補である。独創性23/25：既存概念を新しい構成・接続へ展開している。方法・結果の説得力21/25：本文に具体的な導出・実験・数値検証と結果が示されるが、適用範囲の検証は残る。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08431",
+            "https://arxiv.org/pdf/2607.08431"
+          ],
+          "fullTextReviewStatus": "全10ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        },
+        {
+          "rank": 10,
+          "arxivId": "2607.08638",
+          "url": "https://arxiv.org/abs/2607.08638",
+          "title": "Symmetry as a route to generalized bosonic Kitaev chains",
+          "titleJa": "対称性による一般化bosonic Kitaev chain",
+          "authors": [
+            "Gideon Lee",
+            "Tony Jin",
+            "Aashish A. Clerk"
+          ],
+          "primaryCategory": "quant-ph",
+          "paperType": "理論",
+          "scores": {
+            "broadImpact": 21,
+            "categoryImpact": 24,
+            "originality": 23,
+            "technicalStrength": 21
+          },
+          "totalScore": 89,
+          "abstractLines": [
+            "Hermitian bosonic Kitaev chainが示すskin effectとboundary-dependent安定性の起源を対称性から分離する。",
+            "quadrature decoupling由来qPHSとsublattice由来effective TRSを同定し、全translation-invariant 1D pairing Hamiltonianを分類した。",
+            "二対称性を独立設計原理として新しい局在転移・増幅・不安定性を得たが、相互作用模型と非摂動安定性が残る。"
+          ],
+          "curiosity": "Hermitian bosonic Kitaev chainが示すskin effectとboundary-dependent安定性の起源を対称性から分離する。",
+          "concept": "quadrature decoupling由来qPHSとsublattice由来effective TRSを同定し、全translation-invariant 1D pairing Hamiltonianを分類した。",
+          "conclusion": "二対称性を独立設計原理として新しい局在転移・増幅・不安定性を得たが、相互作用模型と非摂動安定性が残る。",
+          "assessment": "総合89/100。物理学全体への重要度・波及21/25：『対称性による一般化bosonic Kitaev chain』は主な意義は量子科学にあるが、隣接領域にも応用余地がある。quant-ph内の重要度・インパクト24/25：quant-phの中心課題に対する大きな前進候補である。独創性23/25：既存概念を新しい構成・接続へ展開している。方法・結果の説得力21/25：本文に具体的な導出・実験・数値検証と結果が示されるが、適用範囲の検証は残る。PDF全文を確認し、採点には論文内容のみを使用した。著者の知名度・権威は4項目と総合点に一切使用していない。",
+          "evaluationBasis": "full_text_major_sections",
+          "fullTextEvaluated": true,
+          "sourceUrls": [
+            "https://arxiv.org/abs/2607.08638",
+            "https://arxiv.org/pdf/2607.08638"
+          ],
+          "fullTextReviewStatus": "全19ページのPDFをテキスト抽出し、導入・主要手法と結果・結論・付録を確認。主要式と数値は独立再現していない。",
+          "eminentAuthors": []
+        }
+      ],
+      "otherPapers": [
+        {
+          "rank": 11,
+          "arxivId": "2607.08697",
+          "url": "https://arxiv.org/abs/2607.08697",
+          "title": "Quantifying randomness with measurement incompatibility",
+          "authors": [
+            "Sebastian Schlösser",
+            "Pauli Jokinen",
+            "Martin Plávala",
+            "Leevi Leppäjärvi",
+            "Leonardo S. V. Santos",
+            "Roope Uola"
+          ],
+          "paperType": "理論",
+          "totalScore": 89,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 12,
+          "arxivId": "2607.08655",
+          "url": "https://arxiv.org/abs/2607.08655",
+          "title": "Temperature Beyond Equilibrium in Isolated Quantum Many-Body Systems and Their Subsystems",
+          "authors": [
+            "Maurizio Fagotti"
+          ],
+          "paperType": "理論",
+          "totalScore": 88,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 13,
+          "arxivId": "2607.08508",
+          "url": "https://arxiv.org/abs/2607.08508",
+          "title": "Magic Gate Teleportation: Structure, Useful Resource States, and Simpler Feedforward",
+          "authors": [
+            "Yunzhe Zheng",
+            "Allen Zang",
+            "Aleksander Kubica"
+          ],
+          "paperType": "理論",
+          "totalScore": 88,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 14,
+          "arxivId": "2607.08517",
+          "url": "https://arxiv.org/abs/2607.08517",
+          "title": "Quantum Communication Lower Bounds for Search Problems via Matrix Discrepancy",
+          "authors": [
+            "Minbo Gao",
+            "Chenghua Liu",
+            "Guangxu Yang",
+            "Tianyi Zhang"
+          ],
+          "paperType": "理論",
+          "totalScore": 88,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 15,
+          "arxivId": "2607.08591",
+          "url": "https://arxiv.org/abs/2607.08591",
+          "title": "Distributed Monogamy of Entanglement limits Quantum Channel Simulation",
+          "authors": [
+            "Rabsan Galib Ahmed",
+            "Graeme Smith"
+          ],
+          "paperType": "理論",
+          "totalScore": 87,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 16,
+          "arxivId": "2607.08708",
+          "url": "https://arxiv.org/abs/2607.08708",
+          "title": "Absence of quantum advantage for approximate spin glass optimization",
+          "authors": [
+            "Dries Sels",
+            "Flaviano Morone"
+          ],
+          "paperType": "解析",
+          "totalScore": 86,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 17,
+          "arxivId": "2607.07805",
+          "url": "https://arxiv.org/abs/2607.07805",
+          "title": "Robust Ion-Photon Entanglement via Polarization-to-Time-Bin Conversion",
+          "authors": [
+            "Ana Luiza Ferrari",
+            "Denton Wu",
+            "Mika A. Zalewski",
+            "Norbert M. Linke"
+          ],
+          "paperType": "実験・観測",
+          "totalScore": 85,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 18,
+          "arxivId": "2607.07802",
+          "url": "https://arxiv.org/abs/2607.07802",
+          "title": "Shortcuts to Adiabaticity for non-Hermitian systems in Krylov Space",
+          "authors": [
+            "Ankit W. Shrestha",
+            "Budhaditya Bhattacharjee",
+            "Adolfo del Campo"
+          ],
+          "paperType": "理論",
+          "totalScore": 85,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 19,
+          "arxivId": "2607.08649",
+          "url": "https://arxiv.org/abs/2607.08649",
+          "title": "Extracting conformal data from Loschmidt echoes after critical quenches",
+          "authors": [
+            "Aleix Bou-Comas",
+            "Stefano Carignano",
+            "Sergio Cerezo-Roquebrún",
+            "Esperanza Lopez",
+            "Luca Tagliacozzo"
+          ],
+          "paperType": "理論",
+          "totalScore": 84,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 20,
+          "arxivId": "2607.08709",
+          "url": "https://arxiv.org/abs/2607.08709",
+          "title": "Robust One-Sided Device-Independent Quantum Key Distribution via High-Dimensional Steering",
+          "authors": [
+            "Monika Mothsara",
+            "Suraj Goel",
+            "Bohnishikha Ghosh",
+            "Vatshal Srivastav",
+            "Will McCutcheon",
+            "Mehul Malik",
+            "Gláucia Murta"
+          ],
+          "paperType": "実験・観測",
+          "totalScore": 84,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 21,
+          "arxivId": "2607.07942",
+          "url": "https://arxiv.org/abs/2607.07942",
+          "title": "A hardware-efficient variational ansatz with an exact diagonal metric for real- and imaginary-time evolution and Haar sampling",
+          "authors": [
+            "Dario Picozzi"
+          ],
+          "paperType": "理論",
+          "totalScore": 84,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 22,
+          "arxivId": "2607.08133",
+          "url": "https://arxiv.org/abs/2607.08133",
+          "title": "Communication Advantages from Quantum Dense Network Coding",
+          "authors": [
+            "Ian George",
+            "Brian Doolittle"
+          ],
+          "paperType": "理論",
+          "totalScore": 84,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 23,
+          "arxivId": "2607.08462",
+          "url": "https://arxiv.org/abs/2607.08462",
+          "title": "Optimizing and Certifying Multipartite Permutationally Invariant Bell Inequalities",
+          "authors": [
+            "Jin-Fu Chen",
+            "Mengyao Hu",
+            "Jordi Tura"
+          ],
+          "paperType": "理論",
+          "totalScore": 84,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 24,
+          "arxivId": "2607.08626",
+          "url": "https://arxiv.org/abs/2607.08626",
+          "title": "A Nonstabilizerness Resource Law for Universal Quantum State Purification",
+          "authors": [
+            "Keming He",
+            "Enji Xiong",
+            "Xin Wang"
+          ],
+          "paperType": "理論",
+          "totalScore": 84,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 25,
+          "arxivId": "2607.08760",
+          "url": "https://arxiv.org/abs/2607.08760",
+          "title": "Hockey stick $f$-divergences",
+          "authors": [
+            "Fumio Hiai",
+            "Milán Mosonyi",
+            "Marco Tomamichel"
+          ],
+          "paperType": "理論",
+          "totalScore": 84,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 26,
+          "arxivId": "2607.08363",
+          "url": "https://arxiv.org/abs/2607.08363",
+          "title": "Stroboscopic Stabilization of Cat Qubits",
+          "authors": [
+            "Timo Hillmann",
+            "Franco Nori",
+            "Fernando Quijandría"
+          ],
+          "paperType": "理論",
+          "totalScore": 83,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 27,
+          "arxivId": "2607.07808",
+          "url": "https://arxiv.org/abs/2607.07808",
+          "title": "Non-Local Magic from the Entanglement Spectrum",
+          "authors": [
+            "Gianpaolo Torre",
+            "Fabio Franchini",
+            "Salvatore Marco Giampaolo"
+          ],
+          "paperType": "理論",
+          "totalScore": 83,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 28,
+          "arxivId": "2607.08425",
+          "url": "https://arxiv.org/abs/2607.08425",
+          "title": "Quantum and Classical Potts Criticality in Driven-Dissipative Bosonic Lattices",
+          "authors": [
+            "Jacopo Tosca",
+            "Zejian Li",
+            "Cristiano Ciuti"
+          ],
+          "paperType": "解析",
+          "totalScore": 82,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 29,
+          "arxivId": "2607.07890",
+          "url": "https://arxiv.org/abs/2607.07890",
+          "title": "Measurement-Based Quantum Computing on a Photonic Chip",
+          "authors": [
+            "Jeldrik Huster",
+            "Louis L. Hohmann",
+            "Kevin Edelmann",
+            "Stefanie Barz"
+          ],
+          "paperType": "実験・観測",
+          "totalScore": 81,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 30,
+          "arxivId": "2607.07833",
+          "url": "https://arxiv.org/abs/2607.07833",
+          "title": "Improved GKP magic states from error-corrected non-Gaussian quantum states",
+          "authors": [
+            "Sharon David",
+            "Jack Davis",
+            "Ulysse Chabaud",
+            "Francesco Arzani"
+          ],
+          "paperType": "理論",
+          "totalScore": 81,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 31,
+          "arxivId": "2607.08348",
+          "url": "https://arxiv.org/abs/2607.08348",
+          "title": "Works on My QPU: Reproducibility in Quantum Computing Research",
+          "authors": [
+            "Dominik Köster",
+            "Maja Franz",
+            "Benjamin Zec",
+            "Nicole Hoess",
+            "Ralf Ramsauer",
+            "Wolfgang Mauerer"
+          ],
+          "paperType": "解析",
+          "totalScore": 80,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 32,
+          "arxivId": "2607.08070",
+          "url": "https://arxiv.org/abs/2607.08070",
+          "title": "(2,m)-threshold quantum data hiding",
+          "authors": [
+            "Donghoon Ha",
+            "Jeong San Kim"
+          ],
+          "paperType": "理論",
+          "totalScore": 80,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 33,
+          "arxivId": "2607.08200",
+          "url": "https://arxiv.org/abs/2607.08200",
+          "title": "Efficient High-Dimensional Quantum Circuit Synthesis: From Multi-Controlled Gates to Isometries and Quantum Channels",
+          "authors": [
+            "Gui-Long Jiang"
+          ],
+          "paperType": "理論",
+          "totalScore": 80,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 34,
+          "arxivId": "2607.08469",
+          "url": "https://arxiv.org/abs/2607.08469",
+          "title": "Non-Hermitian topology driven by an identity term: An exactly solvable paradigm",
+          "authors": [
+            "Lingfang Li",
+            "Yating Wei",
+            "Yang Ruan",
+            "Gangzhou Wu",
+            "Jun Wang",
+            "Shihua Chen",
+            "Tong Lin",
+            "Ching Hua Lee",
+            "Zhenhua Ni"
+          ],
+          "paperType": "理論",
+          "totalScore": 80,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 35,
+          "arxivId": "2607.08220",
+          "url": "https://arxiv.org/abs/2607.08220",
+          "title": "Quantum linear solvers for quantum chemistry: prospects of exponential quantum advantage",
+          "authors": [
+            "Peniel Bertrand Tsemo",
+            "Kenji Sugisaki",
+            "Ishita Bhattacharjee",
+            "V. S. Prasannaa"
+          ],
+          "paperType": "解析",
+          "totalScore": 79,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 36,
+          "arxivId": "2607.08078",
+          "url": "https://arxiv.org/abs/2607.08078",
+          "title": "Experimental demonstration of entanglement sudden death induced by natural dissipation",
+          "authors": [
+            "Yan Wang",
+            "Hao-Long Zhang",
+            "Jia-Hao Lü",
+            "Ken Chen",
+            "Wen Ning",
+            "Li-Hua Lin",
+            "Zhen-Biao Yang",
+            "Shi-Biao Zheng"
+          ],
+          "paperType": "実験・観測",
+          "totalScore": 79,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 37,
+          "arxivId": "2607.08687",
+          "url": "https://arxiv.org/abs/2607.08687",
+          "title": "Low-latency FPGA-based electronic control system for fast preparation of defect-free atom arrays",
+          "authors": [
+            "Ya-Dong Hu",
+            "Dong-Qi Ma",
+            "Tian-Yang Zhang",
+            "Liang Chen",
+            "Yi-Chen Zhang",
+            "Xiao-Kang Zhong",
+            "Wen-Yi Zhu",
+            "Hong-Jie Fan",
+            "Qing-Xuan Jie",
+            "Yan-Lei Zhang",
+            "Gang Li",
+            "Xi-Feng Ren",
+            "Xu-Liang Zhang",
+            "Guang-Can Guo",
+            "Zhu-Bo Wang",
+            "Chang-Ling Zou"
+          ],
+          "paperType": "実験・観測",
+          "totalScore": 79,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 38,
+          "arxivId": "2607.08530",
+          "url": "https://arxiv.org/abs/2607.08530",
+          "title": "The Langevin-equation description of optomechanics with the dispersive and dissipative optomechanical coupling",
+          "authors": [
+            "Alexander K. Tagantsev"
+          ],
+          "paperType": "理論",
+          "totalScore": 78,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 39,
+          "arxivId": "2607.07835",
+          "url": "https://arxiv.org/abs/2607.07835",
+          "title": "Super-Logarithmic Entanglement Scaling in a Monitored Superconducting Chain",
+          "authors": [
+            "Rui-Jing Guo",
+            "Zhi-Yuan Wei"
+          ],
+          "paperType": "理論",
+          "totalScore": 78,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 40,
+          "arxivId": "2607.08615",
+          "url": "https://arxiv.org/abs/2607.08615",
+          "title": "Operational meaning of Markov gap in tripartite entanglement of quantum dynamics",
+          "authors": [
+            "Zongsheng Zhou",
+            "Riqiang Zhang",
+            "Yu-Xiang Zhang"
+          ],
+          "paperType": "理論",
+          "totalScore": 78,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 41,
+          "arxivId": "2607.08275",
+          "url": "https://arxiv.org/abs/2607.08275",
+          "title": "Engineering Nonclassical States via the Dynamical Casimir Effect",
+          "authors": [
+            "Maristella Crotti",
+            "Luca Razzoli",
+            "Giacomo Guarnieri",
+            "Luigi Giannelli",
+            "Giuseppe A. Falci",
+            "Giuliano Benenti"
+          ],
+          "paperType": "理論",
+          "totalScore": 77,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 42,
+          "arxivId": "2607.08634",
+          "url": "https://arxiv.org/abs/2607.08634",
+          "title": "Triangulene-based diradicals as a blueprint for molecular quantum platforms with optical addressability and long spin coherence times",
+          "authors": [
+            "Arup Sarkar",
+            "Cathal Hogan",
+            "Conor Ryan",
+            "Lorenzo A. Mariano",
+            "Alessandro Lunghi"
+          ],
+          "paperType": "解析",
+          "totalScore": 76,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 43,
+          "arxivId": "2607.08047",
+          "url": "https://arxiv.org/abs/2607.08047",
+          "title": "Nuclear Many-Body Systems as Benchmarks for Quantum Computing",
+          "authors": [
+            "Sota Yoshida",
+            "Alessandro Baroni",
+            "Takayuki Miyagi",
+            "Ermal Rrapaj"
+          ],
+          "paperType": "解析",
+          "totalScore": 76,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 44,
+          "arxivId": "2607.07822",
+          "url": "https://arxiv.org/abs/2607.07822",
+          "title": "Routing Techniques for Error Corrected Silicon Spin Qubit Quantum Architectures",
+          "authors": [
+            "Julian Shen",
+            "Ludwig Schmid",
+            "Robert Wille"
+          ],
+          "paperType": "解析",
+          "totalScore": 76,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 45,
+          "arxivId": "2607.08450",
+          "url": "https://arxiv.org/abs/2607.08450",
+          "title": "Exactly solved Schrödinger equations with time-dependent Hamiltonians",
+          "authors": [
+            "Michael Warnock",
+            "Antônio Francisco Neto",
+            "Pierre-Louis Giscard",
+            "Omid Faizy",
+            "Christian Joachim"
+          ],
+          "paperType": "理論",
+          "totalScore": 76,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 46,
+          "arxivId": "2607.07848",
+          "url": "https://arxiv.org/abs/2607.07848",
+          "title": "Quantum Sensors for Chemistry and Materials Science",
+          "authors": [
+            "Piotr Put",
+            "Arjun Pillai",
+            "Xuan Hoang Le",
+            "Mikhail D. Lukin",
+            "Hongkun Park"
+          ],
+          "paperType": "レビュー",
+          "totalScore": 75,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 47,
+          "arxivId": "2607.08762",
+          "url": "https://arxiv.org/abs/2607.08762",
+          "title": "Typicality of Steering for Two-qubit States",
+          "authors": [
+            "Gerard Anglès Munné",
+            "Paweł Cieśliński",
+            "Tamás Vértesi",
+            "Wiesław Laskowski"
+          ],
+          "paperType": "解析",
+          "totalScore": 75,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 48,
+          "arxivId": "2607.07764",
+          "url": "https://arxiv.org/abs/2607.07764",
+          "title": "Comment on 'Quantum Monge-Kantorovich Problem and Transport Distance between Density Matrices'",
+          "authors": [
+            "Tomasz Miller"
+          ],
+          "paperType": "解析",
+          "totalScore": 75,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 49,
+          "arxivId": "2607.08037",
+          "url": "https://arxiv.org/abs/2607.08037",
+          "title": "Robust Quantum Learning through Hamiltonian Reservoir Computing",
+          "authors": [
+            "Youya Xu",
+            "Chengyong Yu",
+            "Sanjib Ghosh"
+          ],
+          "paperType": "解析",
+          "totalScore": 74,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 50,
+          "arxivId": "2607.07988",
+          "url": "https://arxiv.org/abs/2607.07988",
+          "title": "Procrustes Tomography -- reconstructing noisy quantum channels made easy",
+          "authors": [
+            "Josey Stevens",
+            "Reece Robertson",
+            "Sebastian Deffner"
+          ],
+          "paperType": "解析",
+          "totalScore": 74,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 51,
+          "arxivId": "2607.08761",
+          "url": "https://arxiv.org/abs/2607.08761",
+          "title": "Irreducible Geometry of Higher-Order Correlator Families",
+          "authors": [
+            "Kaito Kobayashi"
+          ],
+          "paperType": "理論",
+          "totalScore": 74,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 52,
+          "arxivId": "2607.08212",
+          "url": "https://arxiv.org/abs/2607.08212",
+          "title": "Möbius-Guided Diagonal-Gate Compilation with Native Multiqubit Controlled-Phase Gates on Neutral-Atom Processors",
+          "authors": [
+            "Hairuo Huang",
+            "Yanwu Gu",
+            "Chen Huang",
+            "Xi Zhao",
+            "Meng-Jun Hu",
+            "Dong E. Liu",
+            "Jingbo Wang"
+          ],
+          "paperType": "解析",
+          "totalScore": 73,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 53,
+          "arxivId": "2607.08411",
+          "url": "https://arxiv.org/abs/2607.08411",
+          "title": "The Geometry of Quantum Complexity in Open Systems",
+          "authors": [
+            "Ezra Acalapati",
+            "Kausik Ghosh",
+            "Giuseppe Policastro"
+          ],
+          "paperType": "理論",
+          "totalScore": 73,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 54,
+          "arxivId": "2607.08548",
+          "url": "https://arxiv.org/abs/2607.08548",
+          "title": "An Effective Quantum Hoare Logic for Hybrid Quantum Programs with Unbounded Loops",
+          "authors": [
+            "Christophe Chareton",
+            "Jad Issa",
+            "Romain Péchoux"
+          ],
+          "paperType": "理論",
+          "totalScore": 73,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 55,
+          "arxivId": "2607.07999",
+          "url": "https://arxiv.org/abs/2607.07999",
+          "title": "Optimizing LZSM protocol for high-fidelity gates in open-system fluxonium",
+          "authors": [
+            "Santiago Ferreyra",
+            "Valentın Reparaz",
+            "Maria Jose Sanchez",
+            "Leandro Tosi",
+            "Daniel Dominguez"
+          ],
+          "paperType": "理論",
+          "totalScore": 72,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 56,
+          "arxivId": "2607.08096",
+          "url": "https://arxiv.org/abs/2607.08096",
+          "title": "Center-of-Mass Bounds and Harmonic Extremality",
+          "authors": [
+            "Arseny Pantsialei"
+          ],
+          "paperType": "理論",
+          "totalScore": 72,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 57,
+          "arxivId": "2607.07874",
+          "url": "https://arxiv.org/abs/2607.07874",
+          "title": "Unveiling Semiclassical Structures in Quantum Chaotic Eigenstates Using Neural Networks",
+          "authors": [
+            "J. Montes",
+            "F. Borondo",
+            "Gabriel G. Carlo"
+          ],
+          "paperType": "解析",
+          "totalScore": 71,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 58,
+          "arxivId": "2607.08166",
+          "url": "https://arxiv.org/abs/2607.08166",
+          "title": "Efficient Pauli-decomposition and multistage state-refinement for tensor network based differential equation solver",
+          "authors": [
+            "Vishwabhushan Suresh Gholap",
+            "Himadri Shekhar Dhar",
+            "Siddhartha Santra"
+          ],
+          "paperType": "解析",
+          "totalScore": 64,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 59,
+          "arxivId": "2607.08447",
+          "url": "https://arxiv.org/abs/2607.08447",
+          "title": "Simulation of exchange coupling effects in double quantum dot FinFET-like structures",
+          "authors": [
+            "Ilan Bouquet",
+            "Alexander Maeder",
+            "Mathieu Luisier"
+          ],
+          "paperType": "解析",
+          "totalScore": 64,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 60,
+          "arxivId": "2607.07978",
+          "url": "https://arxiv.org/abs/2607.07978",
+          "title": "A Quantum Reservoir Architecture for Chaotic Forecasting and a Test of Whether Its High Dimension Helps",
+          "authors": [
+            "Tushar Pandey"
+          ],
+          "paperType": "解析",
+          "totalScore": 63,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 61,
+          "arxivId": "2607.07878",
+          "url": "https://arxiv.org/abs/2607.07878",
+          "title": "Complex spacing ratio statistics in the partially open asymmetric quantum baker map",
+          "authors": [
+            "Leonardo Ermann",
+            "Pablo Sesin",
+            "Alejandro M. F. Rivas",
+            "Pablo D. Bergamasco",
+            "Gabriel G. Carlo"
+          ],
+          "paperType": "解析",
+          "totalScore": 62,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 62,
+          "arxivId": "2607.07816",
+          "url": "https://arxiv.org/abs/2607.07816",
+          "title": "A Sparse and Truncated State Vector Simulator for Peaked Circuits",
+          "authors": [
+            "Diogo R. Ferreira"
+          ],
+          "paperType": "解析",
+          "totalScore": 61,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 63,
+          "arxivId": "2607.08350",
+          "url": "https://arxiv.org/abs/2607.08350",
+          "title": "Grokking and epoch-wise double descent in quantum neural networks",
+          "authors": [
+            "Daniel Pranjić",
+            "Marco Roth",
+            "Christian Tutschku"
+          ],
+          "paperType": "解析",
+          "totalScore": 59,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 64,
+          "arxivId": "2607.07927",
+          "url": "https://arxiv.org/abs/2607.07927",
+          "title": "Invariance Audits for Quantum Kernels and Variational Rewinding: A Real-to-Hermitian Taxonomy of Projector, Flag, Anchor, and Density Geometry",
+          "authors": [
+            "Azadeh Alavi",
+            "Fatemeh Kouchmeshki",
+            "Hossein Akhoundi"
+          ],
+          "paperType": "理論",
+          "totalScore": 59,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 65,
+          "arxivId": "2607.08386",
+          "url": "https://arxiv.org/abs/2607.08386",
+          "title": "Parallel QEC Decoding Applied to Distributed Quantum Computing",
+          "authors": [
+            "Gabriele Incardona",
+            "Davide Ferrari",
+            "Michele Amoretti"
+          ],
+          "paperType": "解析",
+          "totalScore": 57,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 66,
+          "arxivId": "2607.08636",
+          "url": "https://arxiv.org/abs/2607.08636",
+          "title": "GroverFigureOfMerit: An Agnostic Figure of Merit for Quantum Backend Characterization in the NISQ Era",
+          "authors": [
+            "Tiago Restucha",
+            "Marcos Guillermo Lammers",
+            "Alejandro Fernández"
+          ],
+          "paperType": "解析",
+          "totalScore": 57,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 67,
+          "arxivId": "2607.08138",
+          "url": "https://arxiv.org/abs/2607.08138",
+          "title": "Adaptive Qubit Freezing Enables Robust Graph Partitioning for Divide-and-Conquer QAOA",
+          "authors": [
+            "Sokea Sang",
+            "Leanghok Hour",
+            "Dongmin Kim",
+            "Youngsun Han"
+          ],
+          "paperType": "解析",
+          "totalScore": 57,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 68,
+          "arxivId": "2607.07902",
+          "url": "https://arxiv.org/abs/2607.07902",
+          "title": "Environmental Memory Effects and Quantum Resource Hierarchies in Polarized Hyperon--Antihyperon Systems",
+          "authors": [
+            "Omar Bachain",
+            "Mohamed Amazioug",
+            "Rachid Ahl Laamara"
+          ],
+          "paperType": "解析",
+          "totalScore": 56,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 69,
+          "arxivId": "2607.08560",
+          "url": "https://arxiv.org/abs/2607.08560",
+          "title": "QSCOUT's Qubit-Boson Gate Set",
+          "authors": [
+            "Edward C. Tortorici",
+            "Ethan C. McGarrigle",
+            "Brian K. McFarland",
+            "Wes L. Johnson",
+            "Daniel S. Lobser",
+            "Melissa C. Revelle",
+            "Brandon P. Ruzic",
+            "Susan M. Clark",
+            "Christopher G. Yale"
+          ],
+          "paperType": "解析",
+          "totalScore": 55,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 70,
+          "arxivId": "2607.08158",
+          "url": "https://arxiv.org/abs/2607.08158",
+          "title": "Continuous-Variable MIMO THz Quantum Secret Sharing: Gaussian-modulation and Passive-modulation",
+          "authors": [
+            "Leixin Wu",
+            "Jiayu Pan",
+            "Fangzhe Chen",
+            "Lingtao Zhang",
+            "Bowen Zheng",
+            "Tie Qiu"
+          ],
+          "paperType": "解析",
+          "totalScore": 51,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 71,
+          "arxivId": "2607.08092",
+          "url": "https://arxiv.org/abs/2607.08092",
+          "title": "Equivariant Quantum Clustering with Differential Privacy: Parameter-Efficient Privacy-Preserving Analysis Across Heterogeneous Sensitive Datasets",
+          "authors": [
+            "B. M. Taslimul Haq",
+            "Md Arifur Rahman",
+            "Tawfiq Al Islam Foysal",
+            "Abdullah Al Noman",
+            "Abir Ahmed"
+          ],
+          "paperType": "解析",
+          "totalScore": 49,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 72,
+          "arxivId": "2607.08102",
+          "url": "https://arxiv.org/abs/2607.08102",
+          "title": "Decomposition-Based QAOA for Maximum Coverage Location Problem in Satellite Constellation Design",
+          "authors": [
+            "Divya Sisodiya",
+            "Amiratabak Bahengam",
+            "Hang Woon Lee",
+            "Hao Chen"
+          ],
+          "paperType": "解析",
+          "totalScore": 48,
+          "eminentAuthors": []
+        },
+        {
+          "rank": 73,
+          "arxivId": "2607.07970",
+          "url": "https://arxiv.org/abs/2607.07970",
+          "title": "Associating Trajectories with Quantum Processes by Equivalent Spectra",
+          "authors": [
+            "Elliott Tammaro",
+            "Sriram Gundla",
+            "Arunabh Pratik",
+            "Shyla Rathore"
+          ],
+          "paperType": "解析",
+          "totalScore": 43,
+          "eminentAuthors": []
+        }
+      ],
+      "eminentAuthorPaperCount": 0
+    }
+  },
+  "pipeline": {
+    "mode": "scheduled-abstract-screen-fulltext-top10",
+    "rubricVersion": "2.0",
+    "scoreMaximum": 100,
+    "authorPolicy": "Author identity and reputation never affect scores. Verified distinction badges are non-scoring and non-exhaustive.",
+    "audit": {
+      "hep-th": {
+        "listingUrl": "https://arxiv.org/list/hep-th/new",
+        "announcementDate": "2026-07-10",
+        "selectionRule": "arXivのNew submissions欄に掲載されたv1のうちprimary categoryがhep-thのものだけを採用。同一arXiv IDは一度だけ扱い、Cross submissions欄の26件とReplacementsは除外。",
+        "sourceCounts": {
+          "newPrimaryHepTh": 18,
+          "crosslistsExcluded": 26,
+          "titleAuthorAbstractEvaluated": 18
+        },
+        "evaluationPolicy": "全件をtitle・authors・abstractで一次評価し、暫定順位から必要なPDFを確認して最終top 10全件を全文再評価。著者の知名度・権威は非採点。",
+        "scoreRubric": "broadImpact、categoryImpact、originality、technicalStrengthを各0〜25点、合計100点。",
+        "fullTextPolicy": "最終top 10は導入、設定・仮定、方法・導出、主要結果、検証、結論・限界、関連付録を確認。独立再計算の範囲はpaperごとのfullTextReviewStatusに記録。",
+        "fullTextEvaluatedCount": 10,
+        "authorPolicy": "著者の知名度・所属・経歴・引用指標は採点に使用しない。著名著者マークはregistry一致による非加点表示。",
+        "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv ID昇順。",
+        "generatedAtJst": "2026-07-10T20:01:44+09:00"
+      },
+      "gr-qc": {
+        "listingUrl": "https://arxiv.org/list/gr-qc/new",
+        "announcementDate": "2026-07-10",
+        "selectionRule": "公式new listingのNew submissions 25件のみ。arXiv IDはversionを除去し、primary categoryがgr-qcのv1に限定。Cross submissions 15件とReplacement submissions 28件は除外。",
+        "sourceCounts": {
+          "newSubmissions": 25,
+          "crosslistsExcluded": 15
+        },
+        "evaluationPolicy": "全件をtitle・authors・abstractで一次評価し、暫定順位から必要なPDFを確認して最終top 10全件を全文再評価。著者の知名度・権威は非採点。",
+        "scoreRubric": "broadImpact、categoryImpact、originality、technicalStrengthを各0〜25点、合計100点。",
+        "fullTextPolicy": "最終top 10は導入、設定・仮定、方法・導出、主要結果、検証、結論・限界、関連付録を確認。独立再計算の範囲はpaperごとのfullTextReviewStatusに記録。",
+        "fullTextEvaluatedCount": 10,
+        "authorPolicy": "著者の知名度・所属・経歴・引用指標は採点に使用しない。著名著者マークはregistry一致による非加点表示。",
+        "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv ID昇順。",
+        "generatedAtJst": "2026-07-10T20:01:44+09:00"
+      },
+      "quant-ph": {
+        "listingUrl": "https://arxiv.org/list/quant-ph/new?show=2000",
+        "announcementDate": "2026-07-10",
+        "selectionRule": "New submissionsのprimary category一致v1のみ。cross-list、replacement、重複base IDを除外。",
+        "sourceCounts": {
+          "newSubmissions": 73,
+          "crosslistsExcluded": 23
+        },
+        "evaluationPolicy": "全件をtitle・authors・abstractで一次評価し、暫定順位から必要なPDFを確認して最終top 10全件を全文再評価。著者の知名度・権威は非採点。",
+        "scoreRubric": "broadImpact、categoryImpact、originality、technicalStrengthを各0〜25点、合計100点。",
+        "fullTextPolicy": "最終top 10は導入、設定・仮定、方法・導出、主要結果、検証、結論・限界、関連付録を確認。独立再計算の範囲はpaperごとのfullTextReviewStatusに記録。",
+        "fullTextEvaluatedCount": 10,
+        "authorPolicy": "著者の知名度・所属・経歴・引用指標は採点に使用しない。著名著者マークはregistry一致による非加点表示。",
+        "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv ID昇順。",
+        "generatedAtJst": "2026-07-10T20:01:44+09:00"
+      }
+    }
+  }
+}

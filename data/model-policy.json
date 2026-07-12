@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0",
+  "requiredModelId": "gpt-5.6-sol",
+  "requiredModelDisplayName": "5.6 Sol Ultra",
+  "requiredReasoningEffort": "ultra",
+  "requireExplicitModelSelection": true,
+  "minimumUserRequirement": "GPT-5.5 Pro-class or better",
+  "qualificationStatus": "pending_reference_benchmark",
+  "benchmarkRequirements": {
+    "referenceModel": "GPT-5.5 Pro or newer Pro model",
+    "minimumPapers": 30,
+    "minimumTop10OverlapPerCategory": 8,
+    "minimumSpearmanRankCorrelation": 0.8,
+    "maximumMeanAbsoluteScoreDifference": 6,
+    "requireExpertSpotCheck": true
+  },
+  "qualificationBasis": "OpenAI identifies 5.6 Sol as the flagship GPT-5.6 model with the strongest capability for complex research work. Ultra is the maximum reasoning mode with automatic task delegation. OpenAI does not publish an exact equivalence to GPT-5.5 Pro.",
+  "publicationRule": "Reject editions unless the model has passed the Pro-reference benchmark and runtime metadata exactly matches the required model and reasoning effort.",
+  "lastReviewed": "2026-07-10"
+}
