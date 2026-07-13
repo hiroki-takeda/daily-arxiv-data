@@ -18,6 +18,18 @@ test("a complete production report set passes", () => {
   assert.doesNotThrow(() => validateProductionReportSet(validReportSet(), { date: DATE, policy: validPolicy() }));
 });
 
+test("a backfill report set accepts only consistent official pastweek listing URLs", () => {
+  const reports = validReportSet();
+  for (const slug of CATEGORIES) reports[slug].audit.listingUrl = `https://arxiv.org/list/${slug}/pastweek`;
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }));
+
+  reports["hep-th"].audit.listingUrl = "https://arxiv.org/list/hep-th/new";
+  assert.throws(
+    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+    /same official listing kind/,
+  );
+});
+
 test("model policy is enforceable without claiming benchmark qualification", () => {
   assert.doesNotThrow(() => validateModelPolicy(validPolicy()));
   const policy = validPolicy();
@@ -45,6 +57,7 @@ test("invalid IDs and URLs are rejected", () => {
   rejectsMutation((reports) => { reports["gr-qc"].papers[0].url = "http://arxiv.org/abs/9901.00101"; }, /\.url/);
   rejectsMutation((reports) => { reports["quant-ph"].papers[0].arxivVersion = "v2"; }, /arxivVersion/);
   rejectsMutation((reports) => { reports["quant-ph"].papers[0].submissionType = "cross"; }, /submissionType/);
+  rejectsMutation((reports) => { reports["hep-th"].papers[0].sourceUrls.push("https://example.com/untrusted"); }, /exactly the version-fixed arXiv/);
 });
 
 test("invalid score shape, range, and total are rejected", () => {

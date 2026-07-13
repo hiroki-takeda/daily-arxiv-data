@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, truncateSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -7,6 +7,7 @@ import {
   assertExactStagingReports,
   buildEdition,
   findForbiddenRepositoryArtifacts,
+  parseJsonFile,
   publicationAllowlist,
   serializeJson,
   validatePublicArchive,
@@ -71,6 +72,15 @@ test("secret material, PDFs, and nested .git directories are found", () => {
   assert.match(problems, /nested \.git/);
   assert.match(problems, /PDF files are forbidden/);
   assert.match(problems, /probable secret/);
+});
+
+test("oversized JSON cannot bypass the repository secret scan limit", () => {
+  const root = mkdtempSync(resolve(tmpdir(), "daily-arxiv-oversized-json-"));
+  const path = resolve(root, "oversized.json");
+  writeFileSync(path, "{}\n");
+  truncateSync(path, 10 * 1024 * 1024 + 1);
+  assert.throws(() => parseJsonFile(path), /JSON safety limit/);
+  assert.match(findForbiddenRepositoryArtifacts(root).join("\n"), /safety-scan limit/);
 });
 
 test("the publish staging directory and six-file allowlist are exact", () => {

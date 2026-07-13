@@ -7,7 +7,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "prepare:worktree": "node scripts/prepare-worktree.mjs",
+    "automation:check": "node scripts/run-local-automation.mjs --check",
     "test": "node --test test/*.test.mjs",
     "validate": "node scripts/validate.mjs",
     "merge": "node scripts/merge_category_reports.mjs",

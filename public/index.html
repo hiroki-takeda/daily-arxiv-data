@@ -3,48 +3,162 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>Daily arXiv</title>
   <style>
-    :root{color-scheme:dark;--bg:#07111b;--panel:#0d1d2b;--line:#244055;--text:#eef7fb;--muted:#a9becb;--cyan:#50d6ff;--green:#71e2b2;--gold:#ffd269}
-    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top right,#123047 0,var(--bg) 38%);color:var(--text);font:18px/1.55 system-ui,-apple-system,"Hiragino Sans",sans-serif}
-    header{position:sticky;top:0;z-index:5;background:#07111beF;border-bottom:1px solid var(--line);backdrop-filter:blur(12px);padding:18px 3vw}
-    .head{display:flex;gap:24px;align-items:center;justify-content:space-between}.brand{font-size:clamp(28px,3vw,46px);font-weight:850;letter-spacing:-.04em}.brand span{color:var(--cyan)}
-    .meta{text-align:right;color:var(--muted);font-size:15px}.controls{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}button,select{border:1px solid var(--line);border-radius:999px;background:#102535;color:var(--text);padding:10px 18px;font:inherit;font-weight:700;cursor:pointer}button.active{background:var(--cyan);color:#02111a;border-color:var(--cyan)}
-    main{width:min(1560px,94vw);margin:28px auto 80px}.status{border:1px solid var(--line);border-left:5px solid var(--green);border-radius:12px;background:#0b1b28;padding:14px 18px;color:var(--muted)}.status.cached{border-left-color:var(--gold);color:#f5ddb0}.status .original-status{display:block;margin-top:4px;color:var(--muted)}
-    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0}.metric{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}.metric b{display:block;font-size:28px;color:var(--cyan)}
-    .paper{display:grid;grid-template-columns:96px 1fr;gap:20px;background:linear-gradient(135deg,#0e2130,#0a1824);border:1px solid var(--line);border-radius:18px;padding:22px;margin:16px 0;box-shadow:0 12px 35px #0003}.rank{text-align:center}.rank b{display:block;font-size:44px;color:var(--gold)}.score{font-size:22px;font-weight:800;color:var(--green)}
-    h2{font-size:32px;margin:30px 0 8px}h3{font-size:25px;margin:0 0 6px;line-height:1.3}a{color:var(--cyan);text-decoration:none}.authors{color:#c7d8e1}.badges{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.badge{font-size:14px;border:1px solid var(--line);border-radius:999px;padding:3px 9px;color:var(--muted)}.badge.full{color:var(--green);border-color:#347c61}.badge.star{color:var(--gold);border-color:#8a6d2c}
-    .scores{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.scores div{background:#06131d;border-radius:10px;padding:9px}.scores b{display:block;font-size:22px;color:var(--cyan)}
-    dl{display:grid;grid-template-columns:130px 1fr;gap:8px 16px;margin:12px 0}dt{color:var(--cyan);font-weight:800}dd{margin:0}.assessment{border-left:3px solid var(--gold);padding-left:14px;color:#dce8ee}
-    details{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:24px}summary{font-size:22px;font-weight:800;cursor:pointer}.other{display:grid;grid-template-columns:65px 90px 1fr;gap:10px;padding:10px 0;border-top:1px solid #1d3446}.other:first-of-type{margin-top:12px}.error{padding:40px;text-align:center;color:#ff9c9c}
-    @media(max-width:800px){body{font-size:16px}.head{align-items:flex-start;flex-direction:column}.meta{text-align:left}.summary,.scores{grid-template-columns:repeat(2,1fr)}.paper{grid-template-columns:1fr}.rank{text-align:left;display:flex;align-items:center;gap:16px}.rank b{font-size:30px}dl{grid-template-columns:1fr}.other{grid-template-columns:45px 70px 1fr}}
+    :root{color-scheme:dark;--bg:#07111b;--panel:#0d1d2b;--line:#244055;--line-soft:#1b3447;--text:#eef7fb;--muted:#a9becb;--cyan:#50d6ff;--green:#71e2b2;--gold:#ffd269;--danger:#ff9c9c}
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;background:radial-gradient(circle at top right,#123047 0,var(--bg) 38%);color:var(--text);font:16px/1.45 system-ui,-apple-system,"Hiragino Sans",sans-serif}
+    button,select{font:inherit}
+    button,select,summary{-webkit-tap-highlight-color:transparent}
+    a{color:var(--cyan);text-decoration:none}
+    a:hover{text-decoration:underline}
+    header{position:sticky;top:0;z-index:5;background:#07111bf2;border-bottom:1px solid var(--line);backdrop-filter:blur(12px);padding:10px 2.5vw}
+    .head{display:flex;gap:20px;align-items:center;justify-content:space-between}
+    .brand{margin:0;font-size:clamp(27px,2.5vw,38px);font-weight:850;letter-spacing:-.04em;line-height:1}
+    .brand span{color:var(--cyan)}
+    .meta{text-align:right;color:var(--muted);font-size:12.5px;line-height:1.35}
+    .controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:9px}
+    .category-group{display:flex;gap:7px;flex-wrap:wrap}
+    button,select{min-height:40px;border:1px solid var(--line);border-radius:999px;background:#102535;color:var(--text);padding:7px 15px;font-weight:750;cursor:pointer}
+    button:hover,select:hover{border-color:#3f6780}
+    button.active{background:var(--cyan);color:#02111a;border-color:var(--cyan)}
+    button:focus-visible,select:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+    main{width:min(1740px,95vw);margin:14px auto 70px}
+    .status{border:1px solid var(--line);border-left:4px solid var(--green);border-radius:10px;background:#0b1b28;padding:9px 13px;color:var(--muted);font-size:14px}
+    .status.cached{border-left-color:var(--gold);color:#f5ddb0}
+    .status .original-status{display:block;margin-top:3px;color:var(--muted)}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 14px}
+    .metric{display:flex;gap:9px;align-items:baseline;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:8px 12px;color:var(--muted);min-height:48px}
+    .metric b{font-size:22px;line-height:1;color:var(--cyan)}
+    .section-head{display:flex;gap:18px;align-items:end;justify-content:space-between;margin:11px 1px 7px}
+    .section-head h2{font-size:22px;line-height:1.2;margin:0}
+    .section-head p{margin:0;color:var(--muted);font-size:13px;text-align:right}
+    .paper-list{display:grid;gap:6px}
+    .paper-row{background:linear-gradient(135deg,#0e2130,#0a1824);border:1px solid var(--line-soft);border-radius:11px;overflow:clip;box-shadow:0 5px 18px #0002}
+    .paper-row[open]{border-color:#39647f;box-shadow:0 10px 28px #0004}
+    .paper-row>summary{display:grid;grid-template-columns:52px 64px minmax(240px,1fr) 246px 145px 20px;gap:10px;align-items:center;min-height:62px;padding:7px 12px;cursor:pointer;list-style:none}
+    .paper-row>summary::-webkit-details-marker{display:none}
+    .paper-row>summary:hover{background:#15304766}
+    .rank{font-size:19px;font-weight:850;color:var(--gold);text-align:center}
+    .total{text-align:center;color:var(--green);line-height:1}
+    .total b{display:block;font-size:20px}
+    .total small{font-size:11px;color:var(--muted)}
+    .paper-main{min-width:0}
+    .paper-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;line-height:1.25}
+    .paper-authors{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12.5px;margin-top:3px}
+    .mini-scores{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+    .mini-scores span{background:#06131d;border-radius:7px;padding:4px 3px;text-align:center;line-height:1.05}
+    .mini-scores b{display:block;color:var(--cyan);font-size:15px}
+    .mini-scores small{font-size:9.5px;color:var(--muted)}
+    .mini-scores.pending{display:block;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:12px;text-align:center;padding:8px}
+    .row-badges{display:flex;gap:5px;justify-content:flex-end;align-items:center;min-width:0}
+    .badge{display:inline-flex;align-items:center;max-width:100%;white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:3px 7px;color:var(--muted);font-size:11px;line-height:1.2}
+    .badge.full{color:var(--green);border-color:#347c61}
+    .badge.abstract{color:#b9d8e8}
+    .badge.star{color:var(--gold);border-color:#8a6d2c}
+    .chevron{font-size:20px;color:var(--muted);transition:transform .18s ease;text-align:center}
+    .paper-row[open] .chevron{transform:rotate(180deg)}
+    .paper-detail{border-top:1px solid var(--line-soft);padding:17px 22px 20px 128px;background:#071621cc}
+    .detail-heading{display:flex;gap:16px;justify-content:space-between;align-items:start}
+    .detail-heading h3{font-size:21px;line-height:1.3;margin:0 0 4px}
+    .english-title,.authors{color:#c7d8e1}
+    .english-title{font-size:14px}
+    .authors{margin-top:4px}
+    .paper-arxiv{display:inline-block;margin-top:5px;font-size:13px;font-weight:750}
+    .links{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;min-width:160px}
+    .links a{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;white-space:nowrap}
+    .badges{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+    .scores{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:11px 0}
+    .scores div{background:#06131d;border-radius:8px;padding:7px 9px;color:var(--muted);font-size:12px}
+    .scores b{display:block;font-size:18px;color:var(--cyan)}
+    dl{display:grid;grid-template-columns:105px 1fr;gap:7px 14px;margin:12px 0}
+    dt{color:var(--cyan);font-weight:800}
+    dd{margin:0}
+    .assessment{border-left:3px solid var(--gold);padding-left:12px;color:#dce8ee}
+    .evaluation-note{margin:11px 0 0;color:var(--muted);font-size:13px}
+    .detail-state{min-height:78px;display:flex;gap:12px;align-items:center;justify-content:center;color:var(--muted);text-align:center}
+    .detail-state.error{color:var(--danger)}
+    .detail-state button{margin-left:5px}
+    .lower-section{margin-top:22px}
+    .error{padding:40px;text-align:center;color:var(--danger)}
+    @media(max-width:1200px){
+      .paper-row>summary{grid-template-columns:48px 58px minmax(210px,1fr) 210px 124px 18px;gap:8px;padding-inline:9px}
+      .paper-detail{padding-left:113px}
+      .badge.kind{display:none}
+    }
+    @media(max-width:900px){
+      header{position:relative}
+      .paper-row>summary{grid-template-columns:45px 55px minmax(0,1fr) 20px;grid-template-rows:auto auto;min-height:86px}
+      .paper-main{grid-column:3}
+      .mini-scores{grid-column:3;grid-row:2}
+      .row-badges{grid-column:1/3;grid-row:2;justify-content:center}
+      .chevron{grid-column:4;grid-row:1/3}
+      .paper-detail{padding:16px}
+      .detail-heading{display:block}.links{justify-content:flex-start;margin-top:10px}
+    }
+    @media(max-width:620px){
+      body{font-size:15px}
+      .head{align-items:flex-start;flex-direction:column;gap:7px}.meta{text-align:left}
+      .controls{align-items:stretch}.category-group{width:100%}.category-group button{flex:1;padding-inline:8px}select{width:100%}
+      main{width:min(96vw,1740px);margin-top:10px}
+      .summary{grid-template-columns:repeat(2,1fr)}.metric{min-height:44px;padding:7px 9px;font-size:12px}.metric b{font-size:19px}
+      .section-head{display:block}.section-head p{text-align:left;margin-top:4px}
+      .paper-row>summary{grid-template-columns:39px 50px minmax(0,1fr) 18px;gap:6px;padding:7px 6px}
+      .rank{font-size:16px}.total b{font-size:17px}.paper-title{font-size:14px}.paper-authors{font-size:11px}
+      .mini-scores span{padding:4px 1px}.mini-scores b{font-size:13px}.mini-scores small{font-size:8px}
+      .row-badges .badge:not(.full):not(.abstract){display:none}
+      .scores{grid-template-columns:repeat(2,1fr)}
+      dl{grid-template-columns:1fr;gap:3px}dd{margin-bottom:8px}
+      .detail-heading h3{font-size:18px}
+    }
+    @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.chevron{transition:none}}
   </style>
 </head>
 <body>
-  <header><div class="head"><div class="brand">Daily <span>arXiv</span></div><div class="meta" id="meta">データを読み込んでいます…</div></div><div class="controls"><span id="tabs"></span><select id="dates" aria-label="日付"></select></div></header>
-  <main id="app"><div class="status">最新の評価データを読み込んでいます…</div></main>
+  <header>
+    <div class="head">
+      <h1 class="brand">Daily <span>arXiv</span></h1>
+      <div class="meta" id="meta">データを読み込んでいます…</div>
+    </div>
+    <div class="controls">
+      <span class="category-group" id="tabs" role="group" aria-label="カテゴリ"></span>
+      <select id="dates" aria-label="評価日"></select>
+    </div>
+  </header>
+  <main id="app"><div class="status" role="status">最新の評価データを読み込んでいます…</div></main>
   <script>
     const cats=['hep-th','gr-qc','quant-ph'];
+    const scoreFields=[['broadImpact','物理全体への影響','全体'],['categoryImpact','カテゴリ内の重要度','分野'],['originality','独創性','独創'],['technicalStrength','方法・結果の説得力','技術']];
     const DATA_CACHE_PREFIX='daily-arxiv:data:';
     const LAST_GOOD_CACHE='daily-arxiv:last-known-good';
     const INDEX_CACHE='daily-arxiv:index';
-    let data,active='hep-th',dataLoadNotice='',indexLoadNotice='';
+    const reportCache=new Map();
+    const openPapers=new Set();
+    let data,active='hep-th',selectedFile='current.json',dataLoadNotice='',indexLoadNotice='';
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const lines=a=>(a||[]).map(x=>esc(x)).join('<br>');
-    const validData=x=>Boolean(x&&typeof x==='object'&&!Array.isArray(x)&&x.categories&&typeof x.categories==='object');
+    const nonEmpty=value=>typeof value==='string'&&value.trim()!=='';
+    const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value));
+    const validData=x=>Boolean(x&&typeof x==='object'&&!Array.isArray(x)&&validDate(x.date)&&x.categories&&typeof x.categories==='object');
     const validIndex=x=>Boolean(x&&typeof x==='object'&&Array.isArray(x.availableDates));
     function readCache(key,validate){try{const value=JSON.parse(localStorage.getItem(key));return validate(value)?value:null}catch{return null}}
     function writeCache(key,value){try{localStorage.setItem(key,JSON.stringify(value))}catch{}}
-    function safeExternalUrl(value){try{const url=new URL(String(value??''));return url.protocol==='https:'||url.protocol==='http:'?url.href:'#'}catch{return '#'}}
+    function safeExternalUrl(value){try{const url=new URL(String(value??''));return url.protocol==='https:'?url.href:'#'}catch{return '#'}}
     function eminentAuthorName(value){
       if(typeof value==='string'||typeof value==='number')return String(value);
       if(!value||typeof value!=='object')return'';
       for(const name of [value.authorName,value.name])if(typeof name==='string'||typeof name==='number')return String(name);
       return'';
     }
-    async function load(file='current.json'){
+    function paperKey(slug,id,date=data?.date){return `${date}:${slug}:${id}`}
+    function reportKey(date,slug){return `${date}:${slug}`}
+    function reportState(date=data?.date,slug=active){return reportCache.get(reportKey(date,slug))||{status:'idle'}}
+    async function load(file=selectedFile){
+      selectedFile=file;
       try{
-        const r=await fetch('./data/'+file+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(r.status);
+        const r=await fetch('./data/'+encodeURIComponent(file)+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(r.status);
         const next=await r.json();if(!validData(next))throw Error('invalid data');
         data=next;dataLoadNotice='';writeCache(DATA_CACHE_PREFIX+file,next);if(file==='current.json')writeCache(LAST_GOOD_CACHE,next);
       }catch(e){
@@ -53,44 +167,173 @@
         }else{
           const cached=readCache(DATA_CACHE_PREFIX+file,validData)||readCache(LAST_GOOD_CACHE,validData);
           if(cached){data=cached;dataLoadNotice='通信に失敗したため、この端末に保存された最終正常データを表示しています。'}
-          else{document.querySelector('#app').innerHTML='<div class="error">データを読み込めず、この端末に保存された正常データもありません。</div>';return}
+          else{document.querySelector('#app').innerHTML='<div class="error" role="alert">データを読み込めず、この端末に保存された正常データもありません。</div>';return}
         }
       }
-      await loadDates();render();
+      await loadDates();
+      if(!data.categories?.[active])active=cats.find(slug=>data.categories?.[slug])||cats[0];
+      render();
     }
     async function loadDates(){
       let index;
       try{const r=await fetch('./data/index.json?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw Error(r.status);index=await r.json();if(!validIndex(index))throw Error('invalid index');writeCache(INDEX_CACHE,index);indexLoadNotice=''}
       catch{index=readCache(INDEX_CACHE,validIndex);indexLoadNotice=index?'日付一覧は、この端末に保存された情報を使用しています。':'日付一覧を取得できないため、表示中の日付のみ選択できます。'}
       const dates=index?.availableDates||data.availableDates||[data.date];
-      const uniqueDates=[...new Set(dates.filter(d=>typeof d==='string'))];if(data.date&&!uniqueDates.includes(data.date))uniqueDates.unshift(data.date);
-      const el=document.querySelector('#dates');el.innerHTML=uniqueDates.map(d=>`<option ${d===data.date?'selected':''}>${esc(d)}</option>`).join('');
+      const uniqueDates=[...new Set(dates.filter(validDate))];if(data.date&&!uniqueDates.includes(data.date))uniqueDates.unshift(data.date);
+      document.querySelector('#dates').innerHTML=uniqueDates.map(d=>`<option value="${esc(d)}" ${d===data.date?'selected':''}>${esc(d)}</option>`).join('');
     }
-    document.querySelector('#dates').onchange=e=>load(e.target.value+'.json');
-    function render(){
-      const run=data.evaluationRun||data.pipeline?.evaluationRun;const model=run?`${run.modelDisplayName||run.modelId||'モデル未記録'} / ${run.reasoningEffort==='ultra'?'Ultra':run.reasoningEffort||'推論設定未記録'}`:'未記録（旧データ）';
+    document.querySelector('#dates').addEventListener('change',event=>{selectedFile=event.target.value+'.json';load(selectedFile)});
+    function render({restoreFocusId}={}){
+      const run=data.evaluationRun||data.pipeline?.evaluationRun;
+      const model=run?`${run.modelDisplayName||run.modelId||'モデル未記録'} / ${run.reasoningEffort==='ultra'?'Ultra':run.reasoningEffort||'推論設定未記録'}`:'未記録（旧データ）';
+      document.title=`Daily arXiv — ${data.date}`;
       document.querySelector('#meta').innerHTML=`評価日 ${esc(data.date)}<br>最終更新 ${esc(data.generatedAtJst||'—')}<br>前回正常更新 ${esc(data.lastSuccessfulAtJst||'—')}<br>評価モデル ${esc(model)}`;
-      document.querySelector('#tabs').innerHTML=cats.map(c=>`<button class="${c===active?'active':''}" data-cat="${c}">${c}</button>`).join(' ');
-      document.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{active=b.dataset.cat;render()});
-      const c=data.categories?.[active];if(!c){document.querySelector('#app').innerHTML='<div class="error">カテゴリデータがありません。</div>';return}
-      const papers=c.topPapers||[];
+      document.querySelector('#tabs').innerHTML=cats.map(slug=>`<button type="button" class="${slug===active?'active':''}" aria-pressed="${slug===active}" data-cat="${slug}">${slug}</button>`).join('');
+      const category=data.categories?.[active];
+      if(!category){document.querySelector('#app').innerHTML='<div class="error" role="alert">カテゴリデータがありません。</div>';wireInteractions();return}
+      const papers=category.topPapers||[];
       const notices=[dataLoadNotice,indexLoadNotice].filter(Boolean);const cached=notices.length>0;
+      const lower=category.otherPapers||[];
       document.querySelector('#app').innerHTML=`
-        <div class="status${cached?' cached':''}">${cached?`<b>キャッシュ／オフライン表示：</b> ${notices.map(esc).join(' ')}`:esc(data.statusMessage||'正常に更新されました。')}${cached?`<span class="original-status">${esc(data.statusMessage||'最後に取得した正常データです。')}</span>`:''}</div>
-        <div class="summary"><div class="metric"><b>${c.totalNew??'—'}</b>新着 primary</div><div class="metric"><b>${c.evaluatedCount??'—'}</b>一次評価</div><div class="metric"><b>${c.fullTextEvaluatedCount??'—'}</b>全文評価</div><div class="metric"><b>${c.crosslistsExcluded??'—'}</b>cross-list除外</div></div>
-        <h2>${active} 上位10件</h2>${papers.map(paper).join('')}${others(c.otherPapers||[])}`;
+        <div class="status${cached?' cached':''}" role="status" aria-live="polite">${cached?`<b>キャッシュ／オフライン表示：</b> ${notices.map(esc).join(' ')}`:esc(data.statusMessage||'正常に更新されました。')}${cached?`<span class="original-status">${esc(data.statusMessage||'最後に取得した正常データです。')}</span>`:''}</div>
+        <section class="summary" aria-label="処理件数">
+          ${metric(category.totalNew,'新着 primary')}${metric(category.evaluatedCount,'一次評価')}${metric(category.fullTextEvaluatedCount,'全文評価')}${metric(category.crosslistsExcluded,'cross-list除外')}
+        </section>
+        <section aria-labelledby="top-heading">
+          <div class="section-head"><h2 id="top-heading">${esc(active)} 上位${papers.length}件</h2><p>${papers.length}件を一覧で俯瞰できます。論文を選ぶと全評価を展開します。</p></div>
+          <div class="paper-list">${papers.map(p=>paperRow(p,'top')).join('')}</div>
+        </section>
+        ${lowerSection(lower)}`;
+      wireInteractions();
+      if(restoreFocusId){
+        requestAnimationFrame(()=>document.querySelector(`summary[data-focus-id="${CSS.escape(restoreFocusId)}"]`)?.focus({preventScroll:true}));
+      }
     }
-    function paper(p){const s=p.scores||{};const stars=(p.eminentAuthors||[]).map(eminentAuthorName).filter(Boolean);return `<article class="paper">
-      <div class="rank"><b>#${p.rank}</b><div class="score">${p.totalScore}/100</div></div><div>
-      <h3>${esc(p.titleJa||p.title)}</h3><div>${esc(p.title)}</div><div class="authors">${esc((p.authors||[]).join(', '))}</div>
-      <div><a href="${esc(safeExternalUrl(p.url))}" target="_blank" rel="noreferrer">${esc(p.arxivId)} ↗</a></div>
-      <div class="badges"><span class="badge">${esc(p.paperType||'未分類')}</span>${p.fullTextEvaluated?'<span class="badge full">全文確認済み</span>':''}${stars.map(name=>`<span class="badge star">★ ${esc(name)}</span>`).join('')}</div>
-      <div class="scores"><div><b>${s.broadImpact??'—'}/25</b>物理全体への影響</div><div><b>${s.categoryImpact??'—'}/25</b>カテゴリ内の重要度</div><div><b>${s.originality??'—'}/25</b>独創性</div><div><b>${s.technicalStrength??'—'}/25</b>方法・結果の説得力</div></div>
-      <dl><dt>Abstract</dt><dd>${lines(p.abstractLines)}</dd><dt>Curiosity</dt><dd>${esc(p.curiosity)}</dd><dt>Concept</dt><dd>${esc(p.concept)}</dd><dt>Conclusion</dt><dd>${esc(p.conclusion)}</dd></dl>
-      <div class="assessment"><b>評定：</b>${esc(p.assessment)}</div>${p.fullTextReviewStatus?`<p class="authors"><b>全文確認範囲：</b>${esc(p.fullTextReviewStatus)}</p>`:''}</div></article>`}
-    function others(a){if(!a.length)return'';return `<details><summary>上位外の論文（${a.length}件）</summary>${a.map(p=>`<div class="other"><b>#${p.rank}</b><b>${p.totalScore}/100</b><span><a href="${esc(safeExternalUrl(p.url))}" target="_blank" rel="noreferrer">${esc(p.arxivId)}</a>　${esc(p.title)} — ${esc((p.authors||[]).join(', '))}</span></div>`).join('')}</details>`}
+    function metric(value,label){return `<div class="metric"><b>${value??'—'}</b><span>${esc(label)}</span></div>`}
+    function lowerSection(papers){
+      if(!papers.length)return'';
+      return `<section class="lower-section" aria-labelledby="lower-heading">
+        <div class="section-head"><h2 id="lower-heading">11位以下（${papers.length}件）</h2><p>各論文を選ぶと、採点内訳・要約・評定まで取得して表示します。</p></div>
+        <div class="paper-list">${papers.map(p=>paperRow(p,'report')).join('')}</div>
+      </section>`;
+    }
+    function mergedReportPaper(summary){
+      const state=reportState();
+      const detail=state.status==='ready'?state.byId.get(summary.arxivId):null;
+      return detail?{...detail,...summary,titleJa:detail.titleJa,scores:detail.scores,abstractLines:detail.abstractLines,curiosity:detail.curiosity,concept:detail.concept,conclusion:detail.conclusion,assessment:detail.assessment,evaluationBasis:detail.evaluationBasis,fullTextEvaluated:detail.fullTextEvaluated,fullTextReviewStatus:detail.fullTextReviewStatus,sourceUrls:detail.sourceUrls}:summary;
+    }
+    function paperRow(summary,source){
+      const paper=source==='report'?mergedReportPaper(summary):summary;
+      const key=paperKey(active,summary.arxivId);
+      const open=openPapers.has(key);
+      const detailed=hasDetailedPaper(paper);
+      const title=paper.titleJa||paper.title;
+      const evalClass=paper.fullTextEvaluated===true?'full':'abstract';
+      const evalLabel=paper.fullTextEvaluated===true?'全文評価':paper.fullTextEvaluated===false?'要旨評価':'詳細表示';
+      const stars=(summary.eminentAuthors||[]).map(eminentAuthorName).filter(Boolean);
+      return `<details class="paper-row" data-paper-id="${esc(summary.arxivId)}" data-source="${source}" ${open?'open':''}>
+        <summary data-focus-id="${esc(summary.arxivId)}">
+          <span class="rank">#${summary.rank}</span>
+          <span class="total"><b>${summary.totalScore}</b><small>/100</small></span>
+          <span class="paper-main"><strong class="paper-title">${esc(title)}</strong><span class="paper-authors">${esc((summary.authors||[]).join(', '))}</span></span>
+          ${miniScores(paper.scores)}
+          <span class="row-badges"><span class="badge kind">${esc(summary.paperType||'未分類')}</span><span class="badge ${evalClass}">${evalLabel}</span>${stars.length?`<span class="badge star" title="${esc(stars.join(', '))}">★</span>`:''}</span>
+          <span class="chevron" aria-hidden="true">⌄</span>
+        </summary>
+        <div class="paper-detail">${detailed?paperDetail(paper,summary):detailState(source,summary)}</div>
+      </details>`;
+    }
+    function miniScores(scores){
+      if(!scores)return'<span class="mini-scores pending">選択して詳細を表示</span>';
+      return `<span class="mini-scores">${scoreFields.map(([key,,short])=>`<span><b>${scores[key]??'—'}</b><small>${short}</small></span>`).join('')}</span>`;
+    }
+    function hasDetailedPaper(paper){
+      return Boolean(paper&&nonEmpty(paper.titleJa)&&paper.scores&&Array.isArray(paper.abstractLines)&&paper.abstractLines.length===3&&nonEmpty(paper.curiosity)&&nonEmpty(paper.concept)&&nonEmpty(paper.conclusion)&&nonEmpty(paper.assessment));
+    }
+    function paperDetail(paper,summary){
+      const scores=paper.scores||{};
+      const stars=(summary.eminentAuthors||[]).map(eminentAuthorName).filter(Boolean);
+      const basis=paper.evaluationBasis==='full_text_major_sections'?'PDF全文の主要節・結論・限界':paper.evaluationBasis==='title_authors_abstract'?'タイトル・著者・要旨':'記録された評価資料';
+      return `<div class="detail-heading"><div><h3>${esc(paper.titleJa||paper.title)}</h3><div class="english-title">${esc(paper.title)}</div><div class="authors">${esc((paper.authors||[]).join(', '))}</div><a class="paper-arxiv" href="${esc(canonicalAbstractUrl(paper))}" target="_blank" rel="noreferrer">arXiv ${esc(unversionedArxivId(paper.arxivId))} ↗</a></div><div class="links">${detailLinks(paper)}</div></div>
+        <div class="badges"><span class="badge">${esc(paper.paperType||'未分類')}</span><span class="badge ${paper.fullTextEvaluated?'full':'abstract'}">${paper.fullTextEvaluated?'全文確認済み':'要旨による評価'}</span>${stars.map(name=>`<span class="badge star">★ ${esc(name)}</span>`).join('')}</div>
+        <div class="scores">${scoreFields.map(([key,label])=>`<div><b>${scores[key]??'—'}/25</b>${esc(label)}</div>`).join('')}</div>
+        <dl><dt>Abstract</dt><dd>${lines(paper.abstractLines)}</dd><dt>Curiosity</dt><dd>${esc(paper.curiosity)}</dd><dt>Concept</dt><dd>${esc(paper.concept)}</dd><dt>Conclusion</dt><dd>${esc(paper.conclusion)}</dd></dl>
+        <div class="assessment"><b>評定：</b>${esc(paper.assessment)}</div>
+        <p class="evaluation-note"><b>評価根拠：</b>${esc(basis)}${paper.fullTextReviewStatus?`<br><b>全文確認範囲：</b>${esc(paper.fullTextReviewStatus)}`:''}</p>`;
+    }
+    function unversionedArxivId(value){return String(value??'').trim().replace(/v\d+$/i,'')}
+    function canonicalAbstractUrl(paper){return `https://arxiv.org/abs/${encodeURIComponent(unversionedArxivId(paper.arxivId))}`}
+    function arxivResourceKind(value){
+      try{
+        const url=new URL(value);
+        if(!/(^|\.)arxiv\.org$/i.test(url.hostname))return'';
+        if(/^\/abs\//.test(url.pathname))return'abstract';
+        if(/^\/pdf\//.test(url.pathname))return'pdf';
+        if(/^\/html\//.test(url.pathname))return'html';
+      }catch{}
+      return'';
+    }
+    function detailLinks(paper){
+      const urls=[paper.url,...(Array.isArray(paper.sourceUrls)?paper.sourceUrls:[])].map(safeExternalUrl).filter(url=>url!=='#');
+      const seen=new Set();let sourceCount=0;
+      return urls.flatMap(url=>{
+        const kind=arxivResourceKind(url);
+        if(kind==='abstract')return[];
+        const key=kind?`arxiv:${kind}`:url;
+        if(seen.has(key))return[];
+        seen.add(key);
+        const label=kind==='pdf'?'PDF ↗':kind==='html'?'HTML ↗':`Source ${++sourceCount} ↗`;
+        return [`<a href="${esc(url)}" target="_blank" rel="noreferrer">${label}</a>`];
+      }).join('');
+    }
+    function detailState(source,summary){
+      if(source!=='report')return'<div class="detail-state error" role="alert">詳細データが不完全です。</div>';
+      const state=reportState();
+      if(state.status==='error')return `<div class="detail-state error" role="alert"><span>詳細データを取得できませんでした。<a href="${esc(safeExternalUrl(summary.url))}" target="_blank" rel="noreferrer">arXivを開く ↗</a></span><button type="button" data-retry-report>再試行</button></div>`;
+      return'<div class="detail-state" role="status" aria-live="polite">詳細データを読み込んでいます…</div>';
+    }
+    function validateDetailedPaper(paper,slug){
+      if(!paper||typeof paper!=='object'||!nonEmpty(paper.arxivId)||!nonEmpty(paper.title)||!nonEmpty(paper.titleJa)||!Array.isArray(paper.authors)||paper.authors.length===0)throw Error('invalid paper identity');
+      if(paper.primaryCategory!==slug||!nonEmpty(paper.paperType))throw Error('invalid category detail');
+      if(!paper.scores||scoreFields.some(([key])=>!Number.isInteger(paper.scores[key])||paper.scores[key]<0||paper.scores[key]>25))throw Error('invalid scores');
+      if(scoreFields.reduce((sum,[key])=>sum+paper.scores[key],0)!==paper.totalScore)throw Error('invalid score total');
+      if(!Array.isArray(paper.abstractLines)||paper.abstractLines.length!==3||paper.abstractLines.some(line=>!nonEmpty(line)))throw Error('invalid abstract');
+      if([paper.curiosity,paper.concept,paper.conclusion,paper.assessment,paper.evaluationBasis].some(value=>!nonEmpty(value)))throw Error('invalid evaluation detail');
+      if(typeof paper.fullTextEvaluated!=='boolean')throw Error('invalid evaluation basis');
+      if(paper.fullTextEvaluated&&!nonEmpty(paper.fullTextReviewStatus))throw Error('missing full-text review status');
+    }
+    function validateReport(report,date,slug){
+      if(!report||typeof report!=='object'||report.slug!==slug||report.audit?.announcementDate!==date||!Array.isArray(report.papers))throw Error('invalid report');
+      const category=data.categories?.[slug];
+      const summaries=[...(category?.topPapers||[]),...(category?.otherPapers||[])];
+      if(report.papers.length!==summaries.length||report.papers.length!==category.totalNew)throw Error('report count mismatch');
+      const byId=new Map();
+      for(const paper of report.papers){validateDetailedPaper(paper,slug);if(byId.has(paper.arxivId))throw Error('duplicate report paper');byId.set(paper.arxivId,paper)}
+      if(summaries.some(paper=>!byId.has(paper.arxivId)))throw Error('report identity mismatch');
+      return byId;
+    }
+    async function loadReport(slug,focusId){
+      const date=data.date;if(!validDate(date)||!cats.includes(slug))return;
+      const key=reportKey(date,slug);const existing=reportCache.get(key);if(existing?.status==='loading'||existing?.status==='ready')return;
+      reportCache.set(key,{status:'loading'});
+      try{
+        const path=`./data/reports/${encodeURIComponent(date)}-${encodeURIComponent(slug)}.json?v=${encodeURIComponent(data.generatedAtJst||Date.now())}`;
+        const response=await fetch(path,{cache:'no-store'});if(!response.ok)throw Error(response.status);
+        const report=await response.json();const byId=validateReport(report,date,slug);
+        reportCache.set(key,{status:'ready',byId});
+      }catch(error){reportCache.set(key,{status:'error',message:String(error?.message||error)})}
+      if(data.date===date&&active===slug)render({restoreFocusId:focusId});
+    }
+    function wireInteractions(){
+      document.querySelectorAll('[data-cat]').forEach(button=>button.addEventListener('click',()=>{active=button.dataset.cat;render()}));
+      document.querySelectorAll('.paper-row').forEach(details=>details.addEventListener('toggle',()=>{
+        const id=details.dataset.paperId;const key=paperKey(active,id);
+        if(details.open){openPapers.add(key);if(details.dataset.source==='report'&&reportState().status!=='ready')loadReport(active,id)}else openPapers.delete(key);
+      }));
+      document.querySelectorAll('[data-retry-report]').forEach(button=>button.addEventListener('click',event=>{event.stopPropagation();reportCache.delete(reportKey(data.date,active));const id=button.closest('.paper-row')?.dataset.paperId;loadReport(active,id)}));
+    }
     load();
-    setInterval(()=>load(),300000);
+    setInterval(()=>load(selectedFile),300000);
   </script>
 </body>
 </html>

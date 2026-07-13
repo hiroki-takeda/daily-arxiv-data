@@ -36,9 +36,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Assemble validated static site
+        run: |
+          mkdir -p "${{ runner.temp }}/daily-arxiv-site/data/reports"
+          cp -R public/. "${{ runner.temp }}/daily-arxiv-site/"
+          cp data/reports/*.json "${{ runner.temp }}/daily-arxiv-site/data/reports/"
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: public
+          path: ${{ runner.temp }}/daily-arxiv-site
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

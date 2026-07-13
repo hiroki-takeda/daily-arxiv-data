@@ -28,6 +28,7 @@ const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const JST_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+09:00$/;
 const ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}$/;
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
+const MAX_JSON_BYTES = 10 * 1024 * 1024;
 const TEXT_FIELDS = ["title", "titleJa", "paperType", "curiosity", "concept", "conclusion", "assessment"];
 const EXPECTED_POLICY = Object.freeze({
   schemaVersion: "1.1",
@@ -97,6 +98,14 @@ export function validateJstTimestamp(value, path) {
 }
 
 export function parseJsonFile(path) {
+  let metadata;
+  try {
+    metadata = lstatSync(path);
+  } catch (error) {
+    fail(path, `cannot be inspected (${error.message})`);
+  }
+  if (metadata.isSymbolicLink() || !metadata.isFile()) fail(path, "must be a regular JSON file");
+  if (metadata.size > MAX_JSON_BYTES) fail(path, `exceeds the ${MAX_JSON_BYTES}-byte JSON safety limit`);
   let source;
   try {
     source = readFileSync(path, "utf8");
@@ -331,6 +340,19 @@ function validatePaper(paper, slug, path, {
   } else {
     fail(`${path}.fullTextEvaluated`, "must be a boolean");
   }
+  if (production) {
+    const allowedUrls = new Set([
+      arxivVersionedAbsUrl(paper.arxivId),
+      ...(paper.fullTextEvaluated ? [arxivVersionedPdfUrl(paper.arxivId)] : []),
+    ]);
+    if (
+      paper.sourceUrls.length !== allowedUrls.size
+      || new Set(paper.sourceUrls).size !== paper.sourceUrls.length
+      || paper.sourceUrls.some((url) => !allowedUrls.has(url))
+    ) {
+      fail(`${path}.sourceUrls`, "must contain exactly the version-fixed arXiv abstract URL and, after full-text review, PDF URL");
+    }
+  }
 }
 
 export function comparePapers(a, b) {
@@ -357,8 +379,12 @@ function validateAudit(audit, report, date, slug, path) {
     "rankingTieBreak",
     "generatedAtJst",
   ], path);
-  if (audit.listingUrl !== `https://arxiv.org/list/${slug}/new`) {
-    fail(`${path}.listingUrl`, `must be https://arxiv.org/list/${slug}/new`);
+  const allowedListingUrls = new Set([
+    `https://arxiv.org/list/${slug}/new`,
+    `https://arxiv.org/list/${slug}/pastweek`,
+  ]);
+  if (!allowedListingUrls.has(audit.listingUrl)) {
+    fail(`${path}.listingUrl`, `must be the official ${slug} new or pastweek listing URL`);
   }
   if (audit.announcementDate !== date) fail(`${path}.announcementDate`, `must equal ${date}`);
   for (const field of [
@@ -453,6 +479,7 @@ export function validateProductionReportSet(reports, { date, policy, existingRun
   assertExactKeys(reports, CATEGORIES, "reports");
   const allIds = new Set();
   let canonicalRun;
+  let canonicalListingKind;
   for (const slug of CATEGORIES) {
     const report = validateProductionReport(reports[slug], {
       date,
@@ -463,6 +490,9 @@ export function validateProductionReportSet(reports, { date, policy, existingRun
     const runJson = evaluationRunFingerprint(report.evaluationRun);
     canonicalRun ??= runJson;
     if (runJson !== canonicalRun) fail("reports", "all categories must use the identical evaluationRun object");
+    const listingKind = report.audit.listingUrl.endsWith("/pastweek") ? "pastweek" : "new";
+    canonicalListingKind ??= listingKind;
+    if (listingKind !== canonicalListingKind) fail("reports", "all categories must use the same official listing kind");
     for (const paper of report.papers) {
       if (allIds.has(paper.arxivId)) fail("reports", `duplicate arXiv ID across categories: ${paper.arxivId}`);
       allIds.add(paper.arxivId);
@@ -654,9 +684,43 @@ function validateLegacyReport(report, { date, slug, path }) {
   }
   const ids = new Set();
   for (const [index, paper] of report.papers.entries()) {
-    validateArxivIdentity(paper, `${path}.papers[${index}]`);
+    const paperPath = `${path}.papers[${index}]`;
+    validatePaper(paper, slug, paperPath, { requireDetailed: false });
+    if (paper.rank !== index + 1) fail(`${paperPath}.rank`, `must equal ${index + 1}`);
+    if (paper.primaryCategory !== slug) fail(`${paperPath}.primaryCategory`, `must be ${slug}`);
+    for (const field of TEXT_FIELDS) assertNonEmptyString(paper[field], `${paperPath}.${field}`);
+    validateScores(paper, paperPath);
+    if (!Array.isArray(paper.abstractLines) || paper.abstractLines.length !== 3) {
+      fail(`${paperPath}.abstractLines`, "must contain exactly three lines");
+    }
+    paper.abstractLines.forEach((line, lineIndex) => assertNonEmptyString(line, `${paperPath}.abstractLines[${lineIndex}]`));
+    if (paper.fullTextEvaluated === true) {
+      if (paper.evaluationBasis !== "full_text_major_sections") {
+        fail(`${paperPath}.evaluationBasis`, "must be full_text_major_sections after full-text review");
+      }
+      assertNonEmptyString(paper.fullTextReviewStatus, `${paperPath}.fullTextReviewStatus`);
+    } else if (paper.fullTextEvaluated === false) {
+      if (paper.evaluationBasis !== "title_authors_abstract") {
+        fail(`${paperPath}.evaluationBasis`, "must be title_authors_abstract without full-text review");
+      }
+    } else {
+      fail(`${paperPath}.fullTextEvaluated`, "must be a boolean");
+    }
+    if (paper.sourceUrls !== undefined) {
+      if (!Array.isArray(paper.sourceUrls) || paper.sourceUrls.some((url) => typeof url !== "string" || !/^https:\/\//.test(url))) {
+        fail(`${paperPath}.sourceUrls`, "may contain only HTTPS URLs when present");
+      }
+    }
     if (ids.has(paper.arxivId)) fail(`${path}.papers`, `duplicate arXiv ID ${paper.arxivId}`);
     ids.add(paper.arxivId);
+  }
+  for (let index = 1; index < report.papers.length; index += 1) {
+    if (report.papers[index - 1].totalScore < report.papers[index].totalScore) {
+      fail(`${path}.papers`, "total scores must be non-increasing by rank");
+    }
+  }
+  if (report.papers.filter((paper) => paper.fullTextEvaluated).length !== report.fullTextEvaluatedCount) {
+    fail(`${path}.fullTextEvaluatedCount`, "does not match detailed paper records");
   }
   return ids;
 }
@@ -800,6 +864,8 @@ export function findForbiddenRepositoryArtifacts(root) {
             problems.push(`${relativePath}: probable secret or credential detected`);
           }
         }
+      } else {
+        problems.push(`${relativePath}: file exceeds the 10 MiB safety-scan limit`);
       }
     }
   }

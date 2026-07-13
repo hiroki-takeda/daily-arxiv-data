@@ -2,108 +2,214 @@
 
 ## 結論
 
-データ生成はChatGPTデスクトップのStandalone Scheduled Taskを、専用Worktreeで実行します。Web版Scheduled TaskはMac上のリポジトリを直接扱えないため使用しません。
+OpenAI API課金なしで現在もっとも確実な本番経路は、ChatGPTアカウントで認証したCodex CLIをmacOS標準の`launchd`から実行する方式です。APIキー、GitHub PAT、ChatGPTデスクトップ、Atlas、Chrome、共用表示PCを起動しておく必要はありません。
 
-共用表示PCは公開URLを開いておくだけです。データ取得は5分間隔で、通信に失敗した場合はその端末に保存した最終正常版を表示します。
+自動処理用Macは電源オンかつユーザーがログイン済みである必要があります。画面ロックとディスプレイスリープは問題ありません。予定時刻にシステムがスリープ中なら、`launchd`は次の起床時に実行します。完全シャットダウン中やログアウト中には動きません。
 
-## Sol Ultraの確認
+次回ログイン時は、arXiv公式`pastweek`の直近5発表日に公開済み日が含まれていれば、抜けた日のうち最古の1日を復元します。1回の起動では1日だけを処理し、次の定時runで次の日へ進みます。これにより中間日を飛ばさず、長時間runとChatGPT利用枠の集中を避けます。公開済み日が公式範囲より古い場合は、最新日へ飛ばず安全停止します。
 
-このMacでは2026-07-12に次を確認済みです。
+普段ChatGPTを使う画面は`chatgpt.com`をChrome等の通常ブラウザで開く形が長期的な基準です。デスクトップアプリはローカルフォルダを対話操作したい時だけで構いません。このDaily arXivの登録済み自動処理は、どちらの画面にも依存しません。
 
-- モデル一覧に`gpt-5.6-sol`（表示名`GPT-5.6-Sol`）が存在
-- 対応推論レベルに`ultra`が存在
-- 同じChatGPT認証による読み取り専用の一時実行が`SOL_ULTRA_OK`で完了
+## 課金と利用枠
 
-Scheduled Taskの作成画面でも、モデルを`GPT-5.6-Sol`、推論を`Ultra`へ明示設定してください。選択肢が表示されない場合はタスクを有効化せず、ChatGPTアプリの更新とアカウントのモデル利用可否を確認します。`High`へ自動降格させません。
+- OpenAI APIキーとAPI従量課金は使いません。
+- ChatGPTログイン済みCodex CLIを使うため、契約中ChatGPTプランのCodex利用枠を消費します。
+- 全abstractと各カテゴリ最終上位10件のPDFを扱う重いrunです。利用枠、モデル利用可否、ネットワークのいずれかで失敗した場合は公開せず、午後または翌営業日に再試行します。
+- 公式一覧の日付が既に公開済みならCodexを起動しないため、午後runを含め利用枠を消費しません。
 
-リポジトリは出力メタデータを検証しますが、Scheduled画面で実際に選択されたモデルを暗号学的に証明するものではありません。このためモデル設定は初回とアプリ更新後に人が画面で確認します。
-
-## 一度だけ行う設定
-
-1. ChatGPTデスクトップアプリを開きます。
-2. このローカルプロジェクトを選びます。
-
-   ```text
-   /Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data
-   ```
-
-3. Standalone Scheduled Taskを新規作成します。
-4. 実行先は`Dedicated worktree`、基準ブランチは`main`を選びます。Local projectは使用しません。
-5. モデルを`GPT-5.6-Sol`、推論を`Ultra`へ明示設定します。
-6. 時刻をAsia/Tokyoで平日11:30と16:30にします。
-
-   ```text
-   RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=11,16;BYMINUTE=30;BYSECOND=0
-   ```
-
-   1タスクで複数時刻を設定できない場合は、同じプロンプトの`Daily arXiv morning`（11:30）と`Daily arXiv retry`（16:30）を作成します。
-
-7. プロンプトに次だけを貼り付けます。
-
-   ```text
-   Run the complete Daily arXiv production workflow in AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md exactly. This task is configured for GPT-5.6-Sol with Ultra reasoning and runs in a dedicated worktree. Do not weaken any validation or publish by another path.
-   ```
-
-8. プロジェクトを信頼し、固定スクリプト`node scripts/prepare-worktree.mjs`と`node scripts/publish-edition.mjs`の実行だけを許可します。任意のshell、任意の`git push`、full accessは許可しません。
-9. macOSとChatGPTのScheduled通知を有効にします。
-10. 最初の3回はScheduledの実行結果とGitHub Actionsを確認します。
-
-プロジェクトローカルの`.codex/rules/daily-arxiv.rules`は上記2スクリプトだけをallowします。ルールを読み込ませるため、初回設定前にChatGPTアプリを再起動してください。
-
-## 実行条件
-
-- 自動処理を行うMacが電源オンであること
-- Macがスリープしていないこと
-- ChatGPTデスクトップアプリが起動していること
-- ローカルリポジトリとSSH認証が残っていること
-- インターネットへ接続できること
-
-共用表示PCと実行Macは別でも構いません。表示PC側にGit、Node.js、ChatGPTログインは不要です。
-
-## 正常時の結果
-
-成功時はScheduledに次の情報が残ります。
+## 本番構成
 
 ```text
-PUBLISHED
-announcement date
-3カテゴリの新着件数・全文確認件数
-runId
-commit
-public URL
+launchd（平日11:30・16:30 JST）
+  → daily-arxiv-data-publisher/scripts/run-local-automation.mjs
+  → origin/mainを認証付きで確認
+  → ホストがarXiv公式3一覧を取得
+     日付・New ID全件・New/Cross件数をsnapshot化
+  → 未公開日が複数ならpastweekから最古の完全な1日を選択
+  → 公開済みならNO_CHANGE（Codex未使用）
+  → 別のdaily-arxiv-data-agent worktree
+  → Codex CLI（GPT-5.6-Sol / Ultra）
+  → run固有/tmpへ3 JSON + manifest
+  → ホスト専用stagingへ安全にコピー
+  → schemaと公式snapshotを完全照合
+  → pastweekを再取得し、選択した日付のID・件数が同一か確認
+  → モデルが触れないpublisher worktreeの固定publisher
+  → 6ファイルだけcommitしてorigin/mainへpush
+  → GitHub Actions再検証
+  → GitHub Pages
 ```
 
-既に公開済み、または新しい発表がない場合は`ALREADY_PUBLISHED`または`NO_NEW_ANNOUNCEMENT`で正常終了し、評価、commit、pushを行いません。午後タスクは通常この経路になります。
+### 分離する領域
 
-## 失敗時
+```text
+/Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data
+  人が変更を確認してcommitするmain checkout
 
-失敗報告は`ACTION_REQUIRED:`で始まり、`current.json unchanged; no push`を明記します。前回正常版は公開されたままです。
+/Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data-publisher
+  launchdとpublisherだけが使うpristine worktree
+  Codex sandboxから書込不可
 
-よくある確認:
+/Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data-agent
+  モデル専用worktree
+  汚れた場合は残して、次回はrun固有の新しいworktreeを使用
+
+~/Library/Application Support/Daily arXiv/
+  モデルから書込不可のlock、lock履歴、Codex/launchdログ
+
+/tmp/daily-arxiv-automation-<uid>/run-.../
+  そのrunだけモデルに許可するstaging、manifest、一時HOME/TMPDIR
+```
+
+モデルとpublisherを同じworktreeで動かしません。Codexは独立process groupで起動し、終了時には残存childも停止します。万一background processが残っても、publisher、ホストlock、ホストstagingへ書けない構成です。公開成功後は、そのrunが作成したrun固有`/tmp`、ホストstaging、Codexログだけを削除します。失敗時の調査資料、既存フォルダ、worktreeを自動削除・上書きして復旧する処理はありません。
+Codexのstdout/stderrはホストが20 MiBで打ち切り、上限超過runは公開しません。モデル出力がログ領域を無制限に埋めることも防ぎます。
+
+### Codexの固定条件
+
+```text
+model = gpt-5.6-sol
+reasoning effort = ultra
+permissions profile = daily_arxiv_model（Beta、fail closed）
+approval policy = never
+filesystem = agent worktreeは読取り専用、run固有rootだけ書込可能
+shell network = arxiv.org / export.arxiv.orgだけ
+web search = arxiv.org / export.arxiv.orgだけ
+login shell、Apps、Plugins、MCP、browser、computer use = 無効
+```
+
+ChatGPT認証情報、SSH agent、APIキー名、GitHub token名はモデル側shell環境から除外します。モデルのGit push URLも無効化し、`.codex/rules`でadd/commit/push/publisherを拒否します。ネットワークallowlistだけを秘密情報保護とみなさず、BetaのCodex permissions profileでリポジトリを読取り専用、run固有領域だけを書込可能にし、ChatGPT認証保存領域の読取りを明示的に拒否します。秘密情報、lock、履歴は`/tmp`へ置きません。ホストstagingは同じ自動化専用temp base内でもモデルへ許可したrunRootの外に分離し、モデルからの読書きを拒否します。
+
+## ホスト側の決定的な検証
+
+AIの評価内容を機械的に証明することはできませんが、次はホストが独立確認します。
+
+- 公式3カテゴリが同じannouncement dateであること
+- 未来日でなく、公開済みlatestDateより新しいこと
+- `New submissions`を全件表示した公式ページであること
+- 中間日復元では、公開済み日が公式pastweekの発表日列にあり、選択日まで欠落がないこと
+- reportの全ID集合、カテゴリ、`v1`、New件数、Cross件数が公式snapshotと完全一致すること
+- generation前後で、選択したpastweek日付のsnapshot fingerprintが同一であること
+- 3レポートがschema 1.3、同じrunId、固定モデル情報を持つこと
+- 各最終上位10件に全文確認記録があること
+- 秘密情報、PDF、symlink、nested `.git`、10 MiB超ファイルがないこと
+- commit対象が日付に対応する正確な6ファイルだけであること
+- push直前までHEADと`origin/main`が競合していないこと
+
+長時間run中に新しい発表日が追加されても、選択済みの過去日が公式pastweek内に完全な形で残り、fingerprintが同一ならその過去日を公開できます。選択日が範囲外へ落ちた、部分表示になった、または内容が変わった場合は公開せず、次回runまたは手動確認へ回します。
+
+## このMacで必要な前提
+
+- Node.js 22以上
+- ChatGPTアカウントで認証したCodex CLI
+- `gpt-5.6-sol` / `ultra`を利用可能
+- originが`hiroki-takeda/daily-arxiv-data`
+- macOSシステムtimezoneが`Asia/Tokyo`
+- APIキー、GitHub PAT、`gh` CLIは不使用
+
+Codex CLIは更新され得るため、厳格config preflightに失敗した場合は自動runを開始しません。
+登録時に実体path、SHA-256、versionをplistへ固定し、毎runで再計算します。VS Code拡張やCLIが更新・置換された場合は、新バイナリを無検証で使わず停止します。service・plist・publisherを安全に同時更新する自動コマンドは意図的に設けません。失敗通知を受けたら既存物を削除せず、Daily arXivのスケジュール更新をCodexへ依頼し、実行中jobと差分を確認したうえで変更前に別途承認します。
+
+## 一度だけ行う登録
+
+自動化コードとUI改善が`origin/main`へpush済みで、main checkoutがcleanであることが前提です。未commit状態では診断が意図的に失敗します。
+
+### 1. 非公開・非登録の事前診断
 
 ```bash
 cd /Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data
-git pull --ff-only
-npm test
-npm run validate
-git status --short --branch
+node scripts/configure-macos-schedule.mjs check
+node scripts/run-local-automation.mjs --check
 ```
 
-`git reset --hard`、force push、`git add -A`は使用しません。失敗したScheduled Worktreeは本番checkoutから隔離されています。
+`check`は次を確認します。
 
-## GitHub Pagesと共用画面
+- main checkoutがcleanで、認証付き`git ls-remote`の`origin/main`と同じHEAD
+- Node.jsとmacOS timezone
+- launchd相当の限定PATHからCodex CLIを発見できること
+- ChatGPTログインでありAPIキーログインでないこと
+- 固定モデル、filesystem sandbox、managed network proxyのconfigをCLIが認識すること
+- macOS Seatbelt実機で使い捨て模擬workspaceが読取り専用、runRootだけが書込可能で、workspace書込みと認証ファイル読取りが拒否されること
+- sandbox内からarXiv公式通信だけ成功し、外部ドメイン通信が拒否されること
+- 日次モデルrunではコードを変更せず、schemaとリポジトリ検証はモデル終了後に固定publisherが、全テストはpush後にGitHub Actionsが実行すること
+- 既存publisher pathがある場合は正しいrepoのclean worktreeであること
 
-GitHub Actionsはpushされた内容を再度検証し、成功時だけ`public/`をPagesへ配置します。
+この診断はcommit、push、worktree登録、plist登録、モデル実行を行いません。Codex config確認用の小さな一時ディレクトリだけを`/tmp`へ作る場合があります。
 
-- リポジトリ: https://github.com/hiroki-takeda/daily-arxiv-data
-- Actions: https://github.com/hiroki-takeda/daily-arxiv-data/actions
+### 2. plistの確認
+
+```bash
+node scripts/configure-macos-schedule.mjs print | plutil -lint -- -
+node scripts/configure-macos-schedule.mjs print
+```
+
+### 3. ユーザー承認後に登録
+
+```bash
+node scripts/configure-macos-schedule.mjs install
+```
+
+`install`でserviceを読み込んだ直後にも追いつき確認が1回走ります。既に公開済みならCodexを呼ばず`NO_CHANGE`で終了します。未公開日が複数ある場合は最古の1日を評価・公開し、次の定時runで次の日へ進みます。以後もMac再起動後のユーザーログイン時に同じ確認を行います。
+
+公式`pastweek`は直近5発表日の見出しを提供しますが、最古日は一覧の時間境界で一部だけの場合があります。最古日は公開済み日を特定する基準として使い、復元には3カテゴリすべてが完全表示された後続日だけを使います。公開済み日が5発表日の範囲外なら、自動で日付を飛ばさず手動確認を求めます。
+
+作成対象:
+
+```text
+/Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data-publisher/
+~/Library/Application Support/Daily arXiv/
+~/Library/LaunchAgents/com.hiroki.daily-arxiv.plist
+```
+
+`daily-arxiv-data-agent`は最初の新着run時に作ります。対象pathが既に別フォルダなら触らず、run固有の別pathを使います。異なる既存plist、別repoのworktree、dirty publisher、同名service衝突は上書きせず停止します。
+
+登録確認:
+
+```bash
+launchctl print gui/$(id -u)/com.hiroki.daily-arxiv
+```
+
+service停止、plist削除、古いdirty agent worktree整理は対象削除を伴うため自動uninstallを提供しません。必要になった時点で対象と理由を確認してから行います。
+
+## スケジュールと日課
+
+```text
+月〜金 11:30 JST  主run
+月〜金 16:30 JST  retry
+ユーザーログイン時  最古の未公開1日を追いつき確認
+```
+
+日々の指示は不要です。通常の日課は公開ページを見るだけです。週1回程度、または通知が失敗を示した時に次を確認します。
+
+ログイン直後にネットワークやSSH認証がまだ利用できなければ、その追いつき確認は安全に失敗します。常駐retryは行わず、次の11:30または16:30の定時runで再試行します。
+
+```bash
+tail -n 200 "$HOME/Library/Application Support/Daily arXiv/logs/launchd.stdout.log"
+tail -n 200 "$HOME/Library/Application Support/Daily arXiv/logs/launchd.stderr.log"
+git -C /Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data status --short --branch
+```
+
+正常時は`AUTOMATION_PUBLISHED`、既発表なら`NO_CHANGE`です。`NO_CHANGE`ではデスクトップ通知を出しません。push完了時の通知はPages公開完了ではなく、GitHub Actionsによる検証・配信開始を示します。失敗時は`ACTION_REQUIRED:`で始まり、`current.json`と`origin/main`を維持します。
+
+異常終了したlockはすぐ削除せず保存します。元processが存在せず5時間以上経過したlockだけを`stale-locks`へ移し、午後または翌日のrunを継続します。正常lockも削除せず`lock-history`へ移して監査履歴にします。
+
+## 共用表示PC
+
 - 公開ページ: https://hiroki-takeda.github.io/daily-arxiv-data/
+- Actions: https://github.com/hiroki-takeda/daily-arxiv-data/actions
 
-共用PCでは公開ページを全画面で開き、OSの自動スリープを無効にします。ページは5分ごとにデータを再取得し、画面全体の再読み込みは不要です。
+共用PCは表示端末であり、自動生成ホストではありません。ページは5分間隔でデータを再取得し、通信失敗時はその端末の最終正常版を表示します。上位10件は高密度一覧、選択した1件だけ詳細展開、11位以下も初回選択時に完全レポートを取得して全情報を表示します。
 
-## 公式仕様上の制約
+## Mac不要Cloud経路
 
-ChatGPTデスクトップのローカルScheduled Taskは、実行時にMacとアプリが稼働している必要があります。Scheduled Taskは無人実行時のsandbox設定を使うため、権限は固定publisherに限定しています。
+API追加課金なしで無人commit・pushまで確実に行うCloud経路は、現時点では本番に採用しません。Daily arXivは上記のローカル`launchd`経路だけを使います。
 
-- Scheduled Tasks: https://developers.openai.com/codex/app/automations
+## 公式仕様
+
+- Scheduled Tasks: https://learn.chatgpt.com/docs/automations
+- Codex Cloud: https://learn.chatgpt.com/docs/cloud
+- Cloud environments: https://learn.chatgpt.com/docs/environments/cloud-environment
+- ChatGPTプランでのCodex: https://help.openai.com/en/articles/11369540-using-codex-with-your-chatgpt-plan
+- ChatGPT GitHub連携: https://help.openai.com/en/articles/11145903-connecting-github-to-chatgpt-deep-research
+- Codex config: https://learn.chatgpt.com/docs/config-file/config-reference
+- Codex permissions: https://learn.chatgpt.com/docs/permissions
 - arXiv announcement availability: https://info.arxiv.org/help/availability.html
+- arXiv pastweek listing example: https://arxiv.org/list/hep-th/pastweek?skip=0&show=2000

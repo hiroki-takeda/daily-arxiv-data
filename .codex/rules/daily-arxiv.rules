@@ -1,25 +1,29 @@
 prefix_rule(
-    pattern = ["node", "scripts/prepare-worktree.mjs"],
-    decision = "allow",
-    justification = "Synchronize only an isolated Daily arXiv Scheduled-task worktree with origin/main.",
+    pattern = ["node", "scripts/publish-edition.mjs"],
+    decision = "forbidden",
+    justification = "Write only the host-provided staging reports and manifest; the host publishes after Codex exits.",
     match = [
-        "node scripts/prepare-worktree.mjs",
-    ],
-    not_match = [
-        "node scripts/publish-edition.mjs 2026-07-13 .automation/staging/example",
-        "node scripts/validate.mjs",
+        "node scripts/publish-edition.mjs 2026-07-13 /tmp/daily-arxiv/staging",
     ],
 )
 
 prefix_rule(
-    pattern = ["node", "scripts/publish-edition.mjs"],
-    decision = "allow",
-    justification = "Run the fixed Daily arXiv validator and six-file publisher without an unattended approval prompt.",
-    match = [
-        "node scripts/publish-edition.mjs 2026-07-13 .automation/staging/daily-arxiv-2026-07-13-example",
-    ],
-    not_match = [
-        "node scripts/prepare-worktree.mjs",
-        "node scripts/merge_category_reports.mjs 2026-07-13",
-    ],
+    pattern = ["npm", "run", "publish"],
+    decision = "forbidden",
+    justification = "The host publisher runs only after the model exits and its manifest is validated.",
+    match = ["npm run publish -- 2026-07-13 /tmp/daily-arxiv/staging"],
+)
+
+prefix_rule(
+    pattern = ["git"],
+    decision = "forbidden",
+    justification = "The model performs no Git operation; the host owns worktree sync, validation, commit, and push.",
+    match = ["git status"],
+)
+
+prefix_rule(
+    pattern = ["/usr/bin/git"],
+    decision = "forbidden",
+    justification = "Absolute-path Git bypasses are also forbidden inside the model stage.",
+    match = ["/usr/bin/git status"],
 )

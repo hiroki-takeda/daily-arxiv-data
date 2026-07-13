@@ -70,7 +70,7 @@ function assertInitialWorktreeSafe(stagingDir) {
 
 function verifyRepositoryAndRemote() {
   if (!lstatSync(resolve(root, ".git")).isFile()) {
-    throw new Error("Refusing unattended publication from the main checkout; use a dedicated Scheduled-task worktree.");
+    throw new Error("Refusing unattended publication from the main checkout; use the dedicated publisher worktree.");
   }
   const top = git(["rev-parse", "--show-toplevel"]).stdout.trim();
   if (resolve(top) !== root) throw new Error(`Expected Git root ${root}, got ${top}`);
