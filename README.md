@@ -21,8 +21,8 @@
   → Codex CLIをGPT-5.6-Sol / Ultraで実行
   → arXivのNew submissionsを全件一次評価
   → 各カテゴリの最終上位10件をv1 PDFで全文確認
-  → 候補JSONをモデル専用/tmpだけへ出力
-  → ホスト専用stagingへ安全にコピーし、公式ID集合と再照合
+  → 候補JSONを指定run固有/tmpへ出力
+  → Application Support内のホスト専用stagingへ安全にコピーし、公式ID集合と再照合
   → 選択日の公式snapshotがrun中も同一な場合だけ固定publisherが6ファイルをcommit・push
   → GitHub Actionsが再検証してPagesへ公開
   → 共用PCが5分以内に新データを取得
@@ -51,7 +51,7 @@ node scripts/configure-macos-schedule.mjs install
 
 `install`は既存の同名plistを上書き・削除しません。登録直後には最新の未公開分を調べる追いつき確認が1回走り、必要ならそのまま評価・pushします。詳しい確認方法、ログ、停止時の扱いは[自動運用ガイド](docs/AUTOMATION.md)を参照してください。
 
-登録後は、モデルが一度も書けない`daily-arxiv-data-publisher` worktree、モデル専用の`daily-arxiv-data-agent` worktree、`~/Library/Application Support/Daily arXiv/`のロックとログを使います。公開成功時は、そのrun自身が作った一時PDF・staging・Codexログだけを消します。失敗資料と既存フォルダは残し、モデルがagent worktreeを汚した場合も証拠として保存して次回は新しいrun固有worktreeへ切り替えます。
+登録後は、モデルが一度も書けない`daily-arxiv-data-publisher` worktree、モデル専用の`daily-arxiv-data-agent` worktree、`~/Library/Application Support/Daily arXiv/`のロック・ログ・ホストstagingを使います。公開成功時は、そのrun自身が作った一時PDF・staging・Codexログだけを消します。失敗資料と既存フォルダは残し、モデルがagent worktreeを汚した場合も証拠として保存して次回は新しいrun固有worktreeへ切り替えます。
 
 ## 検証
 
@@ -64,7 +64,7 @@ npm run validate
 git diff --check
 ```
 
-日次Codex runはホストから指定された`/tmp`配下に3レポートだけを書きます。Codex自身は`git add`、`commit`、`push`を行いません。シェルの外向き通信とWeb検索は`arxiv.org` / `export.arxiv.org`だけに制限し、`/tmp`全体ではなくrun固有フォルダだけを書込可能にします。モデルが終了した後、別のpublisher worktreeにあるホスト側ランナーだけが次を呼びます。
+日次Codex runには、ホストから指定されたrun固有`/tmp`へ3レポートだけを書くよう要求します。Codex自身は`git add`、`commit`、`push`を行いません。シェルの外向き通信とWeb検索は`arxiv.org` / `export.arxiv.org`だけに制限し、リポジトリ、ChatGPT認証保存領域、publisher、ホスト制御領域への書込みを拒否します。現在のmacOS版Codexでは共通ツール用system tempがscratchとして書込み可能なため、`/tmp`全体を非信頼領域として扱い、公開用のホストstaging・lock・ログ・秘密情報は置きません。モデルが終了した後、別のpublisher worktreeにあるホスト側ランナーだけが次を呼びます。
 
 ```bash
 node scripts/publish-edition.mjs YYYY-MM-DD /tmp/.../staging

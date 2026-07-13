@@ -262,7 +262,7 @@ export function runPaths(runId, {
     outbox: join(runRoot, "outbox"),
     manifest: join(runRoot, "outbox", "manifest.json"),
     agentHome: join(runRoot, "home"),
-    hostStaging: join(base, "host-staging", runId),
+    hostStaging: join(controlRoot, "host-staging", runId),
   });
 }
 
@@ -346,10 +346,11 @@ export function permissionProfileOverrides(runRoot) {
   if (!isAbsolute(runRoot)) fail("Permission-profile runRoot must be absolute.");
   return Object.freeze([
     'default_permissions="daily_arxiv_model"',
-    // Start from a closed custom profile instead of extending :workspace,
-    // because :workspace intentionally grants system-temp access. The model
-    // can inspect but not edit the agent checkout, and can write only inside
-    // the exact host-created run root.
+    // Start from a closed custom profile instead of extending :workspace. The
+    // model can inspect but not edit the agent checkout, and the only trusted
+    // automation path it may edit is the exact host-created run root. Current
+    // macOS Codex runtime defaults still retain writable system-temp scratch;
+    // no secret or host-trusted automation state may be stored there.
     `permissions.daily_arxiv_model.filesystem={":root"="deny",":minimal"="read","/usr/local"="read","/opt/homebrew"="read",":slash_tmp"="deny","~/.codex"="deny",":workspace_roots"={"."="read"},${JSON.stringify(runRoot)}="write"}`,
     'permissions.daily_arxiv_model.network={enabled=true,allow_upstream_proxy=false,enable_socks5=false,enable_socks5_udp=false,domains={"arxiv.org"="allow","export.arxiv.org"="allow"}}',
   ]);
@@ -700,7 +701,7 @@ export function removeSuccessfulRunArtifacts(paths, {
   validateRunId(runId);
   if (
     resolve(paths.runRoot) !== resolve(join(paths.base, runId))
-    || resolve(paths.hostStaging) !== resolve(join(paths.base, "host-staging", runId))
+    || resolve(paths.hostStaging) !== resolve(join(paths.controlRoot, "host-staging", runId))
     || resolve(paths.codexLog) !== resolve(join(paths.logDirectory, `${runId}.codex.log`))
   ) {
     fail("Refusing to clean automation artifacts outside the exact successful run paths.");

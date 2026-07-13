@@ -273,11 +273,12 @@ test("a failed new lock write archives only its own incomplete inode", async () 
   assert.equal(readdirSync(root).filter((name) => name.startsWith("incomplete-")).length, 1);
 });
 
-test("lock/control state and host staging are outside the model-writable run root", () => {
+test("lock/control state and host staging stay outside model-writable system temp", () => {
   const paths = runPaths(RUN_ID, { uid: 501, controlRoot: "/Users/test/Library/Application Support/Daily arXiv" });
   assert.equal(paths.lock, "/Users/test/Library/Application Support/Daily arXiv/active-run.lock");
   assert.ok(paths.runRoot.startsWith("/tmp/daily-arxiv-automation-501/"));
-  assert.ok(!paths.hostStaging.startsWith(`${paths.runRoot}/`));
+  assert.equal(paths.hostStaging, `/Users/test/Library/Application Support/Daily arXiv/host-staging/${RUN_ID}`);
+  assert.ok(!paths.hostStaging.startsWith("/tmp/"));
   assert.ok(!paths.lock.startsWith("/tmp/"));
 });
 
@@ -302,12 +303,14 @@ test("reports are copied into an initially empty host-only staging directory", a
 test("a successful run removes only its own temporary directories and Codex log", async () => {
   const root = await mkdtemp(join(tmpdir(), "daily-arxiv-success-cleanup-test-"));
   const base = join(root, "temp");
-  const logDirectory = join(root, "logs");
+  const controlRoot = join(root, "control");
+  const logDirectory = join(controlRoot, "logs");
   const paths = {
     base,
+    controlRoot,
     logDirectory,
     runRoot: join(base, RUN_ID),
-    hostStaging: join(base, "host-staging", RUN_ID),
+    hostStaging: join(controlRoot, "host-staging", RUN_ID),
     codexLog: join(logDirectory, `${RUN_ID}.codex.log`),
   };
   mkdirSync(paths.runRoot, { recursive: true });
@@ -330,15 +333,17 @@ test("a successful run removes only its own temporary directories and Codex log"
 test("successful-run cleanup rejects paths outside the exact run scope", async () => {
   const root = await mkdtemp(join(tmpdir(), "daily-arxiv-cleanup-guard-test-"));
   const base = join(root, "temp");
-  const logDirectory = join(root, "logs");
+  const controlRoot = join(root, "control");
+  const logDirectory = join(controlRoot, "logs");
   const outside = join(root, "outside");
   mkdirSync(outside, { recursive: true });
   writeFileSync(join(outside, "keep.txt"), "keep\n");
   assert.throws(() => removeSuccessfulRunArtifacts({
     base,
+    controlRoot,
     logDirectory,
     runRoot: outside,
-    hostStaging: join(base, "host-staging", RUN_ID),
+    hostStaging: join(controlRoot, "host-staging", RUN_ID),
     codexLog: join(logDirectory, `${RUN_ID}.codex.log`),
   }), /Invalid automation runId|outside the exact/);
   assert.equal(readFileSync(join(outside, "keep.txt"), "utf8"), "keep\n");

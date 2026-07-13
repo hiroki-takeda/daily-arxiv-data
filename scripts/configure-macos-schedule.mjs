@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { createHash, randomBytes } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   accessSync,
@@ -146,21 +146,6 @@ function remoteMainHead(env) {
   return hash;
 }
 
-function ensureExactProbeFile(path, content, label) {
-  if (!existsSync(path)) {
-    const descriptor = openSync(path, "wx", 0o600);
-    try {
-      writeFileSync(descriptor, content, "utf8");
-    } finally {
-      closeSync(descriptor);
-    }
-  }
-  assertOwnedSafeFile(path, label);
-  if (readFileSync(path, "utf8") !== content) {
-    throw new Error(`${label} has unexpected content: ${path}`);
-  }
-}
-
 function checkPrerequisites() {
   if (process.getuid() === 0 || process.env.SUDO_USER) {
     throw new Error("Run this command as the logged-in user, never with sudo.");
@@ -197,38 +182,14 @@ function checkPrerequisites() {
     runRoot: preflightRoot,
     env,
   });
-  const workspaceMarker = "Daily arXiv disposable read-only permission-probe workspace.\n";
-  const probeHelper = readFileSync(resolve(root, "scripts", "probe-codex-sandbox.mjs"), "utf8");
-  const probeVersion = createHash("sha256")
-    .update(workspaceMarker)
-    .update("\0")
-    .update(probeHelper)
-    .digest("hex")
-    .slice(0, 16);
-  const probeNonce = randomBytes(6).toString("hex");
-  const permissionWorkspace = `/tmp/daily-arxiv-permission-workspace-${process.getuid()}-${probeVersion}-${process.pid}-${probeNonce}`;
-  const permissionScripts = join(permissionWorkspace, "scripts");
-  ensureDirectory(permissionWorkspace, "Permission-probe workspace", { privateDirectory: true });
-  ensureDirectory(permissionScripts, "Permission-probe scripts", { privateDirectory: true });
-  ensureExactProbeFile(
-    join(permissionWorkspace, "AGENTS.md"),
-    workspaceMarker,
-    "Permission-probe workspace marker",
-  );
-  ensureExactProbeFile(
-    join(permissionScripts, "probe-codex-sandbox.mjs"),
-    probeHelper,
-    "Permission-probe helper copy",
-  );
-  const deniedSentinel = join(permissionWorkspace, "repo-write-sentinel.txt");
-  const sentinelContent = "Daily arXiv permission probe: this workspace must remain read-only to the model sandbox.\n";
-  ensureExactProbeFile(deniedSentinel, sentinelContent, "Permission-probe read-only workspace sentinel");
-  if (existsSync(`${deniedSentinel}.write-attempt`)) {
-    throw new Error(`A prior denied-write probe unexpectedly created ${deniedSentinel}.write-attempt; inspect it manually.`);
-  }
+  // Probe the reviewed checkout itself: the production agent worktree is a
+  // sibling on the same filesystem, while system-temp roots have distinct
+  // platform sandbox semantics and are not representative of that boundary.
+  const deniedSentinel = resolve(root, "AGENTS.md");
+  assertOwnedSafeFile(deniedSentinel, "Permission-probe read-only workspace sentinel");
   const permissionCheck = assertCodexPermissionEnforcement({
     codexBin,
-    worktree: permissionWorkspace,
+    worktree: root,
     runRoot: preflightRoot,
     deniedSentinel,
     authPath: resolve(homeDirectory, ".codex", "auth.json"),
@@ -246,7 +207,8 @@ function checkPrerequisites() {
       `Codex: ${codexBin} (${reviewedCodex.version}; SHA-256 ${reviewedCodex.sha256})`,
       "Codex auth/model: ChatGPT login; gpt-5.6-sol / ultra fixed by runner",
       `Publisher: ${publisher.state}`,
-      "Codex permission probe: repo read-only/runRoot write allowed; out-of-run writes and auth reads denied; arXiv network allowed; external network denied",
+      "Codex permission probe: repo read-only; runRoot write allowed; auth reads denied; arXiv network allowed; external network denied",
+      "macOS system-temp scratch is treated as model-writable and contains no host-trusted automation state",
     ].join("\n"),
   };
 }

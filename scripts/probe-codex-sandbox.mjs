@@ -29,8 +29,10 @@ try {
   closeSync(descriptor);
 }
 
-const deniedWrite = expectDenied("Write inside the read-only workspace", () => {
-  const target = openSync(resolve(`${deniedSentinel}.write-attempt`), "wx", 0o600);
+const deniedWrite = expectDenied("Write-open inside the read-only workspace", () => {
+  // Opening the existing sentinel read/write proves write authority without
+  // changing its contents or leaving a new file behind if the sandbox regresses.
+  const target = openSync(resolve(deniedSentinel), "r+");
   closeSync(target);
 });
 const authRead = expectDenied("Read of Codex authentication storage", () => readFileSync(resolve(authPath)));

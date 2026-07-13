@@ -30,7 +30,7 @@ launchd（平日11:30・16:30 JST）
   → 別のdaily-arxiv-data-agent worktree
   → Codex CLI（GPT-5.6-Sol / Ultra）
   → run固有/tmpへ3 JSON + manifest
-  → ホスト専用stagingへ安全にコピー
+  → Application Support内のホスト専用stagingへ安全にコピー
   → schemaと公式snapshotを完全照合
   → pastweekを再取得し、選択した日付のID・件数が同一か確認
   → モデルが触れないpublisher worktreeの固定publisher
@@ -54,13 +54,14 @@ launchd（平日11:30・16:30 JST）
   汚れた場合は残して、次回はrun固有の新しいworktreeを使用
 
 ~/Library/Application Support/Daily arXiv/
-  モデルから書込不可のlock、lock履歴、Codex/launchdログ
+  モデルから書込不可のlock、lock履歴、ホストstaging、Codex/launchdログ
 
 /tmp/daily-arxiv-automation-<uid>/run-.../
-  そのrunだけモデルに許可するstaging、manifest、一時HOME/TMPDIR
+  モデル出力用staging、manifest、一時HOME/TMPDIR
+  macOSのsystem temp全体をモデル側から見た非信頼scratchとして扱う
 ```
 
-モデルとpublisherを同じworktreeで動かしません。Codexは独立process groupで起動し、終了時には残存childも停止します。万一background processが残っても、publisher、ホストlock、ホストstagingへ書けない構成です。公開成功後は、そのrunが作成したrun固有`/tmp`、ホストstaging、Codexログだけを削除します。失敗時の調査資料、既存フォルダ、worktreeを自動削除・上書きして復旧する処理はありません。
+モデルとpublisherを同じworktreeで動かしません。Codexは独立process groupで起動し、終了時には残存childも停止します。万一background processが残っても、publisher、ホストlock、ホストstagingへ書けない構成です。ホストが信頼するstaging、lock、ログ、秘密情報はsystem tempへ置きません。公開成功後は、そのrunが作成したrun固有`/tmp`、Application Support内のホストstaging、Codexログだけを削除します。失敗時の調査資料、既存フォルダ、worktreeを自動削除・上書きして復旧する処理はありません。
 Codexのstdout/stderrはホストが20 MiBで打ち切り、上限超過runは公開しません。モデル出力がログ領域を無制限に埋めることも防ぎます。
 
 ### Codexの固定条件
@@ -70,13 +71,16 @@ model = gpt-5.6-sol
 reasoning effort = ultra
 permissions profile = daily_arxiv_model（Beta、fail closed）
 approval policy = never
-filesystem = agent worktreeは読取り専用、run固有rootだけ書込可能
+filesystem = agent worktree・認証保存領域・ホスト制御領域は書込不可
+             run固有rootは書込可能、macOS system tempは非信頼scratch
 shell network = arxiv.org / export.arxiv.orgだけ
 web search = arxiv.org / export.arxiv.orgだけ
 login shell、Apps、Plugins、MCP、browser、computer use = 無効
 ```
 
-ChatGPT認証情報、SSH agent、APIキー名、GitHub token名はモデル側shell環境から除外します。モデルのGit push URLも無効化し、`.codex/rules`でadd/commit/push/publisherを拒否します。ネットワークallowlistだけを秘密情報保護とみなさず、BetaのCodex permissions profileでリポジトリを読取り専用、run固有領域だけを書込可能にし、ChatGPT認証保存領域の読取りを明示的に拒否します。秘密情報、lock、履歴は`/tmp`へ置きません。ホストstagingは同じ自動化専用temp base内でもモデルへ許可したrunRootの外に分離し、モデルからの読書きを拒否します。
+ChatGPT認証情報、SSH agent、APIキー名、GitHub token名はモデル側shell環境から除外します。モデルのGit push URLも無効化し、`.codex/rules`でadd/commit/push/publisherを拒否します。ネットワークallowlistだけを秘密情報保護とみなさず、BetaのCodex permissions profileでリポジトリを読取り専用にし、ChatGPT認証保存領域の読取りを明示的に拒否します。
+
+現在のmacOS版Codexが共通ツール実行に使う`:minimal`プロファイルはsystem tempへのscratch書込みを保持するため、`/tmp`全体をrun固有の厳密な境界とはみなしません。モデルには指定run root以外へ書かないよう要求しつつ、system tempはすべて非信頼領域として扱います。秘密情報、lock、履歴、ログ、publisher、ホストstagingはそこへ置かず、ホストstagingは`~/Library/Application Support/Daily arXiv/host-staging/`へ分離します。これによりsystem temp内の内容がモデルに変更されても、公開に使うコピーはモデル終了後に保護領域へ新規作成し、独立検証します。
 
 ## ホスト側の決定的な検証
 
@@ -127,7 +131,7 @@ node scripts/run-local-automation.mjs --check
 - launchd相当の限定PATHからCodex CLIを発見できること
 - ChatGPTログインでありAPIキーログインでないこと
 - 固定モデル、filesystem sandbox、managed network proxyのconfigをCLIが認識すること
-- macOS Seatbelt実機で使い捨て模擬workspaceが読取り専用、runRootだけが書込可能で、workspace書込みと認証ファイル読取りが拒否されること
+- macOS Seatbelt実機で実際のmain checkoutが読取り専用、runRootへの書込みが可能で、checkout書込みと認証ファイル読取りが拒否されること（成功時はcheckoutへファイルを作りません）
 - sandbox内からarXiv公式通信だけ成功し、外部ドメイン通信が拒否されること
 - 日次モデルrunではコードを変更せず、schemaとリポジトリ検証はモデル終了後に固定publisherが、全テストはpush後にGitHub Actionsが実行すること
 - 既存publisher pathがある場合は正しいrepoのclean worktreeであること
