@@ -19,6 +19,13 @@ test("the dashboard script compiles and exposes expandable full-rank details", (
 test("the dashboard renders and joins a lower-ranked report without browser-only dependencies", async () => {
   const html = readFileSync(resolve("public/index.html"), "utf8");
   const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
+  const index = JSON.parse(readFileSync(resolve("public/data/index.json"), "utf8"));
+  const reportDate = index.availableDates.find((date) => {
+    const candidate = JSON.parse(readFileSync(resolve("data/reports", `${date}-hep-th.json`), "utf8"));
+    return candidate.papers.length > 10;
+  });
+  assert.ok(reportDate, "an archived hep-th edition must exercise lower-ranked details");
+  const report = JSON.parse(readFileSync(resolve("data/reports", `${reportDate}-hep-th.json`), "utf8"));
   const elements = Object.fromEntries(["#app", "#meta", "#tabs", "#dates"].map((selector) => [selector, {
     innerHTML: "",
     addEventListener() {},
@@ -42,6 +49,7 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
       if (url.includes("data/reports/")) path = resolve("data/reports", /data\/reports\/([^?]+)/.exec(url)[1]);
       else if (url.includes("index.json")) path = resolve("public/data/index.json");
       else if (url.includes("current.json")) path = resolve("public/data/current.json");
+      else if (/data\/(\d{4}-\d{2}-\d{2}\.json)/.test(url)) path = resolve("public/data", /data\/(\d{4}-\d{2}-\d{2}\.json)/.exec(url)[1]);
       else throw new Error(`unexpected request ${url}`);
       return { ok: true, json: async () => JSON.parse(readFileSync(path, "utf8")) };
     },
@@ -49,13 +57,13 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
     setInterval: () => 0,
   };
   runInNewContext(script, context);
-  for (let attempt = 0; attempt < 20 && !elements["#app"].innerHTML.includes("上位10件"); attempt += 1) {
+  for (let attempt = 0; attempt < 20 && !elements["#app"].innerHTML.includes("上位"); attempt += 1) {
     await new Promise((resolvePromise) => setImmediate(resolvePromise));
   }
+  await context.load(`${reportDate}.json`);
   assert.match(elements["#app"].innerHTML, /hep-th 上位10件/);
   assert.match(elements["#app"].innerHTML, /11位以下/);
 
-  const report = JSON.parse(readFileSync(resolve("data/reports/2026-07-10-hep-th.json"), "utf8"));
   const lower = report.papers[10];
   await context.loadReport("hep-th", lower.arxivId);
   assert.match(elements["#app"].innerHTML, new RegExp(lower.titleJa.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
