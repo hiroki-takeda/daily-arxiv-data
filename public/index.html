@@ -39,6 +39,7 @@
     .paper-row{background:linear-gradient(135deg,#0e2130,#0a1824);border:1px solid var(--line-soft);border-radius:11px;overflow:clip;box-shadow:0 5px 18px #0002}
     .paper-row[open]{border-color:#39647f;box-shadow:0 10px 28px #0004}
     .paper-row>summary{display:grid;grid-template-columns:52px 64px minmax(240px,1fr) 246px 145px 20px;gap:10px;align-items:center;min-height:62px;padding:7px 12px;cursor:pointer;list-style:none}
+    .paper-row.pending-detail>summary{grid-template-columns:52px 64px minmax(240px,1fr) 145px 20px}
     .paper-row>summary::-webkit-details-marker{display:none}
     .paper-row>summary:hover{background:#15304766}
     .rank{font-size:19px;font-weight:850;color:var(--gold);text-align:center}
@@ -52,7 +53,6 @@
     .mini-scores span{background:#06131d;border-radius:7px;padding:4px 3px;text-align:center;line-height:1.05}
     .mini-scores b{display:block;color:var(--cyan);font-size:15px}
     .mini-scores small{font-size:9.5px;color:var(--muted)}
-    .mini-scores.pending{display:block;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:12px;text-align:center;padding:8px}
     .row-badges{display:flex;gap:5px;justify-content:flex-end;align-items:center;min-width:0}
     .badge{display:inline-flex;align-items:center;max-width:100%;white-space:nowrap;border:1px solid var(--line);border-radius:999px;padding:3px 7px;color:var(--muted);font-size:11px;line-height:1.2}
     .badge.full{color:var(--green);border-color:#347c61}
@@ -92,16 +92,20 @@
     .error{padding:40px;text-align:center;color:var(--danger)}
     @media(max-width:1200px){
       .paper-row>summary{grid-template-columns:48px 58px minmax(210px,1fr) 210px 124px 18px;gap:8px;padding-inline:9px}
+      .paper-row.pending-detail>summary{grid-template-columns:48px 58px minmax(210px,1fr) 18px}
+      .paper-row.pending-detail .row-badges{display:none}
       .paper-detail{padding-left:113px}
       .badge.kind{display:none}
     }
     @media(max-width:900px){
       header{position:relative}
       .paper-row>summary{grid-template-columns:45px 55px minmax(0,1fr) 20px;grid-template-rows:auto auto;min-height:86px}
+      .paper-row.pending-detail>summary{grid-template-columns:45px 55px minmax(0,1fr) 20px;grid-template-rows:auto;min-height:62px}
       .paper-main{grid-column:3}
       .mini-scores{grid-column:3;grid-row:2}
       .row-badges{grid-column:1/3;grid-row:2;justify-content:center}
       .chevron{grid-column:4;grid-row:1/3}
+      .paper-row.pending-detail .chevron{grid-row:1}
       .paper-detail{padding:16px}
       .detail-heading{display:block}.links{justify-content:flex-start;margin-top:10px}
     }
@@ -113,6 +117,7 @@
       .summary{grid-template-columns:repeat(2,1fr)}.metric{min-height:44px;padding:7px 9px;font-size:12px}.metric b{font-size:19px}
       .section-head{display:block}.section-head p{text-align:left;margin-top:4px}
       .paper-row>summary{grid-template-columns:39px 50px minmax(0,1fr) 18px;gap:6px;padding:7px 6px}
+      .paper-row.pending-detail>summary{grid-template-columns:39px 50px minmax(0,1fr) 18px}
       .rank{font-size:16px}.total b{font-size:17px}.paper-title{font-size:14px}.paper-authors{font-size:11px}
       .mini-scores span{padding:4px 1px}.mini-scores b{font-size:13px}.mini-scores small{font-size:8px}
       .row-badges .badge:not(.full):not(.abstract){display:none}
@@ -223,7 +228,7 @@
     function lowerSection(papers){
       if(!papers.length)return'';
       return `<section class="lower-section" aria-labelledby="lower-heading">
-        <div class="section-head"><h2 id="lower-heading">11位以下（${papers.length}件）</h2><p>各論文を選ぶと、採点内訳・要約・総合評定まで取得して表示します。</p></div>
+        <div class="section-head"><h2 id="lower-heading">11位以下（${papers.length}件）</h2><p>11位以下も、各論文の採点内訳・要約・総合評定を確認できます。</p></div>
         <div class="paper-list">${papers.map(p=>paperRow(p,'report')).join('')}</div>
       </section>`;
     }
@@ -238,23 +243,22 @@
       const open=openPapers.has(key);
       const detailed=hasDetailedPaper(paper);
       const title=paper.titleJa||paper.title;
-      const evalClass=paper.fullTextEvaluated===true?'full':'abstract';
-      const evalLabel=paper.fullTextEvaluated===true?'全文評価':paper.fullTextEvaluated===false?'要旨評価':'詳細表示';
+      const pendingDetail=source==='report'&&!paper.scores;
+      const evaluationBadge=paper.fullTextEvaluated===true?'<span class="badge full">全文評価</span>':paper.fullTextEvaluated===false?'<span class="badge abstract">要旨評価</span>':'';
       const stars=(summary.eminentAuthors||[]).map(eminentAuthorName).filter(Boolean);
-      return `<details class="paper-row" data-paper-id="${esc(summary.arxivId)}" data-source="${source}" ${open?'open':''}>
+      return `<details class="paper-row${pendingDetail?' pending-detail':''}" data-paper-id="${esc(summary.arxivId)}" data-source="${source}" ${open?'open':''}>
         <summary data-focus-id="${esc(summary.arxivId)}">
           <span class="rank">#${summary.rank}</span>
           <span class="total"><b>${summary.totalScore}</b><small>/100</small></span>
           <span class="paper-main"><strong class="paper-title">${esc(title)}</strong><span class="paper-authors">${esc((summary.authors||[]).join(', '))}</span></span>
-          ${miniScores(paper.scores)}
-          <span class="row-badges"><span class="badge kind">${esc(summary.paperType||'未分類')}</span><span class="badge ${evalClass}">${evalLabel}</span>${stars.length?`<span class="badge star" title="${esc(stars.join(', '))}">★</span>`:''}</span>
+          ${paper.scores?miniScores(paper.scores):''}
+          <span class="row-badges"><span class="badge kind">${esc(summary.paperType||'未分類')}</span>${evaluationBadge}${stars.length?`<span class="badge star" title="${esc(stars.join(', '))}">★</span>`:''}</span>
           <span class="chevron" aria-hidden="true">⌄</span>
         </summary>
         <div class="paper-detail">${detailed?paperDetail(paper,summary):detailState(source,summary)}</div>
       </details>`;
     }
     function miniScores(scores){
-      if(!scores)return'<span class="mini-scores pending">選択して詳細を表示</span>';
       return `<span class="mini-scores">${scoreFields.map(([key,,short])=>`<span><b>${scores[key]??'—'}</b><small>${short}</small></span>`).join('')}</span>`;
     }
     function validOptionalScoreReasons(scoreReasons){
@@ -270,8 +274,18 @@
     function hasDetailedPaper(paper){
       return Boolean(paper&&nonEmpty(paper.titleJa)&&paper.scores&&Array.isArray(paper.abstractLines)&&paper.abstractLines.length===3&&nonEmpty(paper.curiosity)&&nonEmpty(paper.concept)&&nonEmpty(paper.conclusion)&&nonEmpty(paper.assessment)&&validScoreReasonsForEdition(paper.scoreReasons));
     }
+    function displayAssessment(value){
+      let text=String(value??'').trim();
+      text=text.replace(/^総合(?:評定|評価|点)?\s*[：:]?\s*[0-9０-９]{1,3}\s*[／/]\s*(?:100|１００)(?:\s*(?:（[^）]*）|\([^)]*\)))?\s*[。．]?\s*/u,'');
+      text=text.replace(/(^|[。！？]\s*)(?:物理(?:学)?全体(?:への重要度・波及)?|(?:hep-th|gr-qc|quant-ph)内(?:の重要度・インパクト)?|カテゴリ(?:内の重要度・インパクト)?|科学的重要性|分野への貢献|独創性|方法・結果(?:の説得力)?|厳密性・信頼性)\s*[：:]?\s*[0-9０-９]{1,2}\s*(?:[／/]\s*(?:25|２５)|点)\s*[：:]\s*/gu,'$1');
+      text=text.replace(/(?:PDF全文|タイトル・著者・要旨)を確認し、採点には論文内容のみを使用した。\s*/gu,'');
+      text=text.replace(/著者の知名度(?:・権威は4項目と総合点に一切使用していない|・所属・経歴は採点に使用していない)。?\s*/gu,'');
+      text=text.replace(/(?:主題の分野横断的な射程|分野内での重要度|問いと構成の新規性)を評価。\s*/gu,'');
+      text=text.replace(/v1本文の[^。]{1,80}を根拠に評価した。\s*/gu,'');
+      return text.replace(/[ \t]{2,}/g,' ').trim()||'評価内容は上記の要約と採点内訳をご覧ください。';
+    }
     function assessmentDetail(paper,scores){
-      const overall=`<div class="assessment"><b>総合評定：</b>${multiline(paper.assessment)}</div>`;
+      const overall=`<div class="assessment"><b>総合評定：</b>${multiline(displayAssessment(paper.assessment))}</div>`;
       if(paper.scoreReasons!==undefined){
         return `<section class="score-reasons" aria-label="採点理由"><h4>採点理由</h4><div class="reason-grid">${scoreFields.map(([key,label])=>`<div class="score-reason"><h5><span>${esc(label)}</span><b>${scores[key]??'—'}/25</b></h5><p>${multiline(paper.scoreReasons[key])}</p></div>`).join('')}</div></section>${overall}`;
       }

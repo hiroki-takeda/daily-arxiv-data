@@ -10,9 +10,11 @@ test("the dashboard script compiles and exposes expandable full-rank details", (
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
   assert.equal(scripts.length, 1);
   assert.doesNotThrow(() => new Function(scripts[0]));
-  assert.match(html, /<details class="paper-row"/);
+  assert.match(html, /<details class="paper-row/);
   assert.match(html, /\.\/data\/reports\//);
   assert.match(html, /11位以下/);
+  assert.doesNotMatch(html, /選択して詳細を表示/);
+  assert.doesNotMatch(html, />詳細表示</);
   assert.match(html, /評価根拠/);
   assert.match(html, /評価基準/);
   for (const label of ["科学的重要性", "分野への貢献", "独創性", "厳密性・信頼性"]) {
@@ -68,9 +70,23 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   assert.match(elements["#app"].innerHTML, /hep-th 上位10件/);
   assert.match(elements["#app"].innerHTML, /11位以下/);
 
+  const edition = JSON.parse(readFileSync(resolve("public/data", `${reportDate}.json`), "utf8"));
+  const lowerSummary = edition.categories["hep-th"].otherPapers[0];
+  const pendingRow = context.paperRow(lowerSummary, "report");
+  assert.match(pendingRow, /<details class="paper-row pending-detail"/);
+  assert.match(pendingRow, /<summary data-focus-id=/);
+  assert.match(pendingRow, /class="chevron"/);
+  assert.doesNotMatch(pendingRow, /選択して詳細を表示/);
+  assert.doesNotMatch(pendingRow, />詳細表示</);
+
   const lower = report.papers[10];
   await context.loadReport("hep-th", lower.arxivId);
   assert.match(elements["#app"].innerHTML, new RegExp(lower.titleJa.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  const loadedRow = context.paperRow(lowerSummary, "report");
+  assert.doesNotMatch(loadedRow, /pending-detail/);
+  assert.match(loadedRow, /class="mini-scores"/);
+  assert.match(loadedRow, />要旨評価<|>全文評価</);
+  assert.doesNotMatch(loadedRow, /選択して詳細を表示|>詳細表示</);
   const detail = context.paperDetail(lower, { ...lower, eminentAuthors: [] });
   assert.match(detail, /3行要約/);
   assert.match(detail, /着眼点/);
@@ -78,7 +94,31 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   assert.match(detail, /結論と限界/);
   assert.match(detail, /総合評定/);
   assert.match(detail, /評価根拠/);
-  assert.match(detail, new RegExp(lower.assessment.slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  const displayedAssessment = context.displayAssessment(lower.assessment);
+  assert.match(detail, new RegExp(displayedAssessment.slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.doesNotMatch(displayedAssessment, /総合\s*\d{1,3}\s*\/\s*100/);
+
+  const compactLegacy = context.displayAssessment("総合84/100（物理全体23、カテゴリ22、独創性19、方法・結果20）。地平面問題・初期条件・過去完全性を同時に扱う。");
+  assert.equal(compactLegacy, "地平面問題・初期条件・過去完全性を同時に扱う。");
+  const slashLegacy = context.displayAssessment("総合95/100。物理全体22/25：隣接分野へ波及する。hep-th内25/25：中心課題を前進させる。独創性25/25：新しい構成を与える。方法・結果23/25：導出と限界が明確である。");
+  assert.match(slashLegacy, /隣接分野へ波及する。/);
+  assert.match(slashLegacy, /導出と限界が明確である。/);
+  assert.doesNotMatch(slashLegacy, /(?:総合95\/100|物理全体22\/25|hep-th内25\/25|独創性25\/25|方法・結果23\/25)/);
+  const pointLegacy = context.displayAssessment("総合92/100。物理全体23点：基礎問題に関わる。gr-qc内24点：中核課題へ答える。独創性24点：非自明な構成である。方法・結果21点：適用範囲に限界がある。");
+  assert.match(pointLegacy, /基礎問題に関わる。/);
+  assert.match(pointLegacy, /適用範囲に限界がある。/);
+  assert.doesNotMatch(pointLegacy, /(?:総合92\/100|物理全体23点|gr-qc内24点|独創性24点|方法・結果21点)/);
+  const narrativeAssessment = "中心成果の射程は広いが、適用範囲には明確な限界がある。";
+  assert.equal(context.displayAssessment(narrativeAssessment), narrativeAssessment);
+  for (const name of readdirSync(resolve("data/reports")).filter((entry) => entry.endsWith(".json"))) {
+    const archived = JSON.parse(readFileSync(resolve("data/reports", name), "utf8"));
+    for (const paper of archived.papers) {
+      const displayed = context.displayAssessment(paper.assessment);
+      assert.notEqual(displayed, "", `${name} ${paper.arxivId} displayed assessment`);
+      assert.doesNotMatch(displayed, /^総合(?:評定|評価|点)?\s*[：:]?\s*\d{1,3}\s*\/\s*100/u, `${name} ${paper.arxivId} total recap`);
+      assert.doesNotMatch(displayed, /(^|[。！？]\s*)(?:物理(?:学)?全体(?:への重要度・波及)?|(?:hep-th|gr-qc|quant-ph)内(?:の重要度・インパクト)?|カテゴリ|独創性|方法・結果(?:の説得力)?)\s*\d{1,2}\s*(?:\/\s*25|点)\s*[：:]/u, `${name} ${paper.arxivId} axis recap`);
+    }
+  }
 
   const scoreReasons = {
     broadImpact: "対象範囲が広く、隣接分野にも波及する。\n<script>alert(1)</script>",
