@@ -5,6 +5,15 @@ import test from "node:test";
 import { runInNewContext } from "node:vm";
 import { SCORE_KEYS } from "../scripts/lib/pipeline.mjs";
 
+const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "\"": "&quot;",
+  "'": "&#39;",
+})[character]);
+const escapeRegExp = (value) => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 test("the dashboard script compiles and exposes expandable full-rank details", () => {
   const html = readFileSync(resolve("public/index.html"), "utf8");
   const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]);
@@ -15,6 +24,13 @@ test("the dashboard script compiles and exposes expandable full-rank details", (
   assert.match(html, /11位以下/);
   assert.doesNotMatch(html, /選択して詳細を表示/);
   assert.doesNotMatch(html, />詳細表示</);
+  assert.match(html, /paper-original-title/);
+  assert.match(html, /detail-toolbar/);
+  assert.match(html, /detail-meta/);
+  assert.match(html, /\.row-badges \.badge\.kind\{display:none\}/);
+  assert.match(html, /\.detail-meta\{display:flex\}/);
+  assert.match(html, /\.detail-meta \.badge\.star\{display:inline-flex\}/);
+  assert.doesNotMatch(html, /class="detail-heading"/);
   assert.match(html, /評価根拠/);
   assert.match(html, /評価基準/);
   for (const label of ["科学的重要性", "分野への貢献", "独創性", "厳密性・信頼性"]) {
@@ -78,6 +94,11 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   assert.match(pendingRow, /class="chevron"/);
   assert.doesNotMatch(pendingRow, /選択して詳細を表示/);
   assert.doesNotMatch(pendingRow, />詳細表示</);
+  if (lowerSummary.titleJa) {
+    assert.match(pendingRow, new RegExp(`class="paper-title"[^>]*>${escapeRegExp(escapeHtml(lowerSummary.titleJa))}</strong>[\\s\\S]*class="paper-original-title"[^>]*>${escapeRegExp(escapeHtml(lowerSummary.title))}</span>[\\s\\S]*class="paper-authors"`));
+  } else {
+    assert.doesNotMatch(pendingRow, /class="paper-original-title"/);
+  }
 
   const lower = report.papers[10];
   await context.loadReport("hep-th", lower.arxivId);
@@ -87,7 +108,17 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   assert.match(loadedRow, /class="mini-scores"/);
   assert.match(loadedRow, />要旨評価<|>全文評価</);
   assert.doesNotMatch(loadedRow, /選択して詳細を表示|>詳細表示</);
+  assert.match(loadedRow, new RegExp(`class="paper-title"[^>]*>${escapeRegExp(escapeHtml(lower.titleJa))}</strong><span class="paper-original-title" lang="en">${escapeRegExp(escapeHtml(lower.title))}</span><span class="paper-authors">${escapeRegExp(escapeHtml(lower.authors.join(", ")))}</span>`));
+  assert.equal((loadedRow.match(/class="paper-title"/g) ?? []).length, 1);
+  assert.equal((loadedRow.match(/class="paper-original-title"/g) ?? []).length, 1);
+  assert.equal((loadedRow.match(/class="paper-authors"/g) ?? []).length, 1);
   const detail = context.paperDetail(lower, { ...lower, eminentAuthors: [] });
+  assert.match(detail, /class="detail-toolbar"/);
+  assert.match(detail, /class="detail-meta"/);
+  assert.match(detail, new RegExp(`class="badge kind">${escapeRegExp(escapeHtml(lower.paperType))}</span>`));
+  assert.doesNotMatch(detail, /class="(?:detail-heading|english-title|authors|badges|scores)"|<h3>/);
+  assert.doesNotMatch(detail, new RegExp(escapeRegExp(escapeHtml(lower.titleJa))));
+  assert.doesNotMatch(detail, new RegExp(escapeRegExp(escapeHtml(lower.title))));
   assert.match(detail, /3行要約/);
   assert.match(detail, /着眼点/);
   assert.match(detail, /中核アイデア・方法/);
@@ -97,6 +128,18 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   const displayedAssessment = context.displayAssessment(lower.assessment);
   assert.match(detail, new RegExp(displayedAssessment.slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   assert.doesNotMatch(displayedAssessment, /総合\s*\d{1,3}\s*\/\s*100/);
+
+  const namedAuthor = lower.authors[0];
+  const responsiveDetail = context.paperDetail(lower, {
+    ...lower,
+    eminentAuthors: [{ authorName: namedAuthor }],
+  });
+  assert.match(responsiveDetail, new RegExp(`class="badge star">★ ${escapeRegExp(escapeHtml(namedAuthor))}</span>`));
+
+  const identicalTitles = { ...lower, titleJa: lower.title };
+  const identicalTitleRow = context.paperRow(identicalTitles, "top");
+  assert.doesNotMatch(identicalTitleRow, /class="paper-original-title"/);
+  assert.equal((identicalTitleRow.match(new RegExp(escapeRegExp(escapeHtml(lower.title)), "g")) ?? []).length, 1);
 
   const compactLegacy = context.displayAssessment("総合84/100（物理全体23、カテゴリ22、独創性19、方法・結果20）。地平面問題・初期条件・過去完全性を同時に扱う。");
   assert.equal(compactLegacy, "地平面問題・初期条件・過去完全性を同時に扱う。");

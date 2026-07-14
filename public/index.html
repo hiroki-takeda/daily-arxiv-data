@@ -47,8 +47,11 @@
     .total b{display:block;font-size:20px}
     .total small{font-size:11px;color:var(--muted)}
     .paper-main{min-width:0}
-    .paper-title{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;line-height:1.25}
-    .paper-authors{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted);font-size:12.5px;margin-top:3px}
+    .paper-title,.paper-original-title,.paper-authors{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .paper-title{font-size:16px;line-height:1.2}
+    .paper-original-title{color:#c7d8e1;font-size:11.5px;line-height:1.2;margin-top:2px}
+    .paper-authors{color:var(--muted);font-size:11.5px;line-height:1.2;margin-top:2px}
+    .paper-row[open] .paper-title,.paper-row[open] .paper-original-title,.paper-row[open] .paper-authors{overflow:visible;text-overflow:clip;white-space:normal}
     .mini-scores{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
     .mini-scores span{background:#06131d;border-radius:7px;padding:4px 3px;text-align:center;line-height:1.05}
     .mini-scores b{display:block;color:var(--cyan);font-size:15px}
@@ -61,19 +64,13 @@
     .chevron{font-size:20px;color:var(--muted);transition:transform .18s ease;text-align:center}
     .paper-row[open] .chevron{transform:rotate(180deg)}
     .paper-detail{border-top:1px solid var(--line-soft);padding:17px 22px 20px 128px;background:#071621cc}
-    .detail-heading{display:flex;gap:16px;justify-content:space-between;align-items:start}
-    .detail-heading h3{font-size:21px;line-height:1.3;margin:0 0 4px}
-    .english-title,.authors{color:#c7d8e1}
-    .english-title{font-size:14px}
-    .authors{margin-top:4px}
-    .paper-arxiv{display:inline-block;margin-top:5px;font-size:13px;font-weight:750}
+    .detail-toolbar{display:flex;gap:16px;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .detail-meta{display:none;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+    .detail-meta .badge.star{display:none}
+    .paper-arxiv{display:inline-block;font-size:13px;font-weight:750;white-space:nowrap}
     .links{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end;min-width:160px}
     .links a{border:1px solid var(--line);border-radius:999px;padding:5px 9px;font-size:12px;white-space:nowrap}
-    .badges{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
-    .scores{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:11px 0}
-    .scores div{background:#06131d;border-radius:8px;padding:7px 9px;color:var(--muted);font-size:12px}
-    .scores b{display:block;font-size:18px;color:var(--cyan)}
-    dl{display:grid;grid-template-columns:105px 1fr;gap:7px 14px;margin:12px 0}
+    dl{display:grid;grid-template-columns:105px 1fr;gap:7px 14px;margin:0 0 12px}
     dt{color:var(--cyan);font-weight:800}
     dd{margin:0}
     .assessment{border-left:3px solid var(--gold);padding-left:12px;color:#dce8ee}
@@ -95,7 +92,8 @@
       .paper-row.pending-detail>summary{grid-template-columns:48px 58px minmax(210px,1fr) 18px}
       .paper-row.pending-detail .row-badges{display:none}
       .paper-detail{padding-left:113px}
-      .badge.kind{display:none}
+      .row-badges .badge.kind{display:none}
+      .detail-meta{display:flex}
     }
     @media(max-width:900px){
       header{position:relative}
@@ -107,7 +105,7 @@
       .chevron{grid-column:4;grid-row:1/3}
       .paper-row.pending-detail .chevron{grid-row:1}
       .paper-detail{padding:16px}
-      .detail-heading{display:block}.links{justify-content:flex-start;margin-top:10px}
+      .detail-toolbar{align-items:flex-start;flex-direction:column;gap:8px}.links{justify-content:flex-start;min-width:0}
     }
     @media(max-width:620px){
       body{font-size:15px}
@@ -118,13 +116,12 @@
       .section-head{display:block}.section-head p{text-align:left;margin-top:4px}
       .paper-row>summary{grid-template-columns:39px 50px minmax(0,1fr) 18px;gap:6px;padding:7px 6px}
       .paper-row.pending-detail>summary{grid-template-columns:39px 50px minmax(0,1fr) 18px}
-      .rank{font-size:16px}.total b{font-size:17px}.paper-title{font-size:14px}.paper-authors{font-size:11px}
+      .rank{font-size:16px}.total b{font-size:17px}.paper-title{font-size:14px}.paper-original-title,.paper-authors{font-size:11px}
       .mini-scores span{padding:4px 1px}.mini-scores b{font-size:13px}.mini-scores small{font-size:8px}
       .row-badges .badge:not(.full):not(.abstract){display:none}
-      .scores{grid-template-columns:repeat(2,1fr)}
+      .detail-meta .badge.star{display:inline-flex}
       .reason-grid{grid-template-columns:1fr}
       dl{grid-template-columns:1fr;gap:3px}dd{margin-bottom:8px}
-      .detail-heading h3{font-size:18px}
     }
     @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.chevron{transition:none}}
   </style>
@@ -243,6 +240,8 @@
       const open=openPapers.has(key);
       const detailed=hasDetailedPaper(paper);
       const title=paper.titleJa||paper.title;
+      const normalizedTitle=value=>String(value??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('en-US');
+      const originalTitle=nonEmpty(paper.title)&&normalizedTitle(paper.title)!==normalizedTitle(title)?paper.title:'';
       const pendingDetail=source==='report'&&!paper.scores;
       const evaluationBadge=paper.fullTextEvaluated===true?'<span class="badge full">全文評価</span>':paper.fullTextEvaluated===false?'<span class="badge abstract">要旨評価</span>':'';
       const stars=(summary.eminentAuthors||[]).map(eminentAuthorName).filter(Boolean);
@@ -250,9 +249,9 @@
         <summary data-focus-id="${esc(summary.arxivId)}">
           <span class="rank">#${summary.rank}</span>
           <span class="total"><b>${summary.totalScore}</b><small>/100</small></span>
-          <span class="paper-main"><strong class="paper-title">${esc(title)}</strong><span class="paper-authors">${esc((summary.authors||[]).join(', '))}</span></span>
+          <span class="paper-main"><strong class="paper-title">${esc(title)}</strong>${originalTitle?`<span class="paper-original-title" lang="en">${esc(originalTitle)}</span>`:''}<span class="paper-authors">${esc((summary.authors||[]).join(', '))}</span></span>
           ${paper.scores?miniScores(paper.scores):''}
-          <span class="row-badges"><span class="badge kind">${esc(summary.paperType||'未分類')}</span>${evaluationBadge}${stars.length?`<span class="badge star" title="${esc(stars.join(', '))}">★</span>`:''}</span>
+          <span class="row-badges"><span class="badge kind">${esc(summary.paperType||'未分類')}</span>${evaluationBadge}${stars.length?`<span class="badge star" title="${esc(stars.join(', '))}" aria-label="著名著者: ${esc(stars.join(', '))}">★</span>`:''}</span>
           <span class="chevron" aria-hidden="true">⌄</span>
         </summary>
         <div class="paper-detail">${detailed?paperDetail(paper,summary):detailState(source,summary)}</div>
@@ -291,13 +290,12 @@
       }
       return overall;
     }
-    function paperDetail(paper,summary){
+    function paperDetail(paper,summary=paper){
       const scores=paper.scores||{};
       const stars=(summary.eminentAuthors||[]).map(eminentAuthorName).filter(Boolean);
       const basis=paper.evaluationBasis==='full_text_major_sections'?'PDF全文の主要節・結論・限界':paper.evaluationBasis==='title_authors_abstract'?'タイトル・著者・要旨':'記録された評価資料';
-      return `<div class="detail-heading"><div><h3>${esc(paper.titleJa||paper.title)}</h3><div class="english-title">${esc(paper.title)}</div><div class="authors">${esc((paper.authors||[]).join(', '))}</div><a class="paper-arxiv" href="${esc(canonicalAbstractUrl(paper))}" target="_blank" rel="noreferrer">arXiv ${esc(unversionedArxivId(paper.arxivId))} ↗</a></div><div class="links">${detailLinks(paper)}</div></div>
-        <div class="badges"><span class="badge">${esc(paper.paperType||'未分類')}</span><span class="badge ${paper.fullTextEvaluated?'full':'abstract'}">${paper.fullTextEvaluated?'全文確認済み':'要旨による評価'}</span>${stars.map(name=>`<span class="badge star">★ ${esc(name)}</span>`).join('')}</div>
-        <div class="scores">${scoreFields.map(([key,label])=>`<div><b>${scores[key]??'—'}/25</b>${esc(label)}</div>`).join('')}</div>
+      return `<div class="detail-toolbar"><a class="paper-arxiv" href="${esc(canonicalAbstractUrl(paper))}" target="_blank" rel="noreferrer">arXiv ${esc(unversionedArxivId(paper.arxivId))} ↗</a><div class="links">${detailLinks(paper)}</div></div>
+        <div class="detail-meta" aria-label="画面幅に応じた論文メタデータ"><span class="badge kind">${esc(paper.paperType||'未分類')}</span>${stars.map(name=>`<span class="badge star">★ ${esc(name)}</span>`).join('')}</div>
         <dl><dt>3行要約</dt><dd>${lines(paper.abstractLines)}</dd><dt>着眼点</dt><dd>${multiline(paper.curiosity)}</dd><dt>中核アイデア・方法</dt><dd>${multiline(paper.concept)}</dd><dt>結論と限界</dt><dd>${multiline(paper.conclusion)}</dd></dl>
         ${assessmentDetail(paper,scores)}
         <p class="evaluation-note"><b>評価根拠：</b>${esc(basis)}${paper.fullTextReviewStatus?`<br><b>全文確認範囲：</b>${multiline(paper.fullTextReviewStatus)}`:''}</p>`;

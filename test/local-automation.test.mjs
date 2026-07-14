@@ -66,8 +66,10 @@ test("mode parser exposes only run and one pure diagnostic mode", () => {
   assert.throws(() => parseMode(["--check", "extra"]), /Usage/);
 });
 
-test("runtime update barrier covers every module imported by the scheduled entrypoint", () => {
+test("runtime update barrier covers every scheduled runtime dependency", () => {
   for (const path of [
+    "AGENTS.md",
+    "docs/SCHEDULED_TASK_PROMPT.md",
     "scripts/run-local-automation.mjs",
     "scripts/lib/local-automation.mjs",
     "scripts/lib/macos-schedule.mjs",
@@ -167,7 +169,14 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   }
   assert.match(specification, /Daily arXiv rubric 3\.0/);
   assert.match(specification, /technicalStrength`の18点以上は全文確認/);
+  assert.match(specification, /`titleJa`:[^\n]*日本語として自然に読める表示題名/);
+  assert.match(specification, /固有名・数式・標準略語だけを英字で残し/);
+  assert.match(specification, /`title`にはarXivの原題を一字一句そのまま保存/);
+  assert.match(specification, /画面は`titleJa`、`title`、著者名の順/);
+  assert.match(specification, /Kerr black hole[^。\n]{0,40}Kerrブラックホール/);
   assert.match(specification, /一般語を英単語のまま日本語の助詞や「する」へ接続しません/);
+  assert.match(specification, /`fullTextReviewStatus`は、固有名・数式・標準略語だけを英字で残し/);
+  assert.match(specification, /英字で残すのは固有名・数式・標準略語に限り/);
   assert.match(specification, /別論文へそのまま移せる定型文を禁止/);
   assert.match(specification, /abstractLines\[0\].*言い換えにはしません/);
   assert.match(specification, /assessment.*点数や`scoreReasons`の反復/);

@@ -68,6 +68,10 @@ test("repeating an identical merge is a no-op", () => {
     "originality",
     "technicalStrength",
   ]);
+  assert.equal(
+    edition.categories["hep-th"].otherPapers[0].titleJa,
+    validReportSet()["hep-th"].papers[10].titleJa,
+  );
   assert.equal(mergeEditionTransactionally({ root, date: DATE }).changed, false);
   assert.equal(readFileSync(resolve(root, "public/data/current.json"), "utf8"), before);
 });

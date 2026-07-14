@@ -82,7 +82,7 @@ public/data/current.json
 public/data/index.json
 ```
 
-arXiv PDFは一時領域でだけ確認し、リポジトリへ保存しません。2026-07-10のschema 1.2版と2026-07-13のschema 1.3版は公開履歴として変更せず、rubric 3.0による今後の版はschema 1.4で保存します。schema 1.4では各論文に4軸それぞれの論文固有な`scoreReasons`を持たせ、`assessment`は全体としての優れた点と評価を抑える主要な限界だけをまとめます。
+arXiv PDFは一時領域でだけ確認し、リポジトリへ保存しません。2026-07-10版と2026-07-13版を含む保存済みの公開版は、schema 1.4 / Daily arXiv rubric 3.0へ統一済みです。一度公開した日付付きレポートと公開版は、以後の日次runでは上書きしません。schema 1.4では各論文に4軸それぞれの論文固有な`scoreReasons`を持たせ、`assessment`は全体としての優れた点と評価を抑える主要な限界だけをまとめます。
 
 ダッシュボードは上位10件を高密度の一覧で表示し、選択した論文だけ全評価を展開します。11位以下も同じ操作で全情報へアクセスできます。Pagesの配信成果物には、`public/`に加えて検証済みの`data/reports/*.json`だけを`data/reports/`として同梱します。
 

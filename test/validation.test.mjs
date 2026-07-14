@@ -111,12 +111,83 @@ test("schema 1.4 requires Japanese prose in every reader-facing evaluation field
     rejectsMutation((reports) => { reports["hep-th"].papers[0][field] = "English only"; }, /natural Japanese/);
   }
   rejectsMutation((reports) => { reports["hep-th"].papers[0].abstractLines[1] = "English only"; }, /natural Japanese/);
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].titleJa = "量 English title"; }, /at least 2/);
+  rejectsMutation((reports) => { reports["hep-th"].papers[0].titleJa = "量 QCD"; }, /at least 2/);
   rejectsMutation((reports) => { reports["hep-th"].papers[0].curiosity = "問いです。"; }, /at least 6/);
   rejectsMutation((reports) => { reports["hep-th"].papers[0].abstractLines[1] = "方法です。"; }, /at least 6/);
   rejectsMutation((reports) => { reports["hep-th"].papers[0].scoreReasons.originality = "根拠です。"; }, /at least 12/);
   rejectsMutation((reports) => { reports["hep-th"].papers[0].assessment = "評価です。"; }, /at least 12/);
   rejectsMutation((reports) => { reports["hep-th"].papers[0].fullTextReviewStatus = "English only"; }, /natural Japanese/);
+});
+
+test("schema 1.4 rejects untranslated lowercase English in Japanese evaluation prose", () => {
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].scoreReasons.broadImpact = "冷却原子でreservoir engineeringを用いて散逸を制御し、境界蓄積を検証した。";
+  }, /lowercase English phrase/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].concept = "局所dephasingによる位相緩和を測定し、境界蓄積との関係を示した。";
+  }, /lowercase English token/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].fullTextReviewStatus = "公式v1全文でnull行列の導出と数値検証を確認した。";
+  }, /lowercase English token/);
+
+  const accepted = validReportSet();
+  accepted["hep-th"].papers[0].fullTextReviewStatus = "公式v1全文でbilby_glitchの実装とcoth(1)極限を確認した。";
+  assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
+});
+
+test("schema 1.4 requires a Japanese display title rather than a mixed or repeated original", () => {
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = reports["hep-th"].papers[0].title;
+  }, /distinct from the original/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = "macroscopic systemのquantum stochastic thermodynamics：algebraic approach";
+  }, /general English title word|lowercase English token/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = "量子systemの検証";
+  }, /general English title word|lowercase English token/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = "量子bootstrap検証";
+  }, /general English title word|lowercase English token/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = "Quantum Field Theoryの検証";
+  }, /general English title word/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = "量子gasの検証";
+  }, /general English title word/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = "Quantum-Fieldの検証";
+  }, /general English title word/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = `日本語題名：${reports["hep-th"].papers[0].title}`;
+  }, /must not contain or concatenate the original title/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].titleJa = "日本語表示：Entropic Bell inequalities";
+  }, /general English title word|lowercase English token/);
+
+  const accepted = validReportSet();
+  accepted["hep-th"].papers[0].titleJa = "KerrブラックホールにおけるQNMの検証";
+  accepted["hep-th"].papers[1].titleJa = "LISAによるRényiダイバージェンスの測定";
+  accepted["hep-th"].papers[2].titleJa = "QCD相図におけるYang–Mills理論";
+  accepted["hep-th"].papers[3].titleJa = "Dark Energy Spectroscopic Instrumentによる宇宙観測";
+  accepted["hep-th"].papers[4].titleJa = "非エルミート$\\mathcal{PT}$対称場の検証";
+  accepted["hep-th"].papers[5].titleJa = "Schrödinger方程式の幾何学的解析";
+  accepted["hep-th"].papers[6].titleJa = "Event Horizon TelescopeによるM87の観測";
+  assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
+});
+
+test("schema 1.4 assessment is narrative and never repeats numeric score summaries", () => {
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].assessment = "総合92/100。中心成果は有用だが、適用範囲は限定される。";
+  }, /without repeating total or axis scores/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].assessment = "中心成果は有用である。独創性23/25：既存手法との差がある。";
+  }, /without repeating total or axis scores/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].assessment = "総合評定は９２／１００。中心成果は有用だが、適用範囲は限定される。";
+  }, /without repeating total or axis scores/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].assessment = "中心成果は有用である。技術的信頼性は23点で、適用範囲は限定される。";
+  }, /without repeating total or axis scores/);
 });
 
 test("schema 1.4 rejects duplicated summary sections, copied conclusions, and generic assessments", () => {

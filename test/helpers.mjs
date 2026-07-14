@@ -55,7 +55,7 @@ export function validReport(slug, { date = DATE, count = 11, run = validRun() } 
       submissionType: "new",
       url: `https://arxiv.org/abs/${arxivId}`,
       title: `Fixture ${slug} ${index + 1}`,
-      titleJa: `テスト ${slug} ${index + 1}`,
+      titleJa: `検証用論文第${index + 1}号`,
       authors: [`Author ${categoryIndex}-${index}`],
       primaryCategory: slug,
       paperType: "理論",

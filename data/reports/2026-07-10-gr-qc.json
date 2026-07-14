@@ -1,90 +1,28 @@
 {
-  "schemaVersion": "1.2",
+  "schemaVersion": "1.4",
+  "reportDate": "2026-07-10",
+  "evaluationRun": {
+    "modelId": "gpt-5.6-sol",
+    "modelDisplayName": "GPT-5.6-Sol",
+    "reasoningEffort": "ultra",
+    "modelSelectionVerified": true,
+    "runId": "run-20260714T051045Z-4b8f200d69f0"
+  },
   "slug": "gr-qc",
-  "label": "gr-qc",
+  "label": "General Relativity and Quantum Cosmology",
   "totalNew": 25,
   "crosslistsExcluded": 15,
   "evaluatedCount": 25,
-  "fullTextEvaluatedCount": 10,
+  "fullTextEvaluatedCount": 18,
   "papers": [
     {
       "rank": 1,
-      "arxivId": "2607.08228",
-      "url": "https://arxiv.org/abs/2607.08228",
-      "title": "Static regular black holes in Horndeski theories: analytic no-go and nonanalytic obstructions",
-      "titleJa": "Horndeski理論の静的正則ブラックホール：解析的no-goと非解析的障害",
-      "authors": [
-        "Antonio De Felice",
-        "Shinji Tsujikawa"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 22,
-        "categoryImpact": 24,
-        "originality": 23,
-        "technicalStrength": 23
-      },
-      "totalScore": 92,
-      "abstractLines": [
-        "静的・球対称・漸近平坦で時間非依存scalarを持つHorndeski正則ブラックホールの存在条件を分類した。",
-        "解析的shift-symmetric理論では非摂動的current no-hair定理によりSchwarzschildしか残らず、中心正則性を満たせない。",
-        "周辺的非解析項ではscalar–Gauss–Bonnet鎖だけが共変的に正則だが、そのhairy解も中心特異である。"
-      ],
-      "curiosity": "修正重力で正則ブラックホールを構成しても、地平面安定性と中心正則性を同時に満たせるとは限らない。Horndeski全体でどこまで一般的な排除が可能かが問題である。",
-      "concept": "地平面でscalar kinetic term Xが非零の枝と零の枝を分け、ghost・勾配安定性、漸近平坦端点でのTaylor展開、Noether currentを解析した。さらにlog・分数冪など非解析的逃げ道を共変正則性から分類した。",
-      "conclusion": "仮定した解析的枝では正則ブラックホールは非存在であり、許される唯一の周辺的非解析完成も中心特異性を回避しない。時間依存scalar、DHOST、hedgehog hair、切断された大結合枝は定理の外である。",
-      "assessment": "総合92/100（物理全体22、カテゴリ24、独創性23、方法・結果23）。正則ブラックホール構成全般へ制約を与える広いno-goであり、gr-qc内の波及性が高い。解析枝と非解析的な逃げ道を分け、安定性・中心正則性まで本文で具体的に追っているため、独創性と論証の強さをともに高く評価した。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "8ページPDFを全文テキスト抽出し、地平面解析、解析枝、非解析完成、結論、付録を確認。",
-      "sourceUrls": [
-        "https://arxiv.org/abs/2607.08228",
-        "https://arxiv.org/pdf/2607.08228"
-      ]
-    },
-    {
-      "rank": 2,
-      "arxivId": "2607.08445",
-      "url": "https://arxiv.org/abs/2607.08445",
-      "title": "Signal-to-Noise Ratio Contours for LISA",
-      "titleJa": "LISAの信号対雑音比コンター",
-      "authors": [
-        "Kai Schmitz",
-        "Joseph D. Romano"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "解析",
-      "scores": {
-        "broadImpact": 22,
-        "categoryImpact": 23,
-        "originality": 23,
-        "technicalStrength": 23
-      },
-      "totalScore": 91,
-      "abstractLines": [
-        "弱い確率的重力波背景だけに有効な標準SNR式を、任意の信号強度へ一般化した。",
-        "背景自身のself-noiseを含めるとLISA自己相関SNRには帯域と観測時間で決まる上限がある。",
-        "一般化PLI曲線をSNR contourとして与え、強信号で従来予測が過大になる領域を宇宙紐で例示した。"
-      ],
-      "curiosity": "LISA forecastで広く使われる弱信号SNR式を強い背景へ外挿すると、非常に大きなSNRを誤って報告する。信号自身の統計揺らぎを含む正しい指標が必要である。",
-      "concept": "LISA TDI自己相関のGaussian尤度からsignal self-noiseを含む最適SNRを導き、任意強度のPLI contourと解析的上限を構成し、宇宙紐背景へ適用した。",
-      "conclusion": "典型的missionでSNRは概ね1万未満、contour終端はおよそ雑音曲線のe倍で抑えられる。検出器networkの相互相関や他の観測器への一般化が次の課題である。",
-      "assessment": "総合91/100（物理全体22、カテゴリ23、独創性23、方法・結果23）。LISAの多数の確率背景予測を横断的に修正し得るため波及範囲が広い。任意信号強度の最適SNR式、解析的上限、PLI contour、公開数値という相互に補強する結果が本文にあり、概念的新規性と検証可能性を高く評価した。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "26ページPDFを全文テキスト抽出し、尤度、一般SNR式、contour構成、宇宙紐例、結論を確認。",
-      "sourceUrls": [
-        "https://arxiv.org/abs/2607.08445",
-        "https://arxiv.org/pdf/2607.08445"
-      ]
-    },
-    {
-      "rank": 3,
       "arxivId": "2607.07790",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.07790",
       "title": "Regular Black Holes in Nonlocal Quasitopological Gravity",
-      "titleJa": "非局所準トポロジカル重力における正則ブラックホール",
+      "titleJa": "非局所準位相重力における正則ブラックホール",
       "authors": [
         "Pablo Bueno",
         "Pablo A. Cano",
@@ -94,32 +32,40 @@
       "primaryCategory": "gr-qc",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 22,
-        "categoryImpact": 24,
-        "originality": 23,
-        "technicalStrength": 21
+        "broadImpact": 19,
+        "categoryImpact": 21,
+        "originality": 21,
+        "technicalStrength": 20
       },
-      "totalScore": 90,
+      "scoreReasons": {
+        "broadImpact": "特異点を避けた真空ブラックホールと余分な伝播極を持たない非局所重力を同じ構成で実現し、内部構造と量子重力有効理論の双方へ接続する。ただし明示解は主に5次元以上の球対称部門に限られる。",
+        "categoryImpact": "正則ブラックホールを物質源なしで得ると強結合やゴーストが生じやすいという中心課題に対し、無限階準位相作用から厳密解と摂動的Birkhoff性を同時に示した。回転解と一般背景での安定性は残る。",
+        "originality": "有限階高曲率理論や既存の非局所形状因子と異なり、準位相方程式を二乗した非局所完備化によってHayward型真空解を保持する。4次元版が非多項式となるため、単純な有限項追加ではない。",
+        "technicalStrength": "球対称方程式を厳密に解き、最大対称背景のプロパゲータと球対称摂動の双方で余分な極がないことを確認した。任意背景でのゴースト不在と物質結合は未検証である。"
+      },
+      "totalScore": 81,
       "abstractLines": [
-        "準トポロジカル重力に対し、無限微分を含む非局所的な完成を構成した。",
-        "その完成はghostを生まず、強結合不安定性を避けると要旨で報告されている。",
-        "球対称な真空正則ブラックホールを厳密解として保ち、摂動的Birkhoff定理も満たす。"
+        "高曲率重力で正則ブラックホールを真空解として得る際には、余分な自由度や強結合を避ける必要がある。",
+        "無限階の準位相密度を非局所形状因子で完備化し、球対称真空方程式と線形摂動を解析した。",
+        "5次元以上で厳密な正則ブラックホールを構成し最大対称背景でゴーストがないと報告したが、一般背景の安定性は扱っていない。"
       ],
-      "curiosity": "正則ブラックホールを許す高曲率重力を、ghostや強結合を避けた非局所理論として完成できるかが問題である。",
-      "concept": "要旨では、準トポロジカル重力の無限微分完成を構成し、ghost、強結合、球対称真空解という三つの条件を同時に評価している。",
-      "conclusion": "ghost-freeかつ強結合不安定性を避け、真空正則ブラックホールと摂動的Birkhoff性を両立する完成を得た。物質や動的形成まで成立するかは要旨からは未解決である。",
-      "assessment": "総合90/100（物理全体22、カテゴリ24、独創性23、方法・結果21）。重力特異点と量子重力に波及する主題、gr-qcでの高い重要性、複数の理論要請を同時に満たす構成を高く評価した。本文は主要性質を明記する一方、検証の詳細や適用範囲は示さないため方法・結果は21点とした。",
+      "curiosity": "真空の重力作用だけで中心特異点を除去しながら、低エネルギーで新たな不安定自由度を導入しない理論を構成できるか。",
+      "concept": "準位相重力の球対称で低階化する構造を保ったまま、運動方程式の二乗に整関数を作用させて非局所完備化する。",
+      "conclusion": "無限階準位相重力は限定された摂動部門で健全性を保つ正則な真空ブラックホールを許すが、任意背景・回転・物質を含む健全性は未確定である。",
+      "assessment": "厳密な正則真空解と線形スペクトルの制御を一つの作用原理に結び付けた点が強い。適用次元と対称性が狭く、完全な非線形安定性までは保証していないことが主要な制約である。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "9ページPDFを全文テキスト抽出し、導入、作用構成、線形化、Newton極限、結論、付録を確認。",
+      "fullTextReviewStatus": "作用の非局所完備化、球対称厳密解、最大対称背景のプロパゲータ、摂動的Birkhoff議論と付録を確認した。任意背景のハミルトニアン解析と正則解の数値的安定性は独立再現していない。",
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.07790",
-        "https://arxiv.org/pdf/2607.07790"
+        "https://arxiv.org/abs/2607.07790v1",
+        "https://arxiv.org/pdf/2607.07790v1"
       ]
     },
     {
-      "rank": 4,
+      "rank": 2,
       "arxivId": "2607.07943",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.07943",
       "title": "Nonlinear hydrodynamics in spinning neutron stars: Theoretical universal relations and equilibrium solutions",
       "titleJa": "回転中性子星の非線形流体力学：理論的普遍関係と平衡解",
@@ -135,34 +81,130 @@
         "Amlan Nanda"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "理論",
+      "paperType": "理論・数値計算",
       "scores": {
-        "broadImpact": 22,
-        "categoryImpact": 23,
-        "originality": 22,
-        "technicalStrength": 22
+        "broadImpact": 19,
+        "categoryImpact": 20,
+        "originality": 19,
+        "technicalStrength": 18
       },
-      "totalScore": 89,
+      "scoreReasons": {
+        "broadImpact": "回転中性子星の非線形潮汐応答を少数の普遍関係へ圧縮し、重力波位相模型と高密度物質推定へ投入できる。単一の基本モードとNewton重力軌道への切り詰めが精度を制限する。",
+        "categoryImpact": "連星合体直前の非線形流体応答を相対論的波形へ組み込む課題に対し、三波・四波結合と回転を含む平衡解を整理した。数値相対論との較正は未実施である。",
+        "originality": "線形潮汐や非回転のアフィン模型を基礎としつつ、任意回転での四次相互作用と理論的普遍関係を同一ハミルトニアンにまとめた。三波係数を線形潮汐量から決める点が差分である。",
+        "technicalStrength": "アフィン楕円体ハミルトニアンを四波次数まで導出し、複数の状態方程式と低周波の相対論計算で較正した。軌道と放射反作用はNewton近似で、高次モード誤差は未定量である。"
+      },
+      "totalScore": 76,
       "abstractLines": [
-        "回転星を楕円体として扱うaffine模型で、f-modeとradial modeの結合を4-wave次数まで解析的に導出した。",
-        "3-wave結合は線形潮汐量だけで決まり新しい物性を運ばない一方、無視すると単独星で合体時約1.7 radの位相誤差を生む。",
-        "高速回転では4-wave非調和性が内部浮力の断熱指数を探る窓になるが、f-mode resonance lockingは起こらない。"
+        "高速回転する中性子星では、合体直前の潮汐変形に線形応答を越える流体相互作用が現れ得る。",
+        "アフィン楕円体模型を任意回転と四波相互作用まで展開し、低周波の相対論的応答で係数を較正した。",
+        "低速回転では四波効果が小さい一方、高速回転では断熱指数への感度を報告したが、数値相対論波形との比較は残る。"
       ],
-      "curiosity": "BNS波形で非線形潮汐がEOS推定をどれほど汚染し、どの非線形結合が本当に新しい中性子星物理を測るかが未整理である。",
-      "concept": "Hamiltonianを4-waveまで構成し、第一原理の普遍関係、Newton流体のmode resonance、相対論的低周波展開を接続したhybrid模型で位相差を評価した。",
-      "conclusion": "3-wave潮汐の波形補正は無視できず、高速回転時のみ高次非線形性が新しい内部情報を持ち得る。相対論的affine模型、EOB実装、NR校正、3PN境界項の不定性が残る。",
-      "assessment": "総合89/100（物理全体22、カテゴリ23、独創性22、方法・結果22）。BNS波形と中性子星内部物理へ直結し、3-wave係数の情報内容を切り分けた点が独創的である。4-waveまでの解析導出、相対論的低周波とNewton的共鳴をつなぐ評価、約1.7 radという定量結果が本文にあり、方法・結果も強い。",
+      "curiosity": "回転が強い中性子星の非線形潮汐は、合体波形に測定可能な位相差と状態方程式情報を残すか。",
+      "concept": "星全体を回転する楕円体として記述し、線形潮汐量から非線形結合を拘束することで多数の流体自由度を普遍関係へ還元する。",
+      "conclusion": "非線形平衡潮汐は高速回転で内部物性への新しい感度を持ち得るが、現実的な多モード相対論波形へ接続した精度保証はまだない。",
+      "assessment": "複雑な回転流体力学を波形模型へ利用可能な関係式に整理した点が有用である。近似軌道と単一モード切り詰めのため、観測推論へ直ちに使える段階ではない。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "37ページPDFを全文テキスト抽出し、Hamiltonian構成、普遍関係、位相評価、Discussionを確認。",
+      "fullTextReviewStatus": "アフィン模型のハミルトニアン導出、三波・四波係数の普遍関係、状態方程式別の平衡系列と連星位相評価を確認した。数値相対論による波形誤差と高次流体モードの収束は独立検証していない。",
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.07943",
-        "https://arxiv.org/pdf/2607.07943"
+        "https://arxiv.org/abs/2607.07943v1",
+        "https://arxiv.org/pdf/2607.07943v1"
+      ]
+    },
+    {
+      "rank": 3,
+      "arxivId": "2607.08445",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.08445",
+      "title": "Signal-to-Noise Ratio Contours for LISA",
+      "titleJa": "LISAの信号対雑音比等高線",
+      "authors": [
+        "Kai Schmitz",
+        "Joseph D. Romano"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "観測解析・方法論",
+      "scores": {
+        "broadImpact": 19,
+        "categoryImpact": 19,
+        "originality": 18,
+        "technicalStrength": 20
+      },
+      "scoreReasons": {
+        "broadImpact": "信号自己雑音を含む一般化等高線は、天体物理・宇宙論由来の確率的背景について、弱信号での検出有意度と強信号での検出後パラメータ推定を接続する。さらに、弱信号極限と強信号飽和の表示はLISA感度曲線と統計的検出閾値の設計を較正するが、ガウス的・定常な背景と既知の装置雑音に範囲が限られる。",
+        "categoryImpact": "雑音優勢近似のべき乗積分感度が強信号域で楽観化する問題に対し、有限な自己雑音上限を持つ一般化等高線を導出した。多チャネル雑音推定への拡張は残る。",
+        "originality": "標準的な最適統計量を継承しつつ、分散の信号項を捨てず任意強度の背景へ適用した。強信号で信号対雑音比が帯域時間積の平方根へ飽和する表示が具体的差分である。",
+        "technicalStrength": "最適自己相関統計量を解析的に導き、厳密積分と一般化等高線を宇宙ひも模型で数値比較した。非定常雑音やLISAの雑音パラメータ不確かさは対象外である。"
+      },
+      "totalScore": 76,
+      "abstractLines": [
+        "LISAの確率的重力波背景では、強い信号自身が推定量の分散を増やし、雑音優勢近似を破る。",
+        "信号を含む全分散から最適自己相関統計量を導出し、任意スペクトルに対する信号対雑音比等高線を数値化した。",
+        "強信号域の感度が有限値へ飽和することを示したが、ガウス定常信号と完全に既知の装置雑音を前提とする。"
+      ],
+      "curiosity": "信号そのものが主要な統計揺らぎになる領域で、LISAの検出能力を過大評価せずどう可視化するか。",
+      "concept": "最適統計量の分母へ装置雑音だけでなく信号自己雑音も保持し、通常の感度曲線を閉じた信号対雑音比等高線へ置き換える。",
+      "conclusion": "一般化等高線は強い確率的背景で不可避な宇宙分散上限を表すが、現実の雑音推定と非ガウス性には追加の統計模型が要る。",
+      "assessment": "頻用される感度表示の強信号域にある系統誤差を、解析式と再利用可能な数値結果で明瞭に修正している。理想化された単一検出器統計への依存が実データ適用の主な隔たりである。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "最適推定量の分散導出、強信号極限、一般化べき乗積分等高線、宇宙ひも例と数値資料の記述を確認した。数値表の全点再計算と実機雑音による頑健性試験は行っていない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08445v1",
+        "https://arxiv.org/pdf/2607.08445v1"
+      ]
+    },
+    {
+      "rank": 4,
+      "arxivId": "2607.08228",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.08228",
+      "title": "Static regular black holes in Horndeski theories: analytic no-go and nonanalytic obstructions",
+      "titleJa": "Horndeski理論の静的正則ブラックホール：解析的禁止則と非解析的障害",
+      "authors": [
+        "Antonio De Felice",
+        "Shinji Tsujikawa"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 20,
+        "originality": 18,
+        "technicalStrength": 20
+      },
+      "scoreReasons": {
+        "broadImpact": "スカラー・テンソル重力で静的正則ブラックホールを作る許容領域を狭め、模型構築と特異点回避研究の探索方針を変える。時間独立スカラーとHorndeski範囲に限られる。",
+        "categoryImpact": "正則中心、健全な地平面、漸近平坦性を両立する毛を探す課題に対し、解析的結合には禁止則、非解析的結合には共変正則性の障害を与えた。縮退点や分離した枝は残る。",
+        "originality": "既存のシフト対称無毛定理を中心近傍の解析性と摂動伝播速度へ組み合わせ、非シフト対称項にも拡張した。周辺的なスカラーGauss–Bonnet鎖まで調べた点が差分である。",
+        "technicalStrength": "地平面でのスカラー運動項を場合分けし、Taylor展開、保存電流、共変不変量から解析的に排除した。時間依存スカラー、縮退高階理論、非摂動枝の反例探索は行っていない。"
+      },
+      "totalScore": 75,
+      "abstractLines": [
+        "Horndeski理論で静的かつ漸近平坦な正則ブラックホールを得られるかは、スカラー毛と安定性の両立に関わる。",
+        "地平面でのスカラー運動項を場合分けし、解析的結合の級数展開、保存電流、摂動伝播条件を調べた。",
+        "広い解析的模型に禁止則を導き非解析的候補にも障害を示したが、時間依存スカラーや理論拡張は対象外である。"
+      ],
+      "curiosity": "最も一般的な二階スカラー・テンソル理論の範囲で、静的な地平面と正則中心を安定に結ぶ毛付き解は存在できるか。",
+      "concept": "地平面でのスカラー勾配の極限と中心近傍の解析性を、保存電流および摂動の有効計量に同時に課して候補を分類する。",
+      "conclusion": "通常の解析的Horndeski結合では静的正則ブラックホールが強く排除され、既知の非解析的抜け道も中心特異点を残す。",
+      "assessment": "散在していた無毛条件と正則性条件を体系的な禁止領域へ統合した点が明確である。時間依存や縮退拡張に実在する反例の可能性は残る。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "地平面での二場合分け、解析的端点の級数論証、シフト対称電流による排除、非解析的スカラーGauss–Bonnet鎖を確認した。除外された縮退模型や時間依存スカラーによる反例は独立探索していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08228v1",
+        "https://arxiv.org/pdf/2607.08228v1"
       ]
     },
     {
       "rank": 5,
       "arxivId": "2607.08466",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08466",
       "title": "Search for strong lensing of gravitational waves in the binary black hole events from O1-O4a",
       "titleJa": "O1–O4a連星ブラックホール事象における重力波強レンズ探索",
@@ -172,37 +214,45 @@
         "Parameswaran Ajith"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "解析",
+      "paperType": "観測データ解析",
       "scores": {
-        "broadImpact": 22,
-        "categoryImpact": 23,
-        "originality": 20,
-        "technicalStrength": 24
+        "broadImpact": 18,
+        "categoryImpact": 19,
+        "originality": 17,
+        "technicalStrength": 20
       },
-      "totalScore": 89,
+      "scoreReasons": {
+        "broadImpact": "207個の連星ブラックホール候補から強レンズ対を系統探索し、レンズ率を通じて重力波源集団と介在構造を制約する。閾値未満の像を除くため完全なレンズ母集団には感度を持たない。",
+        "categoryImpact": "異種カタログで全事象対を比較する計算課題に対し、高速な事後分布重なり統計を実雑音で較正し、O1からO4aまで有力対がないこととレンズ割合上限を一貫して与える。ただし上限は単一の楽観的事前分布に依存し、カタログごとに異なる選択関数と閾値未満像を含まない。",
+        "originality": "既存の事後分布重なり探索を継承し、近最適な新版統計量を複数の公開・独立カタログへ適用した。新規性は規模と速度を両立した母集団探索設計にある。",
+        "technicalStrength": "207事象の2万1321対にPO2.0を適用し、O1–O4a実雑音中の前景・背景計4500注入、ROC、Bayes因子較正、混合模型で否定結果を検証した。一つの楽観的事前分布、異種カタログの選択関数、閾値未満像を包括的には感度解析していない。"
+      },
+      "totalScore": 74,
       "abstractLines": [
-        "LVK・IAS・OGCのO1–O4a BBH事象を統合し、同一信号の強レンズ像対を探索した。",
-        "Posterior Overlap 2.0と現実的なforeground/background simulationから個別確率とcatalog purityを定義した。",
-        "有意な候補はなく、強レンズfractionに90%で1.4%の上限を与え、O5で3σ検出確率を約67%と予測した。"
+        "同一連星から届く複数の強レンズ像は、異なる時刻に似た重力波事象として観測され得る。",
+        "O1からO4aの207個の連星ブラックホール候補を事後分布重なり統計で総当たりし、実雑音注入で較正した。",
+        "有意なレンズ対は見つからずレンズ割合の90%上限を1.4%としたが、解析は検出閾値を超えた事象対に限られる。"
       ],
-      "curiosity": "強レンズ重力波は宇宙論・レンズ天体を探るが、波形類似だけでは偶然一致が多く、複数catalogを含む統計的に校正された探索が必要である。",
-      "concept": "高速Bayesian posterior-overlap pipelineを207事象規模へ適用し、注入simulationでforeground/backgroundを構築、pair-levelとpopulation-levelの二つの有意度を評価した。",
-      "conclusion": "現データに証拠はなくfraction上限を更新した。catalogごとのselection functionを混合したこと、レンズ・源population priorの不確実性、連続prior marginalizationの計算費用が残る。",
-      "assessment": "総合89/100（物理全体22、カテゴリ23、独創性20、方法・結果24）。強レンズ重力波は宇宙論にも波及し、複数catalogを横断する現時点で重要な実データ探索である。新規性は解析枠組みの改良として評価し、207事象規模、現実的simulation、非検出上限、将来検出確率まで本文に揃うため方法・結果を最も高くした。",
+      "curiosity": "現在の重力波カタログに、同じ連星ブラックホールの強レンズ複数像とみなせる事象対は存在するか。",
+      "concept": "共通源パラメータの事後分布重なりを高速な順位統計へ変換し、実際の検出器雑音による偶然一致率でレンズ確率を較正する。",
+      "conclusion": "O1–O4aの超閾値連星ブラックホールには強レンズの有力証拠がなく、単一の楽観的事前分布の下で強レンズ割合の90%上限は1.4%となった。",
+      "assessment": "多数の異種候補を実雑音較正付きで検索し、否定結果を母集団上限へ変換した検証密度が高い。選択関数の不一致と未検出像を含まないため、上限の一般性には留保が必要である。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "14ページPDFを全文テキスト抽出し、pipeline、simulation、候補表、population推定、結論を確認。",
+      "fullTextReviewStatus": "PO2.0の導出、事前分布、2万1321対の探索、候補指標、混合模型による上限、付録の事象選択・重点サンプリング・実雑音4500注入・ROC・Bayes因子較正・将来予測を確認した。事後分布推定は再実行せず、事前分布の連続感度、異種選択関数、閾値未満像は検証していない。",
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.08466",
-        "https://arxiv.org/pdf/2607.08466"
+        "https://arxiv.org/abs/2607.08466v1",
+        "https://arxiv.org/pdf/2607.08466v1"
       ]
     },
     {
       "rank": 6,
       "arxivId": "2607.08619",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08619",
       "title": "Beyond black hole spectroscopy: Quasinormal mode contamination by massless scalars",
-      "titleJa": "ブラックホール分光を超えて：質量なしscalarによる準固有モード混入",
+      "titleJa": "ブラックホール分光を越えて：質量ゼロスカラーによる準固有モード混入",
       "authors": [
         "Miguel Yulo Asuncion",
         "Giovanni D'Addario",
@@ -211,109 +261,43 @@
       "primaryCategory": "gr-qc",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 21,
-        "categoryImpact": 23,
-        "originality": 22,
-        "technicalStrength": 20
+        "broadImpact": 18,
+        "categoryImpact": 19,
+        "originality": 17,
+        "technicalStrength": 17
       },
-      "totalScore": 86,
+      "scoreReasons": {
+        "broadImpact": "スカラー自由度が重力波リングダウンへ混入する次数を整理し、一般相対論検定と新粒子探索で振幅階層を解釈する基準を与える。実際の周波数や検出可能性は未計算である。",
+        "categoryImpact": "修正重力の準固有周波数ずれだけを探す分光法に対し、スカラー励起がテンソル波形へ現れる混入項をHorndeski有効理論で分類した。小結合・小荷の階層が適用境界である。",
+        "originality": "背景と摂動の二重展開でシフト対称Horndeskiの各演算子を混入次数に仕分けた。スカラーGauss–Bonnet結合だけが抑制された励起でも二次で寄与する選別則が具体的差分である。",
+        "technicalStrength": "作用から次数別の階層方程式とリングダウン形を導き、結合ごとの消失を対称性で追跡した。数値スペクトル、合体初期値、波形生成による検証はない。"
+      },
+      "totalScore": 71,
       "abstractLines": [
-        "shift-symmetric Horndeskiのhairy black hole ringdownをscalar charge qで摂動展開した。",
-        "scalar–Gauss–Bonnet結合は周波数shiftとscalar QNM混入の双方をq²次数で生む。",
-        "scalar振幅がqで抑制されなければ混入はq一次に現れ、通常の分光shiftより支配的になり得る。"
+        "追加の質量ゼロスカラーを持つ重力理論では、ブラックホールのテンソルリングダウンへスカラー振動が混入し得る。",
+        "シフト対称Horndeski作用を小結合と小スカラー荷で二重展開し、各演算子が波形へ入る摂動次数を分類した。",
+        "スカラーGauss–Bonnet項が主要な混入源になり得ると導いたが、具体的な準固有周波数や観測可能性は算出していない。"
       ],
-      "curiosity": "beyond-GR ringdown探索はKerr QNMの周波数shiftに集中するが、新しい場自身のQNMがmetric信号へ混入する効果を同じ摂動次数で扱う必要がある。",
-      "concept": "一般shift-symmetric Horndeski作用をscalar chargeと場摂動の二重展開で整理し、各結合がmetric QNM shiftとscalar-frequency contaminationのどの次数へ入るかを導出した。",
-      "conclusion": "小chargeでは少数のEFT結合だけで両効果を記述でき、混入を無視した分光は不完全になり得る。scalar振幅の初期条件、非線形合体での増幅、非shift-symmetric理論への拡張は未解決である。",
-      "assessment": "総合86/100（物理全体21、カテゴリ23、独創性22、方法・結果20）。beyond-GR ringdown探索の設計へ直接関わり、周波数shiftだけでなく新しい場のQNM混入を同じ摂動次数で整理した点が重要である。本文は寄与する結合と次数を明示するが、実波形・合体計算や観測感度までは示さないため方法・結果は20点とした。",
+      "curiosity": "観測されたリングダウンの余分な成分は、ブラックホールの固有周波数変化と外部スカラーの混入をどう区別できるか。",
+      "concept": "結合強度と背景スカラー荷を独立な小量として数え、テンソル方程式へ現れるスカラー源を演算子ごとの最低次数で選別する。",
+      "conclusion": "弱くスカラー化したシフト対称理論では混入の主導次数が結合と励起振幅で変わり、分光解析は周波数ずれ以外も模型化する必要がある。",
+      "assessment": "リングダウンの理論検定で見落とされる混入機構を明快な次数勘定にした点に価値がある。定量スペクトルと観測誤差への伝播を欠き、結論は構造的な選別則にとどまる。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "8ページPDFを全文テキスト抽出し、二重摂動展開、作用別寄与、ringdown ansatz、Discussionを確認。",
+      "fullTextReviewStatus": "Horndeski作用、二重摂動展開、各結合の階層方程式、リングダウンの混入形と適用条件を確認した。準固有値の数値計算、合体シミュレーション、検出器雑音下の識別性は再現していない。",
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.08619",
-        "https://arxiv.org/pdf/2607.08619"
+        "https://arxiv.org/abs/2607.08619v1",
+        "https://arxiv.org/pdf/2607.08619v1"
       ]
     },
     {
       "rank": 7,
-      "arxivId": "2607.08280",
-      "url": "https://arxiv.org/abs/2607.08280",
-      "title": "5d Schwarzschild-Tangherlini spacetime: MST-like formalism for a Reduced Confluent Heun Equation",
-      "titleJa": "5次元Schwarzschild–Tangherlini時空：Reduced Confluent Heun方程式のMST型形式",
-      "authors": [
-        "Donato Bini",
-        "Giorgio Di Russo",
-        "Veronica Fantini"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 18,
-        "categoryImpact": 21,
-        "originality": 23,
-        "technicalStrength": 23
-      },
-      "totalScore": 85,
-      "abstractLines": [
-        "5次元Schwarzschild–Tangherlini時空の測地線・散乱角・臨界軌道をPN/PM展開と超幾何再和で解析した。",
-        "massless scalar radial方程式に対し、Reduced Confluent Heun方程式用のMST型級数形式を新たに構成した。",
-        "renormalized angular momentumを量子Seiberg–Witten法と照合し、円軌道energy fluxを2.5PNまで得た。"
-      ],
-      "curiosity": "4次元Kerr/Schwarzschildで強力なMST法を、異なる特異点構造を持つ高次元Heun方程式へ拡張できるかが技術的課題である。",
-      "concept": "geodesic probeとscalar waveを分離し、両側の級数解をmatchingするMST類似形式、独立なSW照合、円軌道fluxのPN benchmarkで検証した。",
-      "conclusion": "Reduced Confluent HeunへのMST拡張を明示し、高次元摂動計算の基盤を作った。spin場一般化、extremal RNのDoubly Confluent Heun、より高次fluxは今後の課題である。",
-      "assessment": "総合85/100（物理全体18、カテゴリ21、独創性23、方法・結果23）。高次元という専門領域のため広域点は抑えたが、Reduced Confluent Heun方程式へのMST拡張は再利用性のある技術的新規性が高い。独立なSeiberg–Witten法との一致と2.5PN fluxまで本文で示すため方法・結果も高く評価した。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "26ページPDFを全文テキスト抽出し、測地線、Heun方程式、MST構成、SW照合、flux、結論を確認。",
-      "sourceUrls": [
-        "https://arxiv.org/abs/2607.08280",
-        "https://arxiv.org/pdf/2607.08280"
-      ]
-    },
-    {
-      "rank": 8,
-      "arxivId": "2607.07815",
-      "url": "https://arxiv.org/abs/2607.07815",
-      "title": "Causal Horizons, Geodesic Completeness and Stability in Slow Contraction Cosmology",
-      "titleJa": "緩慢収縮宇宙論における因果地平面・測地線完全性・安定性",
-      "authors": [
-        "Mariam Khaldieh",
-        "Anna I. Rosenzweig",
-        "Paul J. Steinhardt"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 23,
-        "categoryImpact": 22,
-        "originality": 19,
-        "technicalStrength": 20
-      },
-      "totalScore": 84,
-      "abstractLines": [
-        "半無限のekpyrotic slow contractionが粒子地平面を持たず、過去にMinkowski attractorへ近づくことを示した。",
-        "平坦・開宇宙では過去測地線完全で、追加物質やscalarに対しても収縮attractorが安定である。",
-        "平均膨張率が非正のためBGV定理の仮定を満たさず、収縮de Sitterとの因果構造の差を明確化した。"
-      ],
-      "curiosity": "初期条件・地平面・過去不完全性を同時に避ける宇宙論が可能か、また測地線完全性だけで地平面問題を解けるかが問われる。",
-      "concept": "粒子地平面の共形時間積分、timelike/null測地線のaffine長、摂動安定性、BGV境界項をslow contractionとcontracting de Sitterで比較した。",
-      "conclusion": "十分長いslow contractionは因果接続・過去完全性・安定attractorを同時に実現する。非特異bounceの微視的実現と観測的識別はこの論文では解かれていない。",
-      "assessment": "総合84/100（物理全体23、カテゴリ22、独創性19、方法・結果20）。地平面問題・初期条件・過去完全性という宇宙論の根幹を同時に扱うため広域インパクトを高くした。slow contraction自体は既存枠組みだが、因果構造、attractor、BGV回避を一つの本文で結び付ける点は強い一方、bounce実現や観測検証は範囲外である。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "9ページPDFを全文テキスト抽出し、因果積分、安定性、測地線、BGV節、結論を確認。",
-      "sourceUrls": [
-        "https://arxiv.org/abs/2607.07815",
-        "https://arxiv.org/pdf/2607.07815"
-      ]
-    },
-    {
-      "rank": 9,
       "arxivId": "2607.07806",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.07806",
       "title": "Singularity resolution and unitarity in two-dimensional dilaton black holes with negative central charge",
-      "titleJa": "負の中心電荷を持つ二次元dilatonブラックホールの特異点解消とunitarity",
+      "titleJa": "負の中心電荷をもつ二次元ディラトン・ブラックホールの特異点解消とユニタリ性",
       "authors": [
         "César García-Pérez",
         "F. Javier Marañón-González",
@@ -321,37 +305,179 @@
         "Silvia Pla"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "理論",
+      "paperType": "量子重力・理論",
       "scores": {
-        "broadImpact": 21,
-        "categoryImpact": 21,
-        "originality": 23,
-        "technicalStrength": 19
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 17
       },
-      "totalScore": 84,
+      "scoreReasons": {
+        "broadImpact": "負の全中心電荷で得る正則内部と相関した負エネルギー流は、移動鏡模型の状態純化と量子幾何における特異点解消を比較する可解経路を与える。ゴースト優勢の非ユニタリ部門と未解決のエネルギー収支が物理的適用を制限する。",
+        "categoryImpact": "半古典的ディラトン重力で曲率特異点とエネルギー保存を扱う課題に対し、負中心電荷の衝撃波解が正則内部を持つと解析した。持続する地平面により放射エネルギーは発散する。",
+        "originality": "CGHS模型とRST型可解化を継承し、物質とゴーストの異常を合わせた負の中心電荷領域を明示的に解いた。正の中心電荷と異なる内部の漸近平坦領域が具体的差分である。",
+        "technicalStrength": "一ループ有効作用から補助場表示と衝撃波解を導き、曲率、地平面、左右のエネルギー流を解析した。ユニタリ性は散乱行列による証明ではない。"
+      },
+      "totalScore": 70,
       "abstractLines": [
-        "one-loop CGHS模型にmatter Polyakov項、FP ghost用補助metric項、局所countertermを組み込んだ可解模型を構成した。",
-        "全中心電荷が負の領域では曲率特異点が消え、地平面内部に漸近平坦領域が現れる。",
-        "外向きHawking fluxと内部の一時的負energy fluxの相関はunitarityを示唆するが、完全なenergy balanceは未完成である。"
+        "二次元ディラトン・ブラックホールの半古典的蒸発は、量子異常による特異点と情報損失の可解模型を与える。",
+        "物質とゴーストを合わせた負の全中心電荷を持つ一ループ作用について、衝撃波崩壊解とエネルギー流を解析した。",
+        "曲率特異点を持たない内部領域を得た一方、外部放射エネルギーは発散し、ユニタリ性は示唆にとどまる。"
       ],
-      "curiosity": "半古典black-hole evaporationで特異点が情報を終端させる問題を、量子ghost backreactionを含む可解二次元模型で回避できるかが問われる。",
-      "concept": "Strominger機構でFP ghostを放射から分離しつつbackreactionへ残し、厳密なcollapse解、左右null infinityのflux相関、affine distance、energy balanceを解析した。",
-      "conclusion": "負中心電荷で特異点を除き、有限affine distanceの観測者にはunitaryな相関構造を得た。ただし左右chiral sectorを結合しない現模型では全体のenergy conservationを確立できない。",
-      "assessment": "総合84/100（物理全体21、カテゴリ21、独創性23、方法・結果19）。特異点とunitarityという広い問題に、負中心電荷と内部・外部flux相関を使う独創性を高く評価した。一方で二次元模型であり、要旨自身が完全なenergy balance未確立と明記するため方法・結果は抑えた。",
+      "curiosity": "量子異常の符号を反転した可解ブラックホールでは、特異点解消と情報保存を同時に実現できるか。",
+      "concept": "物質のPolyakov作用とゴースト補助場を一つの負中心電荷へまとめ、RST型の厳密可解性を保って崩壊時空全体を追跡する。",
+      "conclusion": "負中心電荷は二次元崩壊解の曲率特異点を除くが、無限放射と非ユニタリなゴーストを含むため物理的な情報回収の証明にはならない。",
+      "assessment": "特異点の有無と量子エネルギー流を同じ厳密解で比較できる点が概念的に鋭い。負中心電荷の物理的実現性とエネルギー収支が閉じないことが重い制限である。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "25ページPDFを全文テキスト抽出し、作用、collapse解、flux、相関、energy balance、結論を確認。",
+      "fullTextReviewStatus": "一ループ有効作用、補助場と反項の選択、衝撃波厳密解、曲率と地平面、左右エネルギー流を確認した。量子状態空間の正定値性と散乱振幅によるユニタリ性は独立に立証していない。",
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.07806",
-        "https://arxiv.org/pdf/2607.07806"
+        "https://arxiv.org/abs/2607.07806v1",
+        "https://arxiv.org/pdf/2607.07806v1"
+      ]
+    },
+    {
+      "rank": 8,
+      "arxivId": "2607.08570",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.08570",
+      "title": "Horizon-redshift transfer in black-hole direct-wave damping",
+      "titleJa": "ブラックホール直接波減衰における地平面赤方偏移伝達",
+      "authors": [
+        "Wen-Biao Han",
+        "Ye Jiang"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論・波形解析",
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 15
+      },
+      "scoreReasons": {
+        "broadImpact": "地平面近傍の赤方偏移が直接波の減衰時間を伸ばす機構は、リングダウンの一般相対論検定と合体後波形模型に影響し得る。現状は代理的な源模型で観測的同定には至らない。",
+        "categoryImpact": "準固有モードだけで合体後減衰を解釈する標準像に対し、有限時間の落下源とTeukolsky応答の畳み込みが有効減衰率を変えると示した。完全な合体源計算は残る。",
+        "originality": "既知のブラックホール応答と地平面赤方偏移を継承し、源の時間伸長を伝達核として直接波へ組み込んだ。GW250114の減衰差へ適用した点が具体的差分である。",
+        "technicalStrength": "複素周波数Teukolsky応答を数値化し、瞬間源・試験粒子・時間反転などの対照計算と有限窓依存を比較した。完全な合体源と事後分布周辺化を欠く。"
+      },
+      "totalScore": 69,
+      "abstractLines": [
+        "ブラックホール合体後の直接波は、準固有モードだけでなく地平面へ近づく源の時間伸長を受ける可能性がある。",
+        "Teukolskyインパルス応答へ赤方偏移で引き伸ばした源を畳み込み、模擬波形と二つの重力波事象の残差を比較した。",
+        "GW250114で観測された緩い減衰と整合する値を得たが、源は完全な合体計算ではなく現象論的な代理である。"
+      ],
+      "curiosity": "合体後波形の見かけの減衰率は、ブラックホール固有の準固有モードではなく地平面へ落ちる源の時計をどれだけ反映するか。",
+      "concept": "ブラックホールの線形応答と、赤方偏移により伸長された有限持続源を畳み込み、直接波の包絡線を固有減衰から分離する。",
+      "conclusion": "地平面赤方偏移は直接波を固有応答より遅く減衰させ得るが、実事象の説明には現実的合体源と完全な統計推論が必要である。",
+      "assessment": "地平面近傍の運動学を測定可能な減衰量へ結び付けた仮説は明瞭で、対照計算も複数ある。源の代理性と限定的なデータ解析により観測的主張の確度はまだ低い。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "Teukolsky応答、赤方偏移源との畳み込み、有限窓の減衰率、GW250114とGW231226への適用、対照試験を確認した。生データからの完全な事後推定と非線形合体源は再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08570v1",
+        "https://arxiv.org/pdf/2607.08570v1"
+      ]
+    },
+    {
+      "rank": 9,
+      "arxivId": "2607.08280",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.08280",
+      "title": "5d Schwarzschild-Tangherlini spacetime: MST-like formalism for a Reduced Confluent Heun Equation",
+      "titleJa": "5次元Schwarzschild–Tangherlini時空：簡約合流Heun方程式のMST型形式",
+      "authors": [
+        "Donato Bini",
+        "Giorgio Di Russo",
+        "Veronica Fantini"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "数理物理・摂動論",
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 17,
+        "originality": 18,
+        "technicalStrength": 19
+      },
+      "scoreReasons": {
+        "broadImpact": "5次元スカラーの散乱と円軌道フラックスを解析化し、高次元ブラックホール摂動の数値ベンチマークと5次元自己力計算へ投入できる。重力摂動と他スピンへの実用化は未実証である。",
+        "categoryImpact": "4次元Kerrで確立したMST形式に相当する級数解が高次元で不足する問題に対し、簡約合流Heun方程式の接続係数とフラックスを構成した。重力摂動への一般化は未完である。",
+        "originality": "既存のMST三項漸化式をそのまま移さず、5次元の径方向方程式に適合する繰り込み角運動量を導入した。独立な量子Seiberg–Witten対応との一致が差分を支える。",
+        "technicalStrength": "5項漸化式を偶奇2本の3項式と連分数へ整理し、繰り込み角運動量を独立な量子Seiberg–Witten展開と照合して、円軌道スカラーフラックスを2.5ポストNewton次数まで導出した。MST級数自体の収束と一般次元の関係には追加検証が必要である。"
+      },
+      "totalScore": 68,
+      "abstractLines": [
+        "高次元ブラックホールの散乱と放射を精密に計算するには、地平面解と無限遠解を結ぶ解析形式が必要である。",
+        "5次元Schwarzschild–Tangherlini時空のスカラー径方向方程式を簡約合流Heun形へ写し、MST型級数解を構成した。",
+        "繰り込み角運動量を独立手法と照合し円軌道フラックスを2.5ポストNewton次数まで得たが、他スピン場は扱っていない。"
+      ],
+      "curiosity": "4次元ブラックホールで高精度計算を可能にするMST法を、方程式の特異点構造が異なる5次元へ移せるか。",
+      "concept": "簡約合流Heun方程式の二つの局所級数を、漸化式で決まる非整数の繰り込み角運動量を介して大域的に接続する。",
+      "conclusion": "5次元静的ブラックホールの質量ゼロスカラーについてMST型の内外級数と接続形式を構成し、繰り込み角運動量と2.5ポストNewtonフラックスを得たが、MST級数の収束証明と重力摂動への拡張は残る。",
+      "assessment": "解析接続、独立なスペクトル対応、フラックス計算が相互に支える堅実な数理結果である。対象が高次元の試験スカラーに狭く、重力波への実用性は将来拡張に依存する。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "測地線・散乱・準固有モードの数値比較、簡約合流Heun方程式、MST型級数、5項から2本の3項漸化式への分解、連分数、量子Seiberg–Witten照合、円軌道フラックスを確認した。付録の収束条件はFox–Wright型散乱級数に対するものであり、MST級数の収束、全係数の再計算、他スピン場は確認していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08280v1",
+        "https://arxiv.org/pdf/2607.08280v1"
       ]
     },
     {
       "rank": 10,
+      "arxivId": "2607.07815",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.07815",
+      "title": "Causal Horizons, Geodesic Completeness and Stability in Slow Contraction Cosmology",
+      "titleJa": "緩慢収縮宇宙論の因果地平面・測地的完全性・安定性",
+      "authors": [
+        "Mariam Khaldieh",
+        "Anna I. Rosenzweig",
+        "Paul J. Steinhardt"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "宇宙論",
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 15,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "過去極限がMinkowski時空へ近づくアトラクターは、自然なBunch–Davies型真空を選んで量子初期条件を設定する経路を与える一方、緩慢収縮はインフレーションに代わる初期宇宙の因果的平滑化へつながる。滑らかな反発と物質摂動生成を仮定する。",
+        "categoryImpact": "代替初期宇宙が因果的平滑化と測地的完全性を両立する課題に対し、平坦・開・閉空間の因果積分と過去極限を分類した。閉宇宙の特異性が境界として残る。",
+        "originality": "エクピロティック収縮の既知の平滑化と地平面積分を継承し、BGV平均膨張条件、空間曲率、追加スカラー安定性を同じ比較へ統合した。新規性は総合的分類にある。",
+        "technicalStrength": "尺度因子の漸近形から粒子地平面と測地線長を解析し、曲率別の特殊例と収縮de Sitterを比較した。安定性は簡略化したスカラー模型で、反発を含む全摂動系の検証はない。"
+      },
+      "totalScore": 67,
+      "abstractLines": [
+        "初期宇宙模型には、遠隔領域の因果接触、過去向き測地的完全性、背景安定性を同時に説明する課題がある。",
+        "状態方程式が十分硬い半無限の緩慢収縮について、地平面積分、測地線、空間曲率、追加スカラー摂動を解析した。",
+        "平坦・開宇宙では粒子地平面がなく過去完全になり得ると報告したが、閉宇宙と仮定された反発には未解決点が残る。"
+      ],
+      "curiosity": "インフレーションを用いず、安定な古典時空の中で全観測領域を因果接触させ、過去境界も除けるか。",
+      "concept": "半無限の緩慢収縮では尺度因子がほぼ一定のまま共形時間だけが無限に蓄積することを、曲率別の測地線条件と結び付ける。",
+      "conclusion": "平坦または開いた緩慢収縮宇宙は因果地平面を避けて過去完全になり得るが、閉曲率、反発、摂動生成を含む完全模型は未確定である。",
+      "assessment": "因果性・完全性・安定性を同じ仮定の下で比較し、代替宇宙論の論点を明確にした。結果の多くは漸近背景の運動学で、反発を含む健全な作用の提示を欠く。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "粒子地平面積分、時間的・光的測地線、空間曲率三分類、収縮de Sitter比較、BGV条件と追加スカラー安定性を確認した。反発過程と宇宙摂動全系の非線形安定性は独立計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.07815v1",
+        "https://arxiv.org/pdf/2607.07815v1"
+      ]
+    },
+    {
+      "rank": 11,
       "arxivId": "2607.07831",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.07831",
       "title": "Charging up regular black holes",
-      "titleJa": "正則ブラックホールへの電荷導入",
+      "titleJa": "正則ブラックホールへの電荷付与",
       "authors": [
         "Raúl Carballo-Rubio",
         "Chiara Coviello",
@@ -360,66 +486,43 @@
       "primaryCategory": "gr-qc",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 19,
-        "categoryImpact": 22,
-        "originality": 21,
-        "technicalStrength": 20
+        "broadImpact": 15,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 18
       },
-      "totalScore": 82,
+      "scoreReasons": {
+        "broadImpact": "正則ブラックホールへ電荷を加えても中心正則性を保つ一般条件は、量子補正天体と電磁観測量の模型化へ使える。球対称な有効方程式に限られ形成過程には触れない。",
+        "categoryImpact": "既知のBardeen型・Hayward型解へMaxwell電荷を素朴に加えると特異点が再発する問題を示し、正則化された変形関数を構成した。回転と力学的安定性は残る。",
+        "originality": "一般化Einsteinテンソルの保存則を利用する既存枠組みを継承し、可積分部分クラスで質量と電荷を単一の組合せへまとめた。標準的な電荷付与処方の破綻を解析的に特定した点が差分である。",
+        "technicalStrength": "最も一般的な球対称二階変形を整理し、保存則、Maxwell方程式、中心展開から正則性を検査した。初期値問題の良設定性は示唆にとどまり、摂動安定性は計算していない。"
+      },
+      "totalScore": 67,
       "abstractLines": [
-        "球対称で二階微分までの恒等的保存tensorを用い、一般化Einstein–Maxwell方程式の荷電正則解を構成した。",
-        "非荷電解の正則条件だけでは不十分で、標準Bardeen・Haywardの荷電化は中心特異になることを示した。",
-        "正則性を保つ改良Bardeen・Hayward型を提案し、より現実的な正則解に必要な条件を示した。"
+        "無電荷で正則なブラックホール模型も、電磁場を加えると中心または有限半径に特異点を生じ得る。",
+        "球対称で恒等的に保存される一般化EinsteinテンソルをMaxwell場へ結合し、可積分な電荷付き解を分類した。",
+        "標準Bardeen型とHayward型の単純な電荷付与の破綻を示し改良解を得たが、安定性と形成機構は扱っていない。"
       ],
-      "curiosity": "真空で正則化されたblack holeが電荷や回転を加えても正則とは限らない。現実的な正則compact objectへ進む際の追加条件を一般的に知る必要がある。",
-      "concept": "一般の保存変形Einstein tensorとMaxwell源から球対称方程式を解き、中心展開で正則条件を導出し、Bardeen/Hayward型と新familyを比較した。",
-      "conclusion": "荷電正則化は真空正則化より厳しく、既知の代表解が破綻することを示した。回転系でも同様の障害が予想され、core matterまたは別の重力変形が必要になる。",
-      "assessment": "総合82/100（物理全体19、カテゴリ22、独創性21、方法・結果20）。正則ブラックホール模型の現実性へ一般的な注意を与え、gr-qc内の設計指針として重要である。代表的二模型の破綻と改良案を本文で示す点は強いが、球対称・特定方程式クラスに限られるため広域点と方法点は抑えた。",
+      "curiosity": "無電荷の正則ブラックホールを支える高曲率補正は、電磁自己エネルギーを加えても全半径で特異点を避けられるか。",
+      "concept": "保存された変形Einsteinテンソルの球対称積分を使い、質量項を電荷依存の有効源へ置換した後に中心正則性を逆算する。",
+      "conclusion": "正則な電荷付き解には無電荷計量の機械的置換では足りず、変形関数自体が電荷自己エネルギーを正則化する必要がある。",
+      "assessment": "広い球対称理論で素朴な処方の失敗と修正条件を解析的に対比した点が明快である。作用の微視的由来と摂動安定性がないため、得られた解の物理的実在性は未定である。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "6ページPDFを全文テキスト抽出し、一般方程式、中心条件、例、物質源、結論を確認。",
+      "fullTextReviewStatus": "一般化Einsteinテンソルの保存条件、可積分部分クラス、電荷付きBardeen型・Hayward型の特異性、改良変形の中心展開を確認した。良設定性と非球対称摂動は独立検証していない。",
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.07831",
-        "https://arxiv.org/pdf/2607.07831"
+        "https://arxiv.org/abs/2607.07831v1",
+        "https://arxiv.org/pdf/2607.07831v1"
       ]
-    },
-    {
-      "rank": 11,
-      "arxivId": "2607.08333",
-      "url": "https://arxiv.org/abs/2607.08333",
-      "title": "Gravito-Electromagnetic perturbation of higher derivative corrected Kerr-Newman black hole",
-      "titleJa": "高階微分補正Kerr–Newmanブラックホールの重力電磁摂動",
-      "authors": [
-        "Yuanyuan Ji",
-        "Zheng-wen Long"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 18,
-        "categoryImpact": 21,
-        "originality": 20,
-        "technicalStrength": 21
-      },
-      "totalScore": 80,
-      "abstractLines": [
-        "4階微分Einstein–Maxwell EFTのslowly rotating Kerr–Newmanに対し、axial/polar連成master方程式を導出した。",
-        "連成二階ODEへasymptotic iteration methodを拡張し、8種の高階微分係数に対するQNMを計算した。",
-        "特にc6–c8が高電荷でaxial/polar間のparity isospectralityを顕著に破ることを得た。"
-      ],
-      "curiosity": "高階微分重力のringdown予言には回転・電荷・重力電磁連成を同時に扱う必要があるが、master方程式と数値法が複雑である。",
-      "concept": "spin一次、EFT係数一次、charge高次まで展開して角・動径分離し、連成AIMと多項式fitでQNM shiftとisospectrality breakingを走査した。",
-      "conclusion": "特定の曲率–Maxwell結合が観測可能なparity splitを生む候補となる。高次spinでc2–c5が効く可能性と、完全数値計算による独立検証が残る。",
-      "assessment": "総合80/100（物理全体18、カテゴリ21、独創性20、方法・結果21）。高階微分補正を含むKerr–Newman摂動はringdown理論に有用だが、波及は専門領域中心である。連成master方程式とAIM拡張、8係数のQNM比較が要旨に示される点を評価しつつ、slow rotation・摂動展開への依存から方法点は21点とした。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
     },
     {
       "rank": 12,
       "arxivId": "2607.08258",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08258",
       "title": "Quasi-bound states and late-time evolution of a massive fermion around a Reissner-Nordström black hole",
-      "titleJa": "Reissner–Nordströmブラックホール周りのmassive fermion準束縛状態と晩期発展",
+      "titleJa": "Reissner–Nordströmブラックホール周囲の質量をもつフェルミオンの準束縛状態と晩期発展",
       "authors": [
         "Guang-Shang Chen",
         "Cheng-Bo Yang",
@@ -428,29 +531,42 @@
         "Hong Zhang"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "理論",
+      "paperType": "理論・数値計算",
       "scores": {
-        "broadImpact": 17,
-        "categoryImpact": 20,
-        "originality": 20,
-        "technicalStrength": 23
+        "broadImpact": 14,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 19
       },
-      "totalScore": 80,
+      "scoreReasons": {
+        "broadImpact": "荷電ブラックホール周囲の質量フェルミオンの寿命と晩期尾を統一し、暗黒フェルミオン雲や場の減衰の基準計算となる。弱結合の試験場であり天体観測への直接性は低い。",
+        "categoryImpact": "Dirac準束縛状態の微細構造と長時間分枝切断を同じGreen関数で扱い、極端Reissner–Nordström極限も分離して整理した。回転背景と自己相互作用は残る。",
+        "originality": "既存の水素型準束縛近似と質量場の普遍的尾を継承し、電荷結合を含む幅の補正とフェルミオン固有の遠方漸近形を導いた。出射準固有モードのべき尾と異なり、準束縛部門に伸張指数包絡とチャープ位相を伴う減衰を得た点が差分である。",
+        "technicalStrength": "行列一次系と漸近整合で得た準束縛スペクトルを連分数法と独立な射撃法で比較し、線の方法による時間発展を吸収層、適合度R²、連分数級数の収束条件で検査した。時間発展の格子解像度収束試験はなく、遠方尾の弱結合外では定量精度が低下する。"
+      },
+      "totalScore": 67,
       "abstractLines": [
-        "charged massive Dirac場を行列型一次radial系として書き、ingoing/decaying境界条件のGreen関数を構成した。",
-        "matrix matchingでhydrogenic近似を越えるfine structureとdecay widthを求め、extremal極限の連続性を示した。",
-        "中間晩期の振動power lawと、QBS集団によるchirp付きstretched exponentialから最終t⁻⁵⁄⁶ tailへの移行を得た。"
+        "質量と電荷を持つフェルミオンは、荷電ブラックホール周囲で長寿命準束縛状態と非自明な晩期尾を形成する。",
+        "Dirac方程式のGreen関数を解析し、弱結合整合、連分数・射撃法、時間領域計算でスペクトルと減衰を調べた。",
+        "微細構造とチャープ位相を伴う遠方の伸張指数減衰を得て極端極限との連続性を確認したが、試験場近似と弱結合域が主な適用範囲である。"
       ],
-      "curiosity": "charged black hole周りのfermionic atom型状態が、poleとbranch cutを通じてどのような長時間緩和を作るかはscalarの場合より未整理である。",
-      "concept": "行列Green関数、近・遠領域matching、branch-cut saddle解析、直接time-domain simulationを組み合わせ、QBS spectrumとtailを同一枠組みで検証した。",
-      "conclusion": "fine structureを含むspectrumと、QBSが作る新しい晩期stretched-exponential成分を同定した。弱結合近似の外、回転black hole、観測可能性への拡張が残る。",
-      "assessment": "総合80/100（物理全体17、カテゴリ20、独創性20、方法・結果23）。対象はcharged black hole周りのfermionという専門領域だが、QBSと晩期tailの非自明な移行はgr-qc内で価値がある。解析matching、Green関数、極限の連続性、time-domain simulationの支持が要旨に揃うため方法・結果を高くした。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "curiosity": "フェルミオンの質量引力と電気的相互作用は、準束縛準位の寿命から漸近的な晩期尾までをどう変えるか。",
+      "concept": "結合Dirac系の極と分枝切断を同じ周波数Green関数上で分け、前者を準束縛準位、後者を時間尾として逆変換する。",
+      "conclusion": "荷電質量フェルミオンは水素型準位と特徴的な遠方尾を持ち、解析式は弱結合で数値計算と整合する。",
+      "assessment": "スペクトル極と分枝切断を解析・周波数数値・時間発展で三重に照合した技術的完成度が高い。試験場かつ非回転背景なので、現実的なフェルミオン雲への外挿は限定される。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "Dirac行列方程式、Green関数の極と分枝切断、弱結合整合、極端極限、連分数・射撃法、8次差分と4次Runge–Kutta法による線の方法、吸収層、R²適合を確認した。連分数級数の収束条件はあるが時間発展の解像度収束試験はなく、長時間漸近式の全係数も独立再導出していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08258v1",
+        "https://arxiv.org/pdf/2607.08258v1"
+      ]
     },
     {
       "rank": 13,
       "arxivId": "2607.08088",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08088",
       "title": "An analytic model for a total process of gravitational collapse: From star to Schwarzschild black hole",
       "titleJa": "重力崩壊全過程の解析模型：星からSchwarzschildブラックホールへ",
@@ -461,58 +577,130 @@
       "primaryCategory": "gr-qc",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 19,
-        "categoryImpact": 20,
-        "originality": 21,
-        "technicalStrength": 18
+        "broadImpact": 16,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 17
       },
-      "totalScore": 78,
+      "scoreReasons": {
+        "broadImpact": "星内部から地平面形成後までを一つの解析時空で追える模型は、崩壊の因果構造と量子場計算の試験台となる。物質の微視的状態方程式を持たない現象論的構成である。",
+        "categoryImpact": "静的星とSchwarzschild外部を連続的に結ぶだけでなく、地平面が中心で生まれ成長する全過程を明示した。中心には可積分だが曲率的な特異性が残る。",
+        "originality": "既存の内部解と幾何学的変形法を基礎に、時間依存質量関数を指定して星から黒穴まで単一座標で記述した。有限半径で突然地平面を置かない点が差分である。",
+        "technicalStrength": "計量と応力テンソルを解析表示し、接合、エネルギー保存、複数のエネルギー条件を検査した。物質方程式からの時間発展ではなく、地平面発生点の測地線解析も完全ではない。"
+      },
+      "totalScore": 66,
       "abstractLines": [
-        "地平面を持たない初期星からSchwarzschildブラックホールへ至る厳密な時間依存collapse模型を構成した。",
-        "apparent horizonが微視的尺度から2Mまで単調成長し、中心のr⁻²型可積分曲率特異点を因果的に覆う。",
-        "エネルギー保存とNEC/WECを保ち、有限時間でtrapped surface形成とweak cosmic censorshipを実現した。"
+        "重力崩壊の解析解は、初期の地平面なし星から最終Schwarzschild時空までを同一模型で覆うことが難しい。",
+        "時間依存する質量関数と有効異方性物質を構成し、内部・表面・外部の接合とエネルギー条件を解析した。",
+        "地平面が中心から成長して最終半径へ達する解を得たが、中心の可積分特異性と現象論的な物質源が残る。"
       ],
-      "curiosity": "地平面形成以前から最終真空black holeまでを一つの解析解で追い、地平面成長・特異点・energy conditionを同時に制御できるかが問題である。",
-      "concept": "時間依存matter boundaryとhorizon関数を厳密に設計し、各collapse段階、Penrose構造、energy-momentum tensor、各energy conditionを追跡した。",
-      "conclusion": "模型内では地平面が滑らかに成長しnaked singularityを避ける。matter模型の微視的実在性、特異点開始点のnull構造、摂動安定性と量子領域への接続は未確立である。",
-      "assessment": "総合78/100（物理全体19、カテゴリ20、独創性21、方法・結果18）。地平面なしの初期状態から最終ブラックホールまでを厳密模型でつなぐ問いと構成は独創的である。要旨は地平面成長とcensorshipを明示する一方、構成的模型の一般性、摂動安定性、物質の微視的実在性は確認できないため方法・結果を抑えた。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "curiosity": "通常の星からブラックホールへ至る地平面の誕生と成長を、接合面の破綻なしに閉じた解析式で描けるか。",
+      "concept": "半径と時間に依存する質量関数を先に設計し、Einstein方程式からそれを支える異方性応力と地平面軌跡を逆構成する。",
+      "conclusion": "中心で生じる地平面がSchwarzschild半径まで成長する解析時空を構成できるが、これは具体的物質の初期値問題から導かれた崩壊解ではない。",
+      "assessment": "全崩壊段階を可視化できる閉形式解と接合検査は教育的・計算的に有用である。処方的な質量関数と残存中心特異性が物理的説明力を抑える。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "質量関数の構成、内部応力テンソル、表面接合、地平面軌跡、エネルギー保存と各エネルギー条件の節を確認した。物質場からの初期値発展と中心発生点の完全な因果解析は再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08088v1",
+        "https://arxiv.org/pdf/2607.08088v1"
+      ]
     },
     {
       "rank": 14,
-      "arxivId": "2607.08570",
-      "url": "https://arxiv.org/abs/2607.08570",
-      "title": "Horizon-redshift transfer in black-hole direct-wave damping",
-      "titleJa": "ブラックホールdirect wave減衰における地平面redshift transfer",
+      "arxivId": "2607.08333",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.08333",
+      "title": "Gravito-Electromagnetic perturbation of higher derivative corrected Kerr-Newman black hole",
+      "titleJa": "高階微分補正Kerr–Newmanブラックホールの重力・電磁摂動",
       "authors": [
-        "Wen-Biao Han",
-        "Ye Jiang"
+        "Yuanyuan Ji",
+        "Zheng-wen Long"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "解析",
+      "paperType": "理論・数値計算",
       "scores": {
-        "broadImpact": 18,
-        "categoryImpact": 19,
-        "originality": 22,
-        "technicalStrength": 18
+        "broadImpact": 15,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 16
       },
-      "totalScore": 77,
+      "scoreReasons": {
+        "broadImpact": "高階微分補正が荷電回転ブラックホールの重力・電磁リングダウンへ与える量を示し、重力波による有効場理論制約へ接続する。低速回転と電荷級数に限られる。",
+        "categoryImpact": "Kerr–Newmanの結合摂動と等スペクトル性破れを四階微分Einstein–Maxwell作用で評価した。高スピン・高電荷の完全数値解との照合は残る。",
+        "originality": "既存の低速回転有効計量と結合マスター方程式を継承し、複数の四階演算子を電荷14次まで展開して軸・極部門を比較した。演算子別の等スペクトル性破れが差分である。",
+        "technicalStrength": "背景と結合摂動方程式を摂動的に導き、連立常微分方程式用の漸近反復法と適合式を比較した。独立な直接積分や高スピン計算がなく、切断誤差の全域保証はない。"
+      },
+      "totalScore": 64,
       "abstractLines": [
-        "near-horizon plunge源で駆動されたcomplex-frequency Teukolsky応答から、surface gravityと観測envelope減衰の写像を計算した。",
-        "有限時間源ではγeff/κがおよそ0.6となり、瞬間源だけがκ近傍の減衰を回復する。",
-        "GW250114とGW231226のQNM-subtracted residualはこの有限窓予測と整合すると報告した。"
+        "荷電回転ブラックホールの準固有モードは、Einstein–Maxwell理論を越える高階微分相互作用の探査量となる。",
+        "四階微分演算子を含む低速回転Kerr–Newman背景で、結合した重力・電磁摂動を電荷の高次数まで展開した。",
+        "一部の演算子が軸・極等スペクトル性を破り周波数を変えると報告したが、高速回転域は対象外である。"
       ],
-      "curiosity": "merger直後のdirect wave減衰をsurface gravityの直接測定と解釈できるか、それともsource convolutionと観測窓が別の減衰率を作るかが問題である。",
-      "concept": "complex-frequency Kerr transfer functionへredshift-stretched plunge源を畳み込み、有限窓fitを行い、二事象のdetector residual profileと比較した。",
-      "conclusion": "観測envelope減衰はκそのものではなくhorizon-redshift transfer observableと解釈すべきだとする。remnant・sky・calibration・PSD・source modelの同時事後周辺化が未実施で、発見主張ではない。",
-      "assessment": "総合77/100（物理全体18、カテゴリ19、独創性22、方法・結果18）。direct-wave減衰をsurface gravityの直測定でなくredshift transferと解釈する点は独創的である。Teukolsky応答と二事象の残差整合を要旨で示すが、少数事象・source模型・QNM subtractionへの依存が大きいため方法・結果は18点とした。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "curiosity": "有効場理論のどの四階微分演算子が、荷電回転ブラックホールのリングダウンで識別可能な等スペクトル性破れを残すか。",
+      "concept": "回転と高階結合を一次に保ちながら電荷依存性を高次数展開し、重力・電磁の連立マスター方程式を同時固有値問題として解く。",
+      "conclusion": "特定の四階Einstein–Maxwell演算子はKerr–Newman準固有モードの軸・極縮退を破るが、信頼できる範囲は低速回転の摂動領域である。",
+      "assessment": "扱いにくい結合摂動を演算子別の周波数応答へ整理した点は有用である。二重摂動展開と単一数値法への依存により、大きな補正や実観測への外挿は慎重を要する。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "四階微分作用、低速回転背景、軸・極の連立マスター方程式、電荷級数、漸近反復法、周波数適合表を確認した。完全背景での直接積分と高スピン数値解は独立検証していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08333v1",
+        "https://arxiv.org/pdf/2607.08333v1"
+      ]
     },
     {
       "rank": 15,
+      "arxivId": "2607.07839",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.07839",
+      "title": "Finite mass two throat wormholes: global light rings, branch resolved strong lensing, and scalar transmission",
+      "titleJa": "有限質量二重喉ワームホール：大域的光環・枝別強レンズ・スカラー透過",
+      "authors": [
+        "Anirudh Pradhan",
+        "K. Ghaderi",
+        "M. Zeyauddin",
+        "K. Karimizadeh"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論・数値計算",
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 16,
+        "originality": 16,
+        "technicalStrength": 19
+      },
+      "scoreReasons": {
+        "broadImpact": "二重喉ワームホールの光学像と波動透過を一つの模型で予測し、エキゾチック天体の識別量を提供する。形成、安定性、物質模型を欠く幾何学的試験台である。",
+        "categoryImpact": "複数の光環が同じ衝突径数を持つ場合の強レンズ枝の縮退を解き、スカラー共鳴との対応も算出した。観測器応答を含む像の可検出性は残る。",
+        "originality": "既存の単一喉レンズ解析を基礎に、有限ADM質量を持つ二重喉で全光環相、枝別発散係数、転送行列を同時に扱った。同じ見かけ径で異なるLyapunov指数を分離する点が差分である。",
+        "technicalStrength": "保存された異方性源を示し、光環を解析分類し、レンズ積分の切断収束とスカラー流束残差を数値検査した。線形重力安定性と応力源の微視的実現は検証していない。"
+      },
+      "totalScore": 64,
+      "abstractLines": [
+        "二つの喉を持つ有限質量ワームホールでは、複数の光環が強レンズ像と波動透過を複雑化する。",
+        "厳密な球対称幾何を構成し、全光環相、枝別強レンズ係数、スカラー転送行列を解析・数値計算した。",
+        "同じ衝突径数でも異なる不安定率を持つ光環と透過共鳴を得たが、幾何の形成と安定性は未検討である。"
+      ],
+      "curiosity": "同じ見かけの臨界径に重なる複数光環を、レンズ像の発散率や波動透過から区別できるか。",
+      "concept": "二重喉の有効ポテンシャルを大域的に枝分けし、各極大のLyapunov指数をレンズ係数と散乱転送行列へ別々に保持する。",
+      "conclusion": "二重喉では衝突径数だけでは光環を識別できず、強レンズ係数とスカラー共鳴が補完的な枝情報を持つ。",
+      "assessment": "光線と波動の両方で枝縮退を解き、数値残差まで示した内部整合性は高い。支える物質と動力学的安定性がないため、観測候補というより精密な玩具模型である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "有限質量幾何と有効源、光環相図、枝別強レンズ展開、数値積分の切断収束、スカラー転送行列と流束残差を確認した。重力摂動安定性と観測器込みの像形成は再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.07839v1",
+        "https://arxiv.org/pdf/2607.07839v1"
+      ]
+    },
+    {
+      "rank": 16,
       "arxivId": "2607.08030",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08030",
       "title": "Acceleration in 3D Einstein-Gauss-Bonnet Gravity",
       "titleJa": "3次元Einstein–Gauss–Bonnet重力における加速",
@@ -522,65 +710,181 @@
         "Robert Mann"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "理論",
+      "paperType": "数理物理",
       "scores": {
-        "broadImpact": 15,
-        "categoryImpact": 18,
-        "originality": 19,
-        "technicalStrength": 18
-      },
-      "totalScore": 70,
-      "abstractLines": [
-        "3次元Einstein–Gauss–Bonnet重力でC-metricを一般化する厳密解を構成し、3 class・各6 subclassへ分類した。",
-        "一つのlocally AdS subclassは結合ゼロでも良定義で、未知のAdS座標表示とdomain wallを含む。",
-        "解は加速black holeではなくstringで加速されるsolitonまたはbubble-of-nothing型と解釈される。"
-      ],
-      "curiosity": "3次元修正重力でC-metric型加速幾何がどのような物体を表し、Einstein極限とenergy conditionを保つかが不明である。",
-      "concept": "scalarを伴う厳密ansatzを分類し、座標domain、AdS embedding、domain-wall junction、energy conditionを解析した。",
-      "conclusion": "多数の新厳密解とAdS表示を得たが、調べたのは一subclassに限られ、非定曲率解や他classの物理解釈、量子効果は未解決である。",
-      "assessment": "総合70/100（物理全体15、カテゴリ18、独創性19、方法・結果18）。3次元修正重力の厳密解分類は専門的で広域波及は限定されるが、新しいAdS表示とsoliton／bubble解釈に独自性がある。要旨からは分類の多くの物理解釈や安定性が未確立と読めるため、カテゴリ・方法点は中程度とした。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
-    },
-    {
-      "rank": 16,
-      "arxivId": "2607.07839",
-      "url": "https://arxiv.org/abs/2607.07839",
-      "title": "Finite mass two throat wormholes: global light rings, branch resolved strong lensing, and scalar transmission",
-      "titleJa": "有限質量二重throat wormhole：global light ring・branch別強lensing・scalar透過",
-      "authors": [
-        "Anirudh Pradhan",
-        "K. Ghaderi",
-        "M. Zeyauddin",
-        "K. Karimizadeh"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 14,
+        "broadImpact": 12,
         "categoryImpact": 16,
-        "originality": 18,
-        "technicalStrength": 20
+        "originality": 17,
+        "technicalStrength": 16
       },
-      "totalScore": 68,
+      "scoreReasons": {
+        "broadImpact": "3次元高曲率重力の加速時空は、低次元重力、境界理論、量子ブラックホール模型の解析背景となる。扱う主要枝は局所AdSで、直接的な四次元現象への波及は限られる。",
+        "categoryImpact": "3次元Einstein–Gauss–Bonnet理論にC計量型の厳密解分類を与え、加速地平面と領域壁の幾何を整理した。非定曲率の他部分クラスの物理解釈は残る。",
+        "originality": "既存の3次元C計量とスカラー表示を基礎に、六つの部分クラスを含む三クラスの厳密解を得た。Gauss–Bonnet結合が作る新しいAdS座標表示と領域構造が具体的差分である。",
+        "technicalStrength": "場の方程式を厳密に解き、座標領域、Poincaré・大域埋込み、領域壁応力とエネルギー条件を確認した。詳細解析は一部分クラスに集中し、摂動安定性は計算していない。"
+      },
+      "totalScore": 61,
       "abstractLines": [
-        "両端で同じ有限質量を持つ滑らかな二重throat wormhole familyを単一global metricで構成した。",
-        "複数light ringのphaseを完全分類し、同じimpact parameterでも異なるLyapunov指数を持つbranchを得た。",
-        "cross-throat強lensing係数は通過する全maximaの和となり、scalar transmissionにresonanceが現れる。"
+        "低次元高曲率重力で加速する天体や地平面を表す厳密解は、C計量の一般化として未整理である。",
+        "3次元Einstein–Gauss–Bonnet方程式へ共形C計量型仮定を入れ、三クラスと各部分クラスの解を分類した。",
+        "局所AdS枝の領域構造と領域壁を詳しく解析したが、非定曲率枝の物理的意味と安定性は残る。"
       ],
-      "curiosity": "複数throatのglobal topologyがlight ring、強lensing、wave transmissionへどのようなbranch固有効果を与えるかを一貫した時空で調べる。",
-      "concept": "一つのmetricからeffective source、null potential、強偏向展開、数値積分、scalar transfer matrixをすべて導いた。",
-      "conclusion": "branch-resolvedな複数light ringの不安定性と透過weightを明示した。物質実現、形成・安定性、観測天体への対応は扱われていない。",
-      "assessment": "総合68/100（物理全体14、カテゴリ16、独創性18、方法・結果20）。二重throatと複数light ringのbranch構造は独創的だが、phenomenological wormholeの構成研究で物理全体への波及は限定的である。解析的強偏向係数を数値積分で照合しscalar transmissionまで一貫して扱うと要旨にあるため、方法・結果は20点とした。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "curiosity": "Gauss–Bonnet補正を持つ3次元重力は、通常のEinstein重力にはない加速時空と地平面構造を許すか。",
+      "concept": "共形因子とスカラー自由度をC計量型座標で分離し、場の方程式の代数的分岐を幾何学的領域ごとに分類する。",
+      "conclusion": "3次元Einstein–Gauss–Bonnet理論は複数の加速解枝を持ち、局所AdS枝は領域壁を伴う大域幾何として明示できる。",
+      "assessment": "厳密解の分岐と大域埋込みを系統的に対応付けた点が数理的に有用である。多くの枝の物理解釈と安定性が未着手で、一般的な加速ブラックホール像は完成していない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "共形仮定からの場の方程式、三クラス六部分クラス、局所AdS枝の座標領域、Poincaré・大域埋込み、領域壁条件を確認した。他枝の完全な因果構造と摂動スペクトルは独立解析していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08030v1",
+        "https://arxiv.org/pdf/2607.08030v1"
+      ]
     },
     {
       "rank": 17,
+      "arxivId": "2607.07752",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.07752",
+      "title": "Observational Limits on Einasto Dark Matter Parameters from Event Horizon Telescope Images of Sgr A* and M87*",
+      "titleJa": "Sgr A$^{*}$とM87$^{*}$のEHT画像によるEinasto暗黒物質パラメータの観測制限",
+      "authors": [
+        "A. Errehymy",
+        "S. Hansraj",
+        "C. Hansraj"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "観測解析・理論",
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 15,
+        "originality": 14,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "EHTの影直径から銀河中心近傍のEinastoハローを制約する提案は、ブラックホール画像と暗黒物質分布を接続する。ただし静的非回転模型と質量事前分布への依存が強い。",
+        "categoryImpact": "Sgr A$^{*}$とM87$^{*}$の影に対するEinasto密度・形状パラメータの制限を、公式要旨ではBayes解析により報告する。形状指数は弱くしか拘束されない。",
+        "originality": "暗黒物質ハロー中の影計算を継承し、二つのEHT天体を同じEinasto模型で比較する。要旨上の差分は影直径と独立質量事前分布を組み合わせた密度上限である。",
+        "technicalStrength": "公式要旨は計量、光子球、影直径を計算しBayes推論を行ったと述べるが、尤度、系統誤差、回転模型との比較は本文未確認である。"
+      },
+      "totalScore": 60,
+      "abstractLines": [
+        "ブラックホール影の角直径は、中心天体の質量だけでなく周囲の暗黒物質分布にも依存し得る。",
+        "Einastoハローを伴う静的ブラックホールの光子軌道を求め、Sgr A$^{*}$とM87$^{*}$のEHT直径と質量事前分布へ適合した。",
+        "Sgr A$^{*}$に強い中心密度上限を報告したが、形状指数は弱く、非回転近似の系統誤差が残る。"
+      ],
+      "curiosity": "EHTが測る影直径だけで、銀河中心のEinasto暗黒物質密度をブラックホール質量から分離して制約できるか。",
+      "concept": "暗黒物質が変える光子球と臨界衝突径数を計算し、独立な質量測定を事前分布として影直径の縮退を解く。",
+      "conclusion": "EHT影はEinasto中心密度へ天体依存の上限を与え得るが、形状指数と回転・降着流の系統性は十分に分離されていない。",
+      "assessment": "二つの代表的EHT天体を同一の統計枠組みで比較する着想は明快である。要旨から確認できる模型は理想化が強く、報告された非常に厳しい密度上限の頑健性は未確認である。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.07752v1"
+      ]
+    },
+    {
+      "rank": 18,
+      "arxivId": "2607.07715",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.07715",
+      "title": "Gravitational perturbations of a regular T-duality inspired black hole: Quasinormal modes, excitation factors, and time-domain evolution",
+      "titleJa": "T双対性に着想を得た正則ブラックホールの重力摂動：準固有モード・励起因子・時間領域発展",
+      "authors": [
+        "Bekir Can Lütfüoğlu",
+        "Mardon Abdullaev",
+        "Javlon Rayimbaev",
+        "Shokhzod Jumaniyozov",
+        "Shavkat Karshiboev"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論・数値計算",
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 14,
+        "originality": 12,
+        "technicalStrength": 19
+      },
+      "scoreReasons": {
+        "broadImpact": "正則ブラックホールの重力リングダウンと励起因子を提供し、一般相対論外天体の波形目録に加わる。単一の現象論的T双対性着想計量で、広い理論への波及は限られる。",
+        "categoryImpact": "準固有周波数だけでなく励起因子と時間領域波形を同じ軸性摂動で比較し、零点長さパラメータの効果を整理した。極性部門と回転は残る。",
+        "originality": "既存の正則計量と高次WKB–Padé法を継承し、基本・倍音周波数に加えて留数に相当する励起因子を追跡した。周波数変化より励起変化が弱いという比較が差分である。",
+        "technicalStrength": "高次WKB–Padéの次数安定性を調べ、時間領域発展から支配周波数を照合し、複数パラメータ表を提示した。近極限領域の独立スペクトル法と極性等スペクトル性は未検証である。"
+      },
+      "totalScore": 57,
+      "abstractLines": [
+        "T双対性に着想を得た零点長さ付き正則ブラックホールは、Schwarzschild時空と異なる重力波応答を持ち得る。",
+        "軸性重力摂動について高次WKB–Padé法で基本・倍音準固有モードと励起因子を求め、時間領域発展と比較した。",
+        "零点長さで実周波数が増え減衰率は非単調に変わる一方、励起因子の変化は弱いと報告した。"
+      ],
+      "curiosity": "正則化を表す零点長さは、リングダウン周波数だけでなく各準固有モードが実際に励起される強さへ現れるか。",
+      "concept": "軸性ポテンシャルの極構造から周波数と励起留数を同時に求め、初期値発展の波形でスペクトル予測を照合する。",
+      "conclusion": "この正則計量では零点長さが周波数を系統的に動かす一方、励起因子は比較的頑健だが、回転・極性摂動を含む観測波形は未構築である。",
+      "assessment": "周波数、留数、時間領域という補完的な量を同じ背景で比較した検証構成は堅実である。模型の由来と対象対称性が狭く、独自の物理結論は漸進的である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "軸性マスター方程式、高次WKB–Padé計算、基本・倍音表、励起因子、時間領域波形とパラメータ依存を確認した。独立な連分数法、極性摂動、回転背景での再計算は行っていない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.07715v1",
+        "https://arxiv.org/pdf/2607.07715v1"
+      ]
+    },
+    {
+      "rank": 19,
+      "arxivId": "2607.07741",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.07741",
+      "title": "Systematic Light Propagation Bias from the Heliosphere and Its Impact on the Hubble Tension",
+      "titleJa": "太陽圏による光伝播の系統的偏りとハッブル緊張への影響",
+      "authors": [
+        "Behnam Pourhassan",
+        "İzzet Sakallı",
+        "Sudhaker Upadhyay",
+        "Kairat Myrzakulov"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "仮説・現象論",
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 3
+      },
+      "scoreReasons": {
+        "broadImpact": "太陽圏が標準光源の見かけの明るさを数%変えるなら、宇宙距離梯子によるハッブル定数推定と太陽圏プラズマの多波長測光検証を直接結ぶ。観測者側の局所効果に限られ、効果量は観測で確認されていない。",
+        "categoryImpact": "ハッブル緊張の距離梯子系統誤差という中心課題に、太陽圏の異方性と波長依存を用いる3〜8%の部分説明と反証観測を提示した。Pantheon+の方向別再解析や独立較正との定量比較は行っておらず、観測的解決には至らない。",
+        "originality": "既存の冷たいプラズマの屈折模型と距離梯子の系統誤差解析を継承し、Voyager・IBEXに基づく太陽圏密度を全標準光源に共通する観測者側スクリーンとして組み合わせた。異方性・色依存・太陽周期を一つの予測へ結ぶ点が具体的差分である。",
+        "technicalStrength": "中心式(2.6)の定数は記載式から4.22×10⁻⁷ m²/sとなり、論文値2.41×10⁻¹⁶ s m²と一致せず、式(2.8)の収束度も無次元にならない。標準薄レンズ式κ=D_eff r_e λ²∇⊥²N_e/(4π)に、n_e=0.1 cm⁻³、波長λ=550 nm、視線方向の柱厚1 AU、横方向尺度1 AU、D_eff=120 AUを仮定すると|2κ|≈1.6×10⁻²¹でδ≈0.08を支持せず、Pantheon尤度適合と系統誤差予算もない。"
+      },
+      "totalScore": 56,
+      "abstractLines": [
+        "局所距離梯子によるハッブル定数は初期宇宙推定より高く、未同定の系統誤差も候補となる。",
+        "Voyager・IBEXを基にした電子密度模型に冷たいプラズマの屈折と乱流を組み込み、CepheidとIa型超新星の光束偏りを計算した。",
+        "上流方向の光学的光束増幅δ≈0.08と緊張への3〜8%寄与を報告したが、Pantheon図はδ=0.17を固定した例示で、観測適合と誤差予算は行っていない。"
+      ],
+      "curiosity": "太陽圏の電子密度勾配は、既存の方向別・光学近赤外測光と矛盾せずに距離梯子を数%動かす光束偏りを生めるか。",
+      "concept": "太陽圏電子柱密度の横方向ラプラシアンを弱いプラズマレンズの収束度へ写し、乱流と高エネルギー中性原子の寄与を加えて、光束偏りを距離とハッブル定数の偏りへ換算する。",
+      "conclusion": "太陽圏仮説は異方性・波長依存・太陽周期によって反証できるが、中心的なプラズマレンズ式の次元不整合と観測適合の欠如により、3〜8%の寄与は確立していない。",
+      "assessment": "観測者側の局所機構を方向・波長・太陽周期で検証できる形にした点は明瞭である。中心式の次元と規格化が整合せず、データ尤度と誤差予算もないため、報告された効果量の信頼性は極めて低い。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、太陽圏密度模型、式(2.1)–(2.30)、数値積分と刻み幅確認、Pantheonの例示図、方向・波長・太陽周期の予測、比較・結論を確認した。付録はなく、式(2.6)–(2.8)の次元と数値を独立検算したが整合せず、Maple計算と図の元データは再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.07741v1",
+        "https://arxiv.org/pdf/2607.07741v1"
+      ]
+    },
+    {
+      "rank": 20,
       "arxivId": "2607.08650",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08650",
       "title": "Shadows and lensing signatures of a rotating black hole in a Hernquist dark matter halo",
-      "titleJa": "Hernquist暗黒物質halo中の回転black holeのshadowとlensing",
+      "titleJa": "Hernquist暗黒物質ハロー中の回転ブラックホールの影とレンズ特性",
       "authors": [
         "A. A. Araújo Filho",
         "Arun Kumar",
@@ -590,291 +894,257 @@
         "V. B. Bezerra"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "解析",
-      "scores": {
-        "broadImpact": 16,
-        "categoryImpact": 17,
-        "originality": 15,
-        "technicalStrength": 18
-      },
-      "totalScore": 66,
-      "abstractLines": [
-        "Hernquist haloを含む静的解をnoncomplex Newman–Janis法で回転化し、null geodesicとphoton regionを導出した。",
-        "rotationはshadowを非対称化し、halo densityはcapture regionとshadow径を増大させる。",
-        "EHTのSgr A*・M87*とESO325-G004 Einstein ringからdimensionless halo parameterを制限した。"
-      ],
-      "curiosity": "回転black holeのhorizon-scale optical signalから周囲の現実的galaxy haloを識別できるかが問題である。",
-      "concept": "Hamilton–Jacobi分離でspherical photon orbitとshadowを構成し、strong/weak lensing展開を行い、公開観測値へparameter boundsを当てた。",
-      "conclusion": "haloはshadowとdeflectionを系統的に増やすが、生成metricの物理的一意性、他のastrophysical環境との縮退、joint likelihoodの厳密性が残る。",
-      "assessment": "総合66/100（物理全体16、カテゴリ17、独創性15、方法・結果18）。ブラックホール像と暗黒物質を結ぶ点は広い関心を持つが、Hernquist haloへの既存光学手法の適用という性格が強い。shadow、強・弱lensing、EHTとEinstein ringを一つの要旨で比較する量的幅を評価しつつ、生成metricと環境縮退の模型依存を差し引いた。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
-    },
-    {
-      "rank": 18,
-      "arxivId": "2607.07715",
-      "url": "https://arxiv.org/abs/2607.07715",
-      "title": "Gravitational perturbations of a regular T-duality inspired black hole: Quasinormal modes, excitation factors, and time-domain evolution",
-      "titleJa": "T-duality着想の正則ブラックホールの重力摂動：QNM・励起因子・時間発展",
-      "authors": [
-        "Bekir Can Lütfüoğlu",
-        "Mardon Abdullaev",
-        "Javlon Rayimbaev",
-        "Shokhzod Jumaniyozov",
-        "Shavkat Karshiboev"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "理論",
+      "paperType": "理論・現象論",
       "scores": {
         "broadImpact": 14,
-        "categoryImpact": 17,
-        "originality": 14,
-        "technicalStrength": 20
+        "categoryImpact": 14,
+        "originality": 12,
+        "technicalStrength": 15
       },
-      "totalScore": 65,
+      "scoreReasons": {
+        "broadImpact": "回転ブラックホールの影と強・弱レンズをHernquistハローで統一し、EHT像と銀河レンズ観測へ接続する。理想化されたハローと計量生成法が適用範囲を狭める。",
+        "categoryImpact": "暗黒物質が影径、歪み、偏向角、Einstein環へ与える傾向を複数の観測量で報告する。実際の降着流や非球対称ハローとの縮退は要旨から解消されていない。",
+        "originality": "既存の静的ハロー計量をNewman–Janis処方で回転化し、影と強・弱レンズを併記する。要旨上の新規性はHernquist密度パラメータをEHT直径へ拘束した点にある。",
+        "technicalStrength": "公式要旨は分離可能測地線、影、強・弱偏向、Einstein環を計算したと述べるが、回転化計量の場の方程式整合性と数値誤差は本文未確認である。"
+      },
+      "totalScore": 55,
       "abstractLines": [
-        "zero-point lengthと自己energyで正則化された非回転black holeのaxial gravitational perturbationを調べた。",
-        "高次WKB–Padé、time-domain evolution、Green関数residueからQNMとexcitation factorを計算した。",
-        "zero-point lengthでQNM実部が増え、減衰は緩やかに非単調変化し、excitation factorの変化は比較的小さい。"
+        "銀河のHernquist暗黒物質ハローは、回転ブラックホール近傍の光子軌道と遠方の重力レンズを変え得る。",
+        "静的ハロー計量を回転化して測地線を分離し、影、強・弱偏向、Einstein環を計算してEHT直径と比較した。",
+        "ハロー密度への制限と複数のレンズ特性を報告したが、回転化処方と現実の放射模型に由来する系統性が残る。"
       ],
-      "curiosity": "中心正則化が外部ringdownへ残す効果を、test fieldではなくgeometry自身のgravitational modeで定量化する必要がある。",
-      "concept": "ADM massを明示してzero-point parameterを規格化し、WKB spectrumをtime-domainで検証、励起因子と晩期tailも同じpotentialから求めた。",
-      "conclusion": "正則化parameterは主にQNM周波数を変え、excitation factorへの影響は小さいと要旨で報告される。観測検証には回転・実際の励起源・データ比較への拡張が必要である。",
-      "assessment": "総合65/100（物理全体14、カテゴリ17、独創性14、方法・結果20）。正則black-hole ringdownというgr-qc内の関心はあるが、特定模型・非回転axial sectorへの標準的手法適用で波及と独創性は限定的である。WKBとtime-domainの照合、QNMとexcitation factorの併用を要旨で確認できるため方法・結果は高めた。",
+      "curiosity": "同じHernquistハローの密度尺度を、地平面近傍の影と銀河尺度のレンズ観測から一貫して制約できるか。",
+      "concept": "回転化したハロー計量の保存量から光子軌道を分離し、近接影と遠方偏向を共通の密度・尺度半径へ写像する。",
+      "conclusion": "Hernquistハローは回転ブラックホールの影とレンズ量を系統的に変えるが、模型依存性を越えた暗黒物質検出とはまだ言えない。",
+      "assessment": "近距離と遠距離の光学量を一つのハロー模型で広く計算した点は資料価値がある。回転計量の構成と観測系統誤差を本文で確認しておらず、制限値の頑健性は未評価である。",
       "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08650v1"
+      ]
     },
     {
-      "rank": 19,
-      "arxivId": "2607.07752",
-      "url": "https://arxiv.org/abs/2607.07752",
-      "title": "Observational Limits on Einasto Dark Matter Parameters from Event Horizon Telescope Images of Sgr A* and M87*",
-      "titleJa": "Sgr A*・M87*のEHT画像によるEinasto暗黒物質parameterの観測制限",
+      "rank": 21,
+      "arxivId": "2607.07955",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.07955",
+      "title": "Wave and particle probes of a regular T-duality-inspired black hole with gravitational self-energy",
+      "titleJa": "重力自己エネルギーを伴うT双対性着想型正則ブラックホールの波動・粒子探査",
       "authors": [
-        "A. Errehymy",
-        "S. Hansraj",
-        "C. Hansraj"
+        "Alexey Dubinsky"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "解析",
+      "paperType": "理論・数値計算",
       "scores": {
-        "broadImpact": 17,
-        "categoryImpact": 17,
-        "originality": 13,
-        "technicalStrength": 17
+        "broadImpact": 13,
+        "categoryImpact": 14,
+        "originality": 11,
+        "technicalStrength": 16
       },
-      "totalScore": 64,
+      "scoreReasons": {
+        "broadImpact": "正則ブラックホールの波動、光子軌道、粒子軌道を並べ、リングダウンと影・降着の相補的検定へ接続する。特定の静的計量に限られ直接観測予測はない。",
+        "categoryImpact": "重力自己エネルギーと零点長さが準固有モード、光子球、最内安定円軌道をどう同時に動かすかを要旨で報告する。回転や重力摂動は含まれない。",
+        "originality": "既存のT双対性着想型正則計量と標準的なスカラー・測地線診断を組み合わせる。要旨上の差分は質量を持つスカラーと粒子結合エネルギーを同一パラメータで比較した点である。",
+        "technicalStrength": "公式要旨は質量スカラーの減衰、光子球、最内安定円軌道、影を計算したとするが、スペクトル法の収束や独立検算は本文未確認である。"
+      },
+      "totalScore": 54,
       "abstractLines": [
-        "Einasto haloに埋め込まれた静的球対称black hole metricを構成し、photon sphereとshadow径を計算した。",
-        "EHTのSgr A*・M87* shadow径と独立mass priorを用いてhalo parameterをBayesian推定した。",
-        "中心密度には制限を得るがEinasto indexは弱く、主にphoton sphere内包質量しか測れない。"
+        "重力自己エネルギーを含むT双対性着想型正則ブラックホールは、波動と粒子運動の双方で古典解からずれ得る。",
+        "質量を持つスカラーの準固有モード、光子球、最内安定円軌道、影と結合エネルギーを計算した。",
+        "零点長さで軌道が内側へ移り影が小さくなる傾向を報告したが、静的試験場模型に限られる。"
       ],
-      "curiosity": "horizon-scale imageから銀河中心暗黒物質を直接制限できるか、black-hole massとの縮退をどこまで破れるかが問題である。",
-      "concept": "静的Einasto metricのnull geodesicとshadowを導き、公開EHT径をlikelihoodとしてstellar-dynamics mass priorと組み合わせた。",
-      "conclusion": "Sgr A*がより強い制限を与えるが、非回転近似・halo profile・distance/mass縮退への依存が強い。ngEHT精度、Kerr+halo、galaxy-scale dataとのjoint解析が必要である。",
-      "assessment": "総合64/100（物理全体17、カテゴリ17、独創性13、方法・結果17）。EHT像から暗黒物質を制約する接続は広い関心を持つが、既存shadow径をEinasto模型へ当てる拡張で概念的新規性は限定的である。Bayesian推定と二天体比較を評価する一方、非回転近似とmass–halo縮退により方法・結果は中程度とした。",
+      "curiosity": "正則化長さの効果は、波動減衰と光子・有質量粒子の軌道に共通して識別可能な方向へ現れるか。",
+      "concept": "同じ計量関数からスカラー有効ポテンシャルと測地線有効ポテンシャルを作り、異なる探査量のパラメータ依存を比較する。",
+      "conclusion": "零点長さはこの模型の準固有振動と臨界軌道を同方向に変えるが、計量固有の効果を一般的な量子重力信号と同一視できない。",
+      "assessment": "複数の標準探査量を横断して模型の傾向を照合する点は実用的である。方法と対象はいずれも既存枠組みの適用で、本文検証を欠くため技術評価には上限がある。",
       "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.07955v1"
+      ]
     },
     {
-      "rank": 20,
+      "rank": 22,
       "arxivId": "2607.08343",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08343",
       "title": "Chaplygin and Polytropic Kantowski--Sachs Solutions in Teleparallel F(T) Gravity",
-      "titleJa": "Teleparallel F(T)重力におけるChaplygin・polytropic Kantowski–Sachs解",
+      "titleJa": "遠隔平行化$F(T)$重力におけるChaplygin流体・ポリトロープ流体のKantowski–Sachs解",
       "authors": [
         "Alexandre Landry"
       ],
       "primaryCategory": "gr-qc",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 12,
-        "categoryImpact": 15,
-        "originality": 17,
-        "technicalStrength": 17
-      },
-      "totalScore": 61,
-      "abstractLines": [
-        "共変coframe–spin-connection形式で、非線形流体を源とするKantowski–Sachs F(T)再構成法を作った。",
-        "matter conservationからρ(V)を先に決め、power-lawとexponential幾何から重力Lagrangian F(T)を逆再構成した。",
-        "Chaplygin・modified Chaplygin・polytropic流体ごとに異なる局所branchとleading viability条件を得た。"
-      ],
-      "curiosity": "重力作用を先に仮定せず、非線形matter conservationがどのteleparallel幾何を許すかを体系化できるかが問題である。",
-      "concept": "invariant KS sectorでvolumeとtorsion scalarの写像を使い、各EOSの密度scalingからF(T)を解析的に再構成した。",
-      "conclusion": "新しい局所anisotropic branchを多数得たが、global matching、horizon、二自由scale-factor摂動、観測制限を欠き、物理的viabilityは未確立である。",
-      "assessment": "総合61/100（物理全体12、カテゴリ15、独創性17、方法・結果17）。非線形流体からF(T)を逆再構成する整理には独自性があるが、異方宇宙論の局所解生成が中心で波及範囲は狭い。複数EOSと幾何ansatzの解析branchを要旨で比較する点を評価し、安定性・global matching・観測検証がない点を差し引いた。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
-    },
-    {
-      "rank": 21,
-      "arxivId": "2607.07955",
-      "url": "https://arxiv.org/abs/2607.07955",
-      "title": "Wave and particle probes of a regular T-duality-inspired black hole with gravitational self-energy",
-      "titleJa": "重力自己energyを持つT-duality着想正則black holeの波動・粒子probe",
-      "authors": [
-        "Alexey Dubinsky"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 13,
-        "categoryImpact": 15,
+        "broadImpact": 10,
+        "categoryImpact": 13,
         "originality": 13,
-        "technicalStrength": 18
+        "technicalStrength": 13
       },
-      "totalScore": 59,
-      "abstractLines": [
-        "同じT-duality着想正則black holeでmassive scalar QNMとnull/timelike geodesicを計算した。",
-        "scalar mass増加でringingは高周波・長寿命となり、zero-point length増加でphoton orbitとISCOが物理mass単位で小さくなる。",
-        "shadow縮小、photon-ring周波数・binding energy増加という相関したphenomenological imprintを得た。"
-      ],
-      "curiosity": "一つの正則化parameterがwave、shadow、ISCOへ整合した複数signatureを残すかを調べる。",
-      "concept": "Padé-WKB massive-field spectrumと解析的geodesic条件を同じADM規格化metricで走査し、各observableのparameter依存を比較した。",
-      "conclusion": "複数probeに一貫した傾向を得たが、WKBが破綻する臨界mass、回転、ray tracing、実data fittingは未対応である。",
-      "assessment": "総合59/100（物理全体13、カテゴリ15、独創性13、方法・結果18）。一つの正則black-hole parameterを波動・shadow・ISCOで横断比較する点は有用だが、特定metricへの標準的計算で波及と独創性は限定的である。複数probeの整合した傾向を要旨で示すことを評価し、実データ解析や回転拡張がない点を差し引いた。",
-      "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
-    },
-    {
-      "rank": 22,
-      "arxivId": "2607.08134",
-      "url": "https://arxiv.org/abs/2607.08134",
-      "title": "Field Theoretic Aspects of Gravity From Direct Action to Quantum Fields",
-      "titleJa": "直接作用から量子場まで：重力の場の理論的側面",
-      "authors": [
-        "Ghanashyam Date"
-      ],
-      "primaryCategory": "gr-qc",
-      "paperType": "レビュー",
-      "scores": {
-        "broadImpact": 15,
-        "categoryImpact": 16,
-        "originality": 12,
-        "technicalStrength": 15
+      "scoreReasons": {
+        "broadImpact": "異方的宇宙における遠隔平行化重力の厳密流体解は、初期宇宙やブラックホール内部の玩具模型となる。観測量や摂動安定性への接続は要旨で示されない。",
+        "categoryImpact": "Kantowski–Sachs時空でChaplygin・ポリトロープ保存則から$F(T)$作用を逆構成し、冪型・指数型の枝を分類する。完全な安定条件は残る。",
+        "originality": "既存の共変コフレーム・スピン接続形式を継承し、二種の非線形状態方程式ごとに作用の局所枝を再構成した。ねじれスカラーの移動を含む枝構造が具体的差分である。",
+        "technicalStrength": "公式要旨は保存方程式から厳密枝を導き$F_T>0$と$F_{TT}>0$を主要条件として検査するが、全摂動スペクトルと初期値安定性は本文未確認である。"
       },
-      "totalScore": 58,
+      "totalScore": 49,
       "abstractLines": [
-        "Narlikarの研究を軸に、Mach原理に基づく直接作用と古典場の対立を概念史的にたどる。",
-        "QED、renormalization、effective field theory、Wilsonian RGを経て場が自律的量子実体となる過程を整理する。",
-        "重力ではdiffeomorphism invariance、asymptotic safety、background-independent量子化と離散幾何を対比する。"
+        "遠隔平行化$F(T)$重力の異方的Kantowski–Sachs宇宙では、物質状態方程式から許容作用を逆構成できる。",
+        "共変コフレームとスピン接続を用い、Chaplygin流体とポリトロープ流体の保存則から局所解枝を分類した。",
+        "冪型・指数型を含む複数の$F(T)$枝と主要な符号条件を得たが、完全な摂動安定性は今後の課題である。"
       ],
-      "curiosity": "重力相互作用に媒介場は本質的か、量子化によって場の存在論とbackground independenceがどう変わるかを歴史的に整理する。",
-      "concept": "直接作用から量子場、RG、複数の量子重力路線までを数式と概念史でつなぐ短いconceptual traceである。",
-      "conclusion": "量子重力の複数枠組みは相互に排他的でなく適用域が補完的だと論じる。新定理や定量比較ではなく、論点整理が主目的である。",
-      "assessment": "総合58/100（物理全体15、カテゴリ16、独創性12、方法・結果15）。直接作用から量子重力までをつなぐ教育的波及はあるが、主目的は概念史の整理で新しい定理や定量結果ではない。射程の広いレビュー構成を評価しつつ、独創性と結果の非自明度は控えめにした。",
+      "curiosity": "非線形流体の保存則は、異方的遠隔平行化宇宙を支える$F(T)$作用をどこまで一意に選べるか。",
+      "concept": "状態方程式で密度発展を先に積分し、ねじれスカラーとの局所関係を反転して重力ラグランジアンの枝を再構成する。",
+      "conclusion": "Chaplygin・ポリトロープ物質は複数のKantowski–Sachs型$F(T)$作用を許すが、局所枝の選択と動力学的健全性は未決定である。",
+      "assessment": "共変遠隔平行化形式で二種の流体を解析的に比較できる点は整理価値がある。要旨段階では物理的枝選択と安定性の根拠が限定され、現象的含意は弱い。",
       "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08343v1"
+      ]
     },
     {
       "rank": 23,
-      "arxivId": "2607.07741",
-      "url": "https://arxiv.org/abs/2607.07741",
-      "title": "Systematic Light Propagation Bias from the Heliosphere and Its Impact on the Hubble Tension",
-      "titleJa": "heliosphereによる光伝播biasとHubble tensionへの影響",
+      "arxivId": "2607.07736",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.07736",
+      "title": "Deformed Compact Objects in General Relativity and Modified Gravity",
+      "titleJa": "一般相対論と修正重力における変形コンパクト天体",
       "authors": [
-        "Behnam Pourhassan",
-        "İzzet Sakallı",
-        "Sudhaker Upadhyay",
-        "Kairat Myrzakulov"
+        "Jonathan Tejeda Quartuccio"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "解析",
+      "paperType": "学位論文・理論",
       "scores": {
-        "broadImpact": 16,
-        "categoryImpact": 10,
-        "originality": 19,
-        "technicalStrength": 10
+        "broadImpact": 12,
+        "categoryImpact": 12,
+        "originality": 10,
+        "technicalStrength": 14
       },
-      "totalScore": 55,
+      "scoreReasons": {
+        "broadImpact": "非球対称変形と物質模型が中性子星・奇妙星の質量半径関係へ与える効果を比較し、コンパクト天体推論へ幅広い資料を提供する。博士論文として既存模型の統合が中心である。",
+        "categoryImpact": "標準TOV、変形TOV、$f(R,T)$重力を複数の状態方程式で比較し、扁平・長球変形の違いを要旨で整理する。回転星の完全な二次元解との比較は確認できない。",
+        "originality": "既存の一パラメータ変形TOV法と$f(R,T)$模型をGM1、MIT袋模型、ポリトロープへ適用する。要旨上の新規性は単一の新機構より広い比較にある。",
+        "technicalStrength": "公式要旨は質量半径系列を複数状態方程式で計算したと述べるが、因果性、安定枝、観測事後分布、数値収束の詳細は本文未確認である。"
+      },
+      "totalScore": 48,
       "abstractLines": [
-        "heliopause周辺のplasma・温度勾配がdistance ladder光度測定へ系統biasを与えるという仮説を提案した。",
-        "屈折率・散乱・anisotropyを模型化し、必要bias約0.19に対し代表的upwind値約0.08を見積もった。",
-        "Hubble tensionの約3–8%を説明し得るとして、波長依存・nose–tail差・solar-cycle変調などの検証を提案した。"
+        "コンパクト星の非球対称変形と修正重力は、同じ質量半径観測に縮退した効果を生じ得る。",
+        "標準および変形TOV方程式と$f(R,T)$重力を導き、複数の中性子星・奇妙星状態方程式へ適用した。",
+        "扁平化は質量と半径を増し長球化は圧縮する傾向を報告したが、学位論文全体の独立検証は行っていない。"
       ],
-      "curiosity": "局所distance ladderの光が最後に通るheliosphereを未考慮の観測systematicとして扱うとHubble tensionの一部を説明できるか、という非常に非標準的な問いである。",
-      "concept": "Voyager/IBEX着想のplasma環境を単純化し、optical propagation correctionをCepheid–SN較正へ写して方向・波長・時間依存predictionを作った。",
-      "conclusion": "論文自身の見積りでもtension全体は閉じず3–8%に留まる。光学効果の大きさと標準calibrationに残る実効biasの独立検証が不可欠で、現段階では仮説的である。",
-      "assessment": "総合55/100（物理全体16、カテゴリ10、独創性19、方法・結果10）。Hubble tensionへ太陽圏伝播biasを結び付ける問いは非常に独創的だが、gr-qcの中心的寄与ではなく、要旨上の効果もtensionの一部に留まる。単純化模型の見積りと未検証の予測段階であるため、方法・結果を大きく抑えた。",
+      "curiosity": "観測される質量半径曲線のずれを、星の形状変形、状態方程式、物質跡へ結合する修正重力の間で区別できるか。",
+      "concept": "静水圧平衡へ幾何学的変形パラメータを導入し、同じ状態方程式群に対して一般相対論と$f(R,T)$の系列を並列比較する。",
+      "conclusion": "形状変形と物質跡結合はいずれもコンパクト星系列を系統的に動かすが、観測縮退を破る一意な指標は要旨から確認できない。",
+      "assessment": "複数の物質模型と重力模型を同じ静水圧問題で見渡せる総合性はある。広範な学位研究である一方、主要成果の新規性と検証密度を要旨だけでは十分判定できない。",
       "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.07736v1"
+      ]
     },
     {
       "rank": 24,
       "arxivId": "2607.08148",
+      "arxivVersion": "v1",
+      "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08148",
       "title": "Spectroscopic structure of Non-Hermitian PT-Symmetric Klein--Gordon Fields in a Magnetized Cosmic String Spacetime",
-      "titleJa": "磁化cosmic-string時空における非Hermitian PT対称Klein–Gordon場の分光構造",
+      "titleJa": "磁化宇宙ひも時空における非エルミート$\\mathcal{PT}$対称Klein–Gordon場の分光構造",
       "authors": [
         "Omar Mustafa",
         "Abdullah Guvendi"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "理論",
+      "paperType": "数理物理",
       "scores": {
-        "broadImpact": 10,
-        "categoryImpact": 13,
-        "originality": 15,
-        "technicalStrength": 15
+        "broadImpact": 8,
+        "categoryImpact": 11,
+        "originality": 12,
+        "technicalStrength": 14
       },
-      "totalScore": 53,
+      "scoreReasons": {
+        "broadImpact": "宇宙ひも背景の非エルミート相対論的場を厳密可解化し、数理物理の比較模型を与える。磁気単極子と複素結合の現実的実装が不明で、重力現象への波及は狭い。",
+        "categoryImpact": "磁化宇宙ひも上のKlein–Gordonスペクトルを双合流Heun多項式条件から求め、実エネルギー領域を要旨で分類する。場の量子化と安定性は確認できない。",
+        "originality": "既存の$\\mathcal{PT}$対称非エルミート量子力学とHeun多項式法を継承し、虚数磁気電荷と複素非最小スカラー結合を宇宙ひも上のKlein–Gordon振動子へ組み合わせた。実パラメータのエルミート対応系にはない許容エネルギー上限が具体的差分である。",
+        "technicalStrength": "公式要旨は双合流Heun級数の多項式打切りと、ω=0での合流型超幾何級数によるCoulomb極限を示し、虚数パラメータを実数へ写したエルミート対応系と比較する。物理的内積、境界条件の完全性、数値スペクトル照合は本文未確認である。"
+      },
+      "totalScore": 45,
       "abstractLines": [
-        "磁化cosmic-string背景に複素非最小couplingとimaginary chargeを導入し、PT対称Klein–Gordon oscillatorを構成した。",
-        "biconfluent Heun級数のpolynomial終端条件から条件付き厳密spectrumを導いた。",
-        "PT対称化はHermitian対応系にないenergy上限とnormalizable stateのparameter制限を生む。"
+        "非エルミートだが$\\mathcal{PT}$対称な相対論的場は、適切な領域で実スペクトルを持ち得る。",
+        "磁化宇宙ひも時空のKlein–Gordon方程式へ複素非最小結合を入れ、双合流Heun多項式条件で固有値を求めた。",
+        "虚数パラメータを実数へ写したエルミート対応系と比較し、二つの非エルミート$\\mathcal{PT}$対称模型に許容エネルギー上限を得たが、磁気電荷と相互作用は複素数である。"
       ],
-      "curiosity": "curved spacetime上のrelativistic場へ非Hermitian PT対称構造を整合的に導入し、topological defectがspectrumへどう作用するかを問う。",
-      "concept": "複素radial couplingと電荷処方でradial方程式をHeun型へ写し、polynomial条件をHermitian写像・Coulomb極限と比較した。",
-      "conclusion": "解析可能なspectrumとenergy上限を得たが、unbroken PT領域の境界、内積・unitarityの物理解釈、より一般背景への頑健性が残る。",
-      "assessment": "総合53/100（物理全体10、カテゴリ13、独創性15、方法・結果15）。曲がった時空のPT対称Klein–Gordon系という組合せには独自性があるが、特殊な複素couplingに依存しgr-qc全体への波及は狭い。Heun終端条件による解析spectrumを評価しつつ、内積・unitarity・物理的実現性の検証が要旨から見えない点を差し引いた。",
+      "curiosity": "$\\mathcal{PT}$対称性は、曲率と磁束を持つ宇宙ひも背景でも非エルミートKlein–Gordon場の実エネルギーを保てるか。",
+      "concept": "虚数磁気電荷と複素径方向結合から$\\mathcal{PT}$対称Klein–Gordon振動子を作り、双合流Heun級数の多項式打切りで固有値を定め、パラメータを実数化したエルミート系と比較する。",
+      "conclusion": "特定の結合領域では形式的に実なKlein–Gordonスペクトルが得られるが、物理的内積と磁場源の実在性は未確定である。",
+      "assessment": "閉形式の固有値条件と複数極限を提示する点は数理的に明快である。人工的な複素源への依存と本文未確認の量子論的健全性が評価を抑える。",
       "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08148v1"
+      ]
     },
     {
       "rank": 25,
-      "arxivId": "2607.07736",
-      "url": "https://arxiv.org/abs/2607.07736",
-      "title": "Deformed Compact Objects in General Relativity and Modified Gravity",
-      "titleJa": "一般相対論・修正重力における変形compact object",
+      "arxivId": "2607.08134",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.08134",
+      "title": "Field Theoretic Aspects of Gravity From Direct Action to Quantum Fields",
+      "titleJa": "直接作用から量子場へ：重力の場の理論的側面",
       "authors": [
-        "Jonathan Tejeda Quartuccio"
+        "Ghanashyam Date"
       ],
       "primaryCategory": "gr-qc",
-      "paperType": "理論",
+      "paperType": "概説・基礎論",
       "scores": {
-        "broadImpact": 12,
-        "categoryImpact": 14,
-        "originality": 11,
-        "technicalStrength": 13
+        "broadImpact": 10,
+        "categoryImpact": 8,
+        "originality": 6,
+        "technicalStrength": 9
       },
-      "totalScore": 50,
+      "scoreReasons": {
+        "broadImpact": "直接作用、Mach原理、量子場を結ぶ歴史的概説は基礎概念の教育に役立つが、新たな計算結果や観測接続は要旨から認められない。",
+        "categoryImpact": "Jayant V. Narlikar（JVN）のMach原理に基づく遠隔直接作用を起点に、古典的な直接作用と場の理論を量子重力まで比較する。gr-qcの特定未解決問題を解く主張ではない。",
+        "originality": "公式要旨は既知の直接作用論と量子場論的重力の概念史をたどる寄稿であり、独自の形式、定理、データ解析は確認できない。",
+        "technicalStrength": "24頁の概念的寄稿であることはコメントから分かるが、技術導出、独立検算、反例検討の範囲は本文未確認である。"
+      },
+      "totalScore": 33,
       "abstractLines": [
-        "polar/equatorial radius比Dを導入した1次元deformed TOVとf(R,T)拡張を博士論文としてまとめた。",
-        "GM1・MIT bag・polytropeで平衡系列を計算し、oblate D<1が同じEOSで最大質量を増やすことを示した。",
-        "GW190814副成分級の高質量を得るparameter域を議論するが、変形原因と動的安定性は模型に含まれない。"
+        "重力を遠隔直接作用として捉える立場と局所量子場として捉える立場には、異なる歴史的・概念的系譜がある。",
+        "Jayant V. Narlikar（JVN）の遠隔直接作用とMach的発想を起点に、古典的な場の記述から量子場と重力がもたらす新要素までを概念的にたどる。",
+        "重力場理論の見取り図を提示する寄稿だが、公式要旨から新しい定量結果や検証可能な予測は確認できない。"
       ],
-      "curiosity": "回転・磁場・anisotropyによる非球対称性を多次元計算なしに有効parameter化し、高質量compact starを記述できるかが問題である。",
-      "concept": "幾何比DだけでTOV balanceを変形し、複数EOSとf(R,T) couplingでmass–radius系列を走査、canonical mass/radiusとGW190814を基準に比較した。",
-      "conclusion": "oblate変形とmodified gravityは最大質量を上げるが、Dは原因を符号化せず静的・実効等方の近似である。radial oscillation安定性、多次元化、観測縮退の分離が必要である。",
-      "assessment": "総合50/100（物理全体12、カテゴリ14、独創性11、方法・結果13）。高質量compact objectへの応用はあるが、半径比Dで非球対称性を有効化する仮定が強く、新規性と一般性は限定的である。複数EOSと修正重力を走査する幅を評価しつつ、変形原因・動的安定性・多次元検証が要旨から確認できない点を差し引いた。",
+      "curiosity": "直接作用の非局所的直観は、局所量子場としての重力記述へどの概念を残し、どこで失われるか。",
+      "concept": "直接相互作用から媒介場、量子場へ至る理論史をMach原理との関係で並べ、重力記述の前提を比較する。",
+      "conclusion": "本稿は重力の場の理論的系譜を概観するが、要旨からは新しい理論結果や具体的な反証条件を読み取れない。",
+      "assessment": "異なる基礎的立場を歴史的文脈で結ぶ教育的価値はある。一次研究として評価できる新規命題と技術検証が要旨では提示されていない。",
       "evaluationBasis": "title_authors_abstract",
-      "fullTextEvaluated": false
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.08134v1"
+      ]
     }
   ],
   "audit": {
-    "listingUrl": "https://arxiv.org/list/gr-qc/new",
+    "listingUrl": "https://arxiv.org/list/gr-qc/pastweek",
     "announcementDate": "2026-07-10",
-    "selectionRule": "公式new listingのNew submissions 25件のみ。arXiv IDはversionを除去し、primary categoryがgr-qcのv1に限定。Cross submissions 15件とReplacement submissions 28件は除外。",
+    "selectionRule": "ホストが固定した公式gr-qc一覧から、主分類がgr-qcのNew submission v1を25件評価し、Cross submissions 15件を除外した。",
     "sourceCounts": {
-      "newSubmissions": 25,
-      "crosslistsExcluded": 15
+      "newPrimary": 25,
+      "crosslistsExcluded": 15,
+      "titleAuthorAbstractEvaluated": 25
     },
-    "evaluationPolicy": "全件をtitle・authors・abstractで一次評価し、暫定順位から必要なPDFを確認して最終top 10全件を全文再評価。著者の知名度・権威は非採点。",
-    "scoreRubric": "broadImpact、categoryImpact、originality、technicalStrengthを各0〜25点、合計100点。",
-    "fullTextPolicy": "最終top 10は導入、設定・仮定、方法・導出、主要結果、検証、結論・限界、関連付録を確認。独立再計算の範囲はpaperごとのfullTextReviewStatusに記録。",
-    "fullTextEvaluatedCount": 10,
-    "authorPolicy": "著者の知名度・所属・経歴・引用指標は採点に使用しない。著名著者マークはregistry一致による非加点表示。",
-    "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv ID昇順。",
-    "generatedAtJst": "2026-07-10T20:01:44+09:00"
+    "evaluationPolicy": "全25件を題名、全著者、要旨、主分類、コメントで評価し、最終上位10件と順位境界の候補は版固定PDFの主要節まで確認した。著者の所属、知名度、評判は点数に用いていない。",
+    "scoreRubric": "Daily arXiv rubric 3.0。broadImpact、categoryImpact、originality、technicalStrengthを各0〜25の整数で独立採点した。高得点は具体的な波及経路、分野内の未解決課題への前進、最隣接研究との差分、中心手法と独立検証および限界を本文で確認できる場合に限った。",
+    "fullTextPolicy": "最終上位10件に加え、同点処理と順位境界の頑健性に必要な候補を優先して版固定PDFの主要節、導出、検証、限界まで確認した。全文未確認論文の技術的強度は17以下とした。",
+    "fullTextEvaluatedCount": 18,
+    "authorPolicy": "全著者名は公式v1要旨ページの表示を保存した。著名著者レジストリはpublisherが決定的に付与するため、選考と採点から分離した。",
+    "rankingTieBreak": "totalScore降順、broadImpact降順、originality降順、technicalStrength降順、categoryImpact降順、arxivId昇順の順に決定した。",
+    "generatedAtJst": "2026-07-14T14:35:50+09:00"
   }
 }

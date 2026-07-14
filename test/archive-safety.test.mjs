@@ -17,7 +17,6 @@ import {
   DATE,
   validPolicy,
   validReportSet,
-  writeBaseRoot,
   writeProductionRepository,
   writeReports,
 } from "./helpers.mjs";
@@ -42,12 +41,22 @@ test("current.json and index.json must exactly describe the dated archive", () =
   assert.throws(() => validatePublicArchive(root, validPolicy()), /exactly match the latest dated edition/);
 });
 
-test("the checked-in schema-1.2 edition is accepted but cannot be overwritten", () => {
+test("a synthetic schema-1.2 edition is accepted but cannot be overwritten", () => {
   const root = mkdtempSync(resolve(tmpdir(), "daily-arxiv-legacy-readonly-"));
-  writeBaseRoot(root);
-  const legacy = JSON.parse(readFileSync(resolve("public/data/2026-07-10.json"), "utf8"));
-  writeFileSync(resolve(root, "public/data/2026-07-10.json"), serializeJson(legacy));
-  assert.throws(() => buildEdition({ root, date: "2026-07-10" }), /legacy schema-1\.2 editions are immutable/);
+  writeProductionRepository(root);
+  const datedPath = resolve(root, `public/data/${DATE}.json`);
+  const legacy = JSON.parse(readFileSync(datedPath, "utf8"));
+  legacy.schemaVersion = "1.2";
+  for (const category of Object.values(legacy.categories)) {
+    category.schemaVersion = "1.2";
+    for (const paper of category.topPapers) {
+      delete paper.scoreReasons;
+      paper.sourceUrls = paper.sourceUrls.map((url) => url.replace(/v1$/, ""));
+    }
+    for (const paper of category.otherPapers) delete paper.titleJa;
+  }
+  writeFileSync(datedPath, serializeJson(legacy));
+  assert.throws(() => buildEdition({ root, date: DATE }), /legacy schema-1\.2 editions are immutable/);
 });
 
 test("a production public edition must match its three immutable source reports", () => {

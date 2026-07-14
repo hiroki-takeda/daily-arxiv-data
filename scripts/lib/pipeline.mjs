@@ -35,6 +35,16 @@ const TEXT_FIELDS = ["title", "titleJa", "paperType", "curiosity", "concept", "c
 const STRUCTURED_SCHEMAS = Object.freeze([PREVIOUS_PRODUCTION_SCHEMA, PRODUCTION_SCHEMA]);
 const SUPPORTED_SCHEMAS = Object.freeze([LEGACY_SCHEMA, ...STRUCTURED_SCHEMAS]);
 const JAPANESE_TEXT_PATTERN = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u;
+const LOWERCASE_LATIN_TITLE_TOKEN_PATTERN = /(?<![\p{Script=Latin}\p{N}])([a-z][a-z-]{3,})(?![\p{Script=Latin}\p{N}])/gu;
+const ALLOWED_LOWERCASE_TITLE_TOKENS = new Set(["arxiv", "hep-th", "gr-qc", "quant-ph"]);
+const FORMAL_ENGLISH_NAME_PATTERN = /\b(?:[A-Z][\p{Script=Latin}0-9'’-]*\s+){1,7}(?:Antenna|Array|Collaboration|Collider|Detector|Experiment|Explorer|Instrument|Mission|Observatory|Project|Survey|Telescope)\b/gu;
+const GENERIC_ENGLISH_TITLE_TOKEN_PATTERN = /(?<![\p{Script=Latin}\p{N}])(analysis|approach|black|bootstrap|classical|correlations?|cosmology|dynamics|energy|entanglement|entropy|equations?|fields?|finite|framework|gas|gates?|geometry|gravitational|gravity|holes?|inequalit(?:y|ies)|information|infinite|interactions?|macroscopic|matter|measurements?|methods?|microscopic|models?|networks?|noise|operators?|particles?|phases?|protocols?|quantum|qubits?|scalar|signals?|simulations?|solutions?|spacetime|spectrum|states?|stochastic|systems?|tensor|theor(?:y|ies)|thermodynamics|topological|topology|transitions?|universe|vectors?|waves?)(?![\p{Script=Latin}\p{N}])/iu;
+const LOWERCASE_LATIN_PROSE_PHRASE_PATTERN = /(?<![\p{Script=Latin}\p{N}])([a-z][a-z-]{3,}(?:\s+[a-z][a-z-]{3,})+)(?![\p{Script=Latin}\p{N}])/u;
+const LOWERCASE_LATIN_WITH_JAPANESE_PATTERN = /(?<![\p{Script=Latin}\p{N}])([a-z][a-z-]{3,})(?=[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}・])/gu;
+const LOWERCASE_LATIN_PARENTHETICAL_PATTERN = /[（(]\s*([a-z][a-z-]{3,})\s*[）)]/gu;
+const ALLOWED_LOWERCASE_PROSE_TOKENS = new Set(["arxiv", "coth", "gr-qc", "hep-th", "quant-ph"]);
+const ASSESSMENT_TOTAL_RECAP_PATTERN = /総合(?:評定|評価|点)?\s*(?:は|:)?\s*[(]?\s*\d{1,3}\s*(?:\/\s*100|点)/u;
+const ASSESSMENT_AXIS_RECAP_PATTERN = /(?:科学的重要性|物理(?:学)?全体|重要性|分野への貢献|分野貢献|(?:hep-th|gr-qc|quant-ph)内|カテゴリ(?:ー)?|独創性|厳密性・信頼性|技術(?:的)?信頼性|信頼性|方法・結果)\s*(?:は|:)?\s*[(]?\s*\d{1,2}\s*(?:\/\s*25|点)/u;
 const KNOWN_GENERIC_RATIONALE_PHRASES = Object.freeze([
   "主題の分野横断的な射程を評価",
   "分野内での重要度を評価",
@@ -81,6 +91,64 @@ function assertNaturalJapanese(value, path, minimumCharacters = 1) {
   const japaneseCharacters = [...value].filter((character) => JAPANESE_TEXT_PATTERN.test(character)).length;
   if (japaneseCharacters < minimumCharacters) {
     fail(path, `must contain natural Japanese text with at least ${minimumCharacters} Japanese-script characters`);
+  }
+  assertNoUntranslatedEnglishProse(value, path);
+}
+
+function proseOutsideMathAndIdentifiers(value) {
+  return String(value)
+    .replace(/\$[^$]*\$/gu, " ")
+    .replace(/\\\([^]*?\\\)/gu, " ")
+    .replace(/\\\[[^]*?\\\]/gu, " ")
+    .replace(/\\[A-Za-z]+/gu, " ")
+    .replace(/(?<![\p{Script=Latin}\p{N}])[A-Za-z][A-Za-z0-9]*(?:_[A-Za-z0-9]+)+(?![\p{Script=Latin}\p{N}])/gu, " ");
+}
+
+function assertNoUntranslatedEnglishProse(value, path) {
+  const prose = proseOutsideMathAndIdentifiers(value);
+  const phrase = LOWERCASE_LATIN_PROSE_PHRASE_PATTERN.exec(prose)?.[1];
+  if (phrase) {
+    fail(path, `must translate the lowercase English phrase ${JSON.stringify(phrase)} into natural Japanese or katakana`);
+  }
+  for (const pattern of [LOWERCASE_LATIN_WITH_JAPANESE_PATTERN, LOWERCASE_LATIN_PARENTHETICAL_PATTERN]) {
+    const untranslated = [...prose.matchAll(pattern)]
+      .map((match) => match[1])
+      .find((token) => !ALLOWED_LOWERCASE_PROSE_TOKENS.has(token));
+    if (untranslated) {
+      fail(path, `must translate the lowercase English token ${JSON.stringify(untranslated)} into natural Japanese or katakana`);
+    }
+  }
+}
+
+function assertJapaneseDisplayTitle(value, originalTitle, path) {
+  assertNonEmptyString(value, path);
+  const normalizedTitle = normalizedProse(value);
+  const normalizedOriginal = normalizedProse(originalTitle);
+  if (normalizedTitle === normalizedOriginal) {
+    fail(path, "must be a Japanese display title distinct from the original title");
+  }
+  if (normalizedOriginal.length >= 12 && normalizedTitle.includes(normalizedOriginal)) {
+    fail(path, "must not contain or concatenate the original title");
+  }
+  const proseOutsideMath = proseOutsideMathAndIdentifiers(value)
+    .replace(FORMAL_ENGLISH_NAME_PATTERN, " ");
+  const generic = GENERIC_ENGLISH_TITLE_TOKEN_PATTERN.exec(proseOutsideMath)?.[1];
+  if (generic) {
+    fail(path, `must translate the general English title word ${JSON.stringify(generic)} into natural Japanese or katakana`);
+  }
+  const untranslated = [...proseOutsideMath.matchAll(LOWERCASE_LATIN_TITLE_TOKEN_PATTERN)]
+    .map((match) => match[1])
+    .find((token) => !ALLOWED_LOWERCASE_TITLE_TOKENS.has(token));
+  if (untranslated) {
+    fail(path, `must translate the lowercase English token ${JSON.stringify(untranslated)} into natural Japanese or katakana`);
+  }
+  assertNaturalJapanese(value, path, 2);
+}
+
+function assertNarrativeAssessment(value, path) {
+  const normalized = String(value).normalize("NFKC");
+  if (ASSESSMENT_TOTAL_RECAP_PATTERN.test(normalized) || ASSESSMENT_AXIS_RECAP_PATTERN.test(normalized)) {
+    fail(path, "must explain overall merit and the principal limitation without repeating total or axis scores");
   }
 }
 
@@ -380,7 +448,7 @@ function validatePaper(paper, slug, path, {
   }
   paper.abstractLines.forEach((line, index) => assertNonEmptyString(line, `${path}.abstractLines[${index}]`));
   if (structuredSchema === PRODUCTION_SCHEMA) {
-    assertNaturalJapanese(paper.titleJa, `${path}.titleJa`, 2);
+    assertJapaneseDisplayTitle(paper.titleJa, paper.title, `${path}.titleJa`);
     for (const field of ["curiosity", "concept", "conclusion"]) {
       assertNaturalJapanese(paper[field], `${path}.${field}`, 6);
     }
@@ -395,6 +463,7 @@ function validatePaper(paper, slug, path, {
     if (normalizedProse(paper.assessment).includes(normalizedProse(paper.conclusion))) {
       fail(`${path}.assessment`, "must not copy the conclusion");
     }
+    assertNarrativeAssessment(paper.assessment, `${path}.assessment`);
     assertNoKnownGenericRationale(paper.assessment, `${path}.assessment`);
   }
   const requiredAbstractUrl = structuredSchema !== undefined ? arxivVersionedAbsUrl(paper.arxivId) : arxivAbsUrl(paper.arxivId);
@@ -668,11 +737,18 @@ function validatePublicCategory(category, slug, schema, path) {
   const ids = new Set();
   const all = [...category.topPapers, ...category.otherPapers];
   all.forEach((paper, index) => {
-    validatePaper(paper, slug, `${path}.${index < expectedTop ? "topPapers" : "otherPapers"}[${index < expectedTop ? index : index - expectedTop}]`, {
+    const paperPath = `${path}.${index < expectedTop ? "topPapers" : "otherPapers"}[${index < expectedTop ? index : index - expectedTop}]`;
+    validatePaper(paper, slug, paperPath, {
       requireDetailed: index < expectedTop,
       structuredSchema: isStructuredSchema(schema) ? schema : undefined,
       allowEminentAuthors: isStructuredSchema(schema) && index < expectedTop,
     });
+    if (schema === PRODUCTION_SCHEMA && index >= expectedTop) {
+      assertExactKeys(paper, [
+        "rank", "arxivId", "url", "title", "titleJa", "authors", "paperType", "totalScore", "eminentAuthors",
+      ], paperPath);
+      assertJapaneseDisplayTitle(paper.titleJa, paper.title, `${paperPath}.titleJa`);
+    }
     if (paper.rank !== index + 1) fail(`${path}.papers`, "ranks must be consecutive");
     if (ids.has(paper.arxivId)) fail(`${path}.papers`, `duplicate arXiv ID ${paper.arxivId}`);
     ids.add(paper.arxivId);
@@ -927,6 +1003,7 @@ export function validateReportsArchive(root, policy, publicArchive) {
           arxivId: paper.arxivId,
           url: paper.url,
           title: paper.title,
+          ...(edition.schemaVersion === PRODUCTION_SCHEMA ? { titleJa: paper.titleJa } : {}),
           authors: paper.authors,
           paperType: paper.paperType,
           totalScore: paper.totalScore,
@@ -1094,6 +1171,7 @@ export function buildEdition({ root, date, reportsDir = resolve(root, "data/repo
       arxivId: paper.arxivId,
       url: paper.url,
       title: paper.title,
+      titleJa: paper.titleJa,
       authors: paper.authors,
       paperType: paper.paperType,
       totalScore: paper.totalScore,
