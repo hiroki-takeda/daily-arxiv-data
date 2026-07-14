@@ -6,6 +6,7 @@
 - GitHubリポジトリ（管理用）: https://github.com/hiroki-takeda/daily-arxiv-data
 - データ生成: macOS `launchd` + Codex CLI（ChatGPTアカウント認証）
 - 評価設定: `GPT-5.6-Sol` / `Ultra`
+- 評価基準: [Daily arXiv rubric 3.0](docs/SCHEDULED_TASK_PROMPT.md)（意義と波及、分野内の前進、独創性、厳密性・信頼性）
 - 配信: GitHub Pages
 - OpenAI APIキー・API課金: 不使用
 
@@ -81,7 +82,7 @@ public/data/current.json
 public/data/index.json
 ```
 
-arXiv PDFは一時領域でだけ確認し、リポジトリへ保存しません。2026-07-10のschema 1.2版は初回公開履歴として保持し、今後の版はschema 1.3で保存します。
+arXiv PDFは一時領域でだけ確認し、リポジトリへ保存しません。2026-07-10のschema 1.2版と2026-07-13のschema 1.3版は公開履歴として変更せず、rubric 3.0による今後の版はschema 1.4で保存します。schema 1.4では各論文に4軸それぞれの論文固有な`scoreReasons`を持たせ、`assessment`は全体としての優れた点と評価を抑える主要な限界だけをまとめます。
 
 ダッシュボードは上位10件を高密度の一覧で表示し、選択した論文だけ全評価を展開します。11位以下も同じ操作で全情報へアクセスできます。Pagesの配信成果物には、`public/`に加えて検証済みの`data/reports/*.json`だけを`data/reports/`として同梱します。
 

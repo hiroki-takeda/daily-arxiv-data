@@ -92,7 +92,8 @@ AIの評価内容を機械的に証明することはできませんが、次は
 - 中間日復元では、公開済み日が公式pastweekの発表日列にあり、選択日まで欠落がないこと
 - reportの全ID集合、カテゴリ、`v1`、New件数、Cross件数が公式snapshotと完全一致すること
 - generation前後で、選択したpastweek日付のsnapshot fingerprintが同一であること
-- 3レポートがschema 1.3、同じrunId、固定モデル情報を持つこと
+- 3レポートがschema 1.4、Daily arXiv rubric 3.0、同じrunId、固定モデル情報を持つこと
+- 全論文が4軸と正確に対応する4キーの`scoreReasons`を持ち、`audit.scoreRubric`が`Daily arXiv rubric 3.0`で始まること
 - 各最終上位10件に全文確認記録があること
 - 秘密情報、PDF、symlink、nested `.git`、10 MiB超ファイルがないこと
 - commit対象が日付に対応する正確な6ファイルだけであること

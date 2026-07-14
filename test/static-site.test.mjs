@@ -14,6 +14,10 @@ test("the dashboard script compiles and exposes expandable full-rank details", (
   assert.match(html, /\.\/data\/reports\//);
   assert.match(html, /11位以下/);
   assert.match(html, /評価根拠/);
+  assert.match(html, /評価基準/);
+  for (const label of ["科学的重要性", "分野への貢献", "独創性", "厳密性・信頼性"]) {
+    assert.match(html, new RegExp(label));
+  }
 });
 
 test("the dashboard renders and joins a lower-ranked report without browser-only dependencies", async () => {
@@ -68,12 +72,45 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   await context.loadReport("hep-th", lower.arxivId);
   assert.match(elements["#app"].innerHTML, new RegExp(lower.titleJa.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   const detail = context.paperDetail(lower, { ...lower, eminentAuthors: [] });
-  assert.match(detail, /Abstract/);
-  assert.match(detail, /Curiosity/);
-  assert.match(detail, /Concept/);
-  assert.match(detail, /Conclusion/);
-  assert.match(detail, /評定/);
+  assert.match(detail, /3行要約/);
+  assert.match(detail, /着眼点/);
+  assert.match(detail, /中核アイデア・方法/);
+  assert.match(detail, /結論と限界/);
+  assert.match(detail, /総合評定/);
   assert.match(detail, /評価根拠/);
+  assert.match(detail, new RegExp(lower.assessment.slice(0, 20).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+
+  const scoreReasons = {
+    broadImpact: "対象範囲が広く、隣接分野にも波及する。\n<script>alert(1)</script>",
+    categoryImpact: "分野固有の未解決問題へ直接答える。",
+    originality: "既存手法とは異なる構成を導入した。",
+    technicalStrength: "本文の導出と限界を照合できる。",
+  };
+  const withReasons = { ...lower, scoreReasons };
+  assert.doesNotThrow(() => context.validateDetailedPaper(withReasons, "hep-th"));
+  const reasonDetail = context.paperDetail(withReasons, { ...withReasons, eminentAuthors: [] });
+  assert.equal((reasonDetail.match(/class="score-reason"/g) ?? []).length, 4);
+  for (const [key, label] of [
+    ["broadImpact", "科学的重要性"],
+    ["categoryImpact", "分野への貢献"],
+    ["originality", "独創性"],
+    ["technicalStrength", "厳密性・信頼性"],
+  ]) {
+    assert.match(reasonDetail, new RegExp(`${label}[\\s\\S]*?${withReasons.scores[key]}/25`));
+  }
+  assert.match(reasonDetail, /波及する。<br>&lt;script&gt;alert\(1\)&lt;\/script&gt;/);
+  assert.doesNotMatch(reasonDetail, /<script>alert/);
+  assert.match(reasonDetail, /総合評定/);
+
+  const missingReason = structuredClone(withReasons);
+  delete missingReason.scoreReasons.originality;
+  assert.throws(() => context.validateDetailedPaper(missingReason, "hep-th"), /invalid score reasons/);
+  const extraReason = structuredClone(withReasons);
+  extraReason.scoreReasons.extra = "余分な理由";
+  assert.throws(() => context.validateDetailedPaper(extraReason, "hep-th"), /invalid score reasons/);
+  const emptyReason = structuredClone(withReasons);
+  emptyReason.scoreReasons.technicalStrength = "  ";
+  assert.throws(() => context.validateDetailedPaper(emptyReason, "hep-th"), /invalid score reasons/);
 
   const versionedSources = {
     ...lower,

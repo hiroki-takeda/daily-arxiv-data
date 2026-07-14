@@ -149,9 +149,28 @@ test("automation prompt binds host runId and outbox while forbidding model-side 
   assert.match(prompt, new RegExp(RUN_ID));
   assert.match(prompt, /modelId: gpt-5\.6-sol/);
   assert.match(prompt, /reasoningEffort: ultra/);
+  assert.match(prompt, /rubric 3\.0 scoring/);
+  assert.match(prompt, /natural-Japanese writing/);
+  assert.match(prompt, /schema 1\.4/);
   assert.match(prompt, /Do not run git add, git commit, git push/);
   assert.match(prompt, /host process alone publishes/);
   assert.match(prompt, /2099\.00001/);
+});
+
+test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality requirements", () => {
+  const specification = readFileSync(join(process.cwd(), "docs", "SCHEDULED_TASK_PROMPT.md"), "utf8");
+  for (const key of ["broadImpact", "categoryImpact", "originality", "technicalStrength"]) {
+    assert.match(specification, new RegExp(`scoreReasons\\.${key}`));
+  }
+  for (const band of ["0〜5", "6〜10", "11〜14", "15〜17", "18〜20", "21〜23", "24〜25"]) {
+    assert.ok((specification.match(new RegExp(band, "g")) ?? []).length >= 4, band);
+  }
+  assert.match(specification, /Daily arXiv rubric 3\.0/);
+  assert.match(specification, /technicalStrength`の18点以上は全文確認/);
+  assert.match(specification, /一般語を英単語のまま日本語の助詞や「する」へ接続しません/);
+  assert.match(specification, /別論文へそのまま移せる定型文を禁止/);
+  assert.match(specification, /abstractLines\[0\].*言い換えにはしません/);
+  assert.match(specification, /assessment.*点数や`scoreReasons`の反復/);
 });
 
 test("Codex discovery honors an absolute CODEX_BIN", async () => {

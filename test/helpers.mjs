@@ -18,7 +18,7 @@ export function validPolicy() {
     qualificationStatus: "not_benchmarked",
     qualificationRequiredForPublication: false,
     verificationScope: "Metadata is checked; scheduler model selection cannot be independently attested.",
-    publicationRule: "Only complete schema-1.3 editions with exact runtime metadata may publish.",
+    publicationRule: "Only complete schema-1.4 editions with exact runtime metadata may publish.",
     lastReviewed: "2099-01-05",
   };
 }
@@ -46,7 +46,7 @@ export function validReport(slug, { date = DATE, count = 11, run = validRun() } 
       broadImpact: 25 - index,
       categoryImpact: 20,
       originality: 20,
-      technicalStrength: 20,
+      technicalStrength: fullTextEvaluated ? 20 : 17,
     };
     return {
       rank: index + 1,
@@ -60,15 +60,21 @@ export function validReport(slug, { date = DATE, count = 11, run = validRun() } 
       primaryCategory: slug,
       paperType: "理論",
       scores,
+      scoreReasons: {
+        broadImpact: `論文${index + 1}の結果は、複数の物理領域へ波及する可能性がある。`,
+        categoryImpact: `論文${index + 1}は、${slug}の中心課題に対して具体的な前進を示している。`,
+        originality: `論文${index + 1}は、既存手法とは異なる構成を導入して新しい問いに答えている。`,
+        technicalStrength: `論文${index + 1}は、明示した仮定の下で導出と検証を行い、適用限界も記している。`,
+      },
       totalScore: Object.values(scores).reduce((sum, value) => sum + value, 0),
       abstractLines: ["背景を説明する。", "方法を説明する。", "結論を説明する。"],
       curiosity: "研究上の問いを説明する。",
       concept: "研究の方法を説明する。",
       conclusion: "研究の結論を説明する。",
-      assessment: "四つの採点軸から評価した。",
+      assessment: `論文${index + 1}は、提示した証拠と明記された限界を踏まえて総合評価した。`,
       evaluationBasis: fullTextEvaluated ? "full_text_major_sections" : "title_authors_abstract",
       fullTextEvaluated,
-      ...(fullTextEvaluated ? { fullTextReviewStatus: "主要節、結論、限界、付録を確認した。" } : {}),
+      ...(fullTextEvaluated ? { fullTextReviewStatus: `論文${index + 1}の主要節、結論、限界、付録を確認した。` } : {}),
       sourceUrls: [
         `https://arxiv.org/abs/${arxivId}v1`,
         ...(fullTextEvaluated ? [`https://arxiv.org/pdf/${arxivId}v1`] : []),
@@ -76,7 +82,7 @@ export function validReport(slug, { date = DATE, count = 11, run = validRun() } 
     };
   });
   return {
-    schemaVersion: "1.3",
+    schemaVersion: "1.4",
     reportDate: date,
     evaluationRun: structuredClone(run),
     slug,
@@ -96,7 +102,7 @@ export function validReport(slug, { date = DATE, count = 11, run = validRun() } 
         titleAuthorAbstractEvaluated: count,
       },
       evaluationPolicy: "Every paper is scored without author reputation.",
-      scoreRubric: "Four integer dimensions from zero through 25.",
+      scoreRubric: "Daily arXiv rubric 3.0 — 四つの評価軸を各0点から25点で採点する。",
       fullTextPolicy: "Every final top-ten paper receives full-text review.",
       fullTextEvaluatedCount: Math.min(10, count),
       authorPolicy: "Author identity is never scored.",

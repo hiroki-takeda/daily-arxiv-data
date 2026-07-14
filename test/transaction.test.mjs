@@ -59,6 +59,15 @@ test("repeating an identical merge is a no-op", () => {
   writeReports(root);
   assert.equal(mergeEditionTransactionally({ root, date: DATE }).changed, true);
   const before = readFileSync(resolve(root, "public/data/current.json"), "utf8");
+  const edition = JSON.parse(before);
+  assert.equal(edition.schemaVersion, "1.4");
+  assert.equal(edition.pipeline.rubricVersion, "3.0");
+  assert.deepEqual(Object.keys(edition.categories["hep-th"].topPapers[0].scoreReasons).sort(), [
+    "broadImpact",
+    "categoryImpact",
+    "originality",
+    "technicalStrength",
+  ]);
   assert.equal(mergeEditionTransactionally({ root, date: DATE }).changed, false);
   assert.equal(readFileSync(resolve(root, "public/data/current.json"), "utf8"), before);
 });

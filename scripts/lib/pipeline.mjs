@@ -14,8 +14,10 @@ import {
 } from "node:fs";
 import { basename, dirname, relative, resolve, sep } from "node:path";
 
-export const PRODUCTION_SCHEMA = "1.3";
+export const PRODUCTION_SCHEMA = "1.4";
+export const PREVIOUS_PRODUCTION_SCHEMA = "1.3";
 export const LEGACY_SCHEMA = "1.2";
+export const RUBRIC_3_MARKER = "Daily arXiv rubric 3.0";
 export const CATEGORIES = Object.freeze(["hep-th", "gr-qc", "quant-ph"]);
 export const SCORE_KEYS = Object.freeze([
   "broadImpact",
@@ -30,6 +32,18 @@ const ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}$/;
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const MAX_JSON_BYTES = 10 * 1024 * 1024;
 const TEXT_FIELDS = ["title", "titleJa", "paperType", "curiosity", "concept", "conclusion", "assessment"];
+const STRUCTURED_SCHEMAS = Object.freeze([PREVIOUS_PRODUCTION_SCHEMA, PRODUCTION_SCHEMA]);
+const SUPPORTED_SCHEMAS = Object.freeze([LEGACY_SCHEMA, ...STRUCTURED_SCHEMAS]);
+const JAPANESE_TEXT_PATTERN = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u;
+const KNOWN_GENERIC_RATIONALE_PHRASES = Object.freeze([
+  "主題の分野横断的な射程を評価",
+  "分野内での重要度を評価",
+  "問いと構成の新規性を評価",
+  "公式title・完全著者列・abstract・commentsを根拠に評価した",
+  "v1本文の主要導出・検証・限界を根拠に評価した",
+  "v1本文の主要導出・数値/定理検証・限界を根拠に評価した",
+  "v1本文の定理・実験/数値検証・限界を根拠に評価した",
+]);
 const EXPECTED_POLICY = Object.freeze({
   schemaVersion: "1.1",
   requiredModelId: "gpt-5.6-sol",
@@ -60,6 +74,28 @@ function assertObject(value, path) {
 
 function assertNonEmptyString(value, path) {
   if (typeof value !== "string" || value.trim() === "") fail(path, "must be a non-empty string");
+}
+
+function assertNaturalJapanese(value, path, minimumCharacters = 1) {
+  assertNonEmptyString(value, path);
+  const japaneseCharacters = [...value].filter((character) => JAPANESE_TEXT_PATTERN.test(character)).length;
+  if (japaneseCharacters < minimumCharacters) {
+    fail(path, `must contain natural Japanese text with at least ${minimumCharacters} Japanese-script characters`);
+  }
+}
+
+function normalizedProse(value) {
+  return String(value).normalize("NFKC").toLocaleLowerCase("ja-JP").trim().replace(/\s+/gu, " ");
+}
+
+function assertNoKnownGenericRationale(value, path) {
+  const normalized = normalizedProse(value);
+  const phrase = KNOWN_GENERIC_RATIONALE_PHRASES.find((candidate) => normalized.includes(candidate));
+  if (phrase) fail(path, `must not use the generic rationale phrase ${JSON.stringify(phrase)}`);
+}
+
+function isStructuredSchema(schema) {
+  return STRUCTURED_SCHEMAS.includes(schema);
 }
 
 function assertNonNegativeInteger(value, path) {
@@ -252,6 +288,31 @@ function validateScores(paper, path) {
   if (paper.totalScore !== total) fail(`${path}.totalScore`, `must equal the four-score sum (${total})`);
 }
 
+function validateScoreReasons(paper, path) {
+  assertExactKeys(paper.scoreReasons, SCORE_KEYS, `${path}.scoreReasons`);
+  for (const key of SCORE_KEYS) {
+    assertNaturalJapanese(paper.scoreReasons[key], `${path}.scoreReasons.${key}`, 12);
+    assertNoKnownGenericRationale(paper.scoreReasons[key], `${path}.scoreReasons.${key}`);
+  }
+  const normalized = SCORE_KEYS.map((key) => normalizedProse(paper.scoreReasons[key]));
+  if (new Set(normalized).size !== SCORE_KEYS.length) {
+    fail(`${path}.scoreReasons`, "must contain four distinct per-axis reasons");
+  }
+}
+
+function validateCategoryProseDiversity(values, path, paperCount = values.length) {
+  if (values.length === 0) return;
+  const counts = new Map();
+  for (const value of values) {
+    const normalized = normalizedProse(value);
+    counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+  }
+  const repeated = [...counts.values()].find((count) => count >= 3 && count / paperCount > 0.25);
+  if (repeated !== undefined) {
+    fail(path, `must not reuse identical text for ${repeated} of ${paperCount} papers (maximum 25%, with at least three matches)`);
+  }
+}
+
 function validateAuthors(authors, path) {
   if (!Array.isArray(authors) || authors.length === 0) fail(path, "must be a non-empty array");
   const seen = new Set();
@@ -265,7 +326,7 @@ function validateAuthors(authors, path) {
 
 function validatePaper(paper, slug, path, {
   requireDetailed = true,
-  production = false,
+  structuredSchema,
   allowEminentAuthors = false,
 } = {}) {
   assertObject(paper, path);
@@ -279,7 +340,8 @@ function validatePaper(paper, slug, path, {
   }
   if (!requireDetailed) return;
 
-  if (production) {
+  if (structuredSchema !== undefined) {
+    if (!isStructuredSchema(structuredSchema)) fail(`${path}.schemaVersion`, `unsupported detailed-paper schema ${structuredSchema}`);
     const keys = [
       "rank",
       "arxivId",
@@ -292,6 +354,7 @@ function validatePaper(paper, slug, path, {
       "primaryCategory",
       "paperType",
       "scores",
+      ...(structuredSchema === PRODUCTION_SCHEMA ? ["scoreReasons"] : []),
       "totalScore",
       "abstractLines",
       "curiosity",
@@ -316,7 +379,25 @@ function validatePaper(paper, slug, path, {
     fail(`${path}.abstractLines`, "must contain exactly three lines");
   }
   paper.abstractLines.forEach((line, index) => assertNonEmptyString(line, `${path}.abstractLines[${index}]`));
-  const requiredAbstractUrl = production ? arxivVersionedAbsUrl(paper.arxivId) : arxivAbsUrl(paper.arxivId);
+  if (structuredSchema === PRODUCTION_SCHEMA) {
+    assertNaturalJapanese(paper.titleJa, `${path}.titleJa`, 2);
+    for (const field of ["curiosity", "concept", "conclusion"]) {
+      assertNaturalJapanese(paper[field], `${path}.${field}`, 6);
+    }
+    assertNaturalJapanese(paper.assessment, `${path}.assessment`, 12);
+    paper.abstractLines.forEach((line, index) => assertNaturalJapanese(line, `${path}.abstractLines[${index}]`, 6));
+    validateScoreReasons(paper, path);
+    const namedSections = ["curiosity", "concept", "conclusion"];
+    paper.abstractLines.forEach((line, lineIndex) => {
+      const duplicate = namedSections.find((field) => normalizedProse(line) === normalizedProse(paper[field]));
+      if (duplicate) fail(`${path}.abstractLines[${lineIndex}]`, `must not exactly duplicate ${path}.${duplicate}`);
+    });
+    if (normalizedProse(paper.assessment).includes(normalizedProse(paper.conclusion))) {
+      fail(`${path}.assessment`, "must not copy the conclusion");
+    }
+    assertNoKnownGenericRationale(paper.assessment, `${path}.assessment`);
+  }
+  const requiredAbstractUrl = structuredSchema !== undefined ? arxivVersionedAbsUrl(paper.arxivId) : arxivAbsUrl(paper.arxivId);
   if (!Array.isArray(paper.sourceUrls) || !paper.sourceUrls.includes(requiredAbstractUrl)) {
     fail(`${path}.sourceUrls`, `must include ${requiredAbstractUrl}`);
   }
@@ -329,7 +410,10 @@ function validatePaper(paper, slug, path, {
       fail(`${path}.evaluationBasis`, "must be full_text_major_sections after full-text review");
     }
     assertNonEmptyString(paper.fullTextReviewStatus, `${path}.fullTextReviewStatus`);
-    const requiredPdfUrl = production ? arxivVersionedPdfUrl(paper.arxivId) : arxivPdfUrl(paper.arxivId);
+    if (structuredSchema === PRODUCTION_SCHEMA) {
+      assertNaturalJapanese(paper.fullTextReviewStatus, `${path}.fullTextReviewStatus`, 6);
+    }
+    const requiredPdfUrl = structuredSchema !== undefined ? arxivVersionedPdfUrl(paper.arxivId) : arxivPdfUrl(paper.arxivId);
     if (!paper.sourceUrls.includes(requiredPdfUrl)) {
       fail(`${path}.sourceUrls`, `must include ${requiredPdfUrl} after full-text review`);
     }
@@ -337,10 +421,19 @@ function validatePaper(paper, slug, path, {
     if (paper.evaluationBasis !== "title_authors_abstract") {
       fail(`${path}.evaluationBasis`, "must be title_authors_abstract without full-text review");
     }
+    if (structuredSchema === PRODUCTION_SCHEMA) {
+      const unreviewedHighScore = SCORE_KEYS.find((key) => paper.scores[key] >= 24);
+      if (unreviewedHighScore) {
+        fail(`${path}.scores.${unreviewedHighScore}`, "must be below 24 without full-text review under rubric 3.0");
+      }
+      if (paper.scores.technicalStrength > 17) {
+        fail(`${path}.scores.technicalStrength`, "must be at most 17 without full-text review under rubric 3.0");
+      }
+    }
   } else {
     fail(`${path}.fullTextEvaluated`, "must be a boolean");
   }
-  if (production) {
+  if (structuredSchema !== undefined) {
     const allowedUrls = new Set([
       arxivVersionedAbsUrl(paper.arxivId),
       ...(paper.fullTextEvaluated ? [arxivVersionedPdfUrl(paper.arxivId)] : []),
@@ -397,6 +490,9 @@ function validateAudit(audit, report, date, slug, path) {
   ]) {
     assertNonEmptyString(audit[field], `${path}.${field}`);
   }
+  if (report.schemaVersion === PRODUCTION_SCHEMA && !audit.scoreRubric.startsWith(RUBRIC_3_MARKER)) {
+    fail(`${path}.scoreRubric`, `must start with ${JSON.stringify(RUBRIC_3_MARKER)}`);
+  }
   validateJstTimestamp(audit.generatedAtJst, `${path}.generatedAtJst`);
   if (audit.fullTextEvaluatedCount !== report.fullTextEvaluatedCount) {
     fail(`${path}.fullTextEvaluatedCount`, "must match the report count");
@@ -418,7 +514,13 @@ function validateAudit(audit, report, date, slug, path) {
   }
 }
 
-export function validateProductionReport(report, { date, slug, policy, path = "report" }) {
+export function validateProductionReport(report, {
+  date,
+  slug,
+  policy,
+  path = "report",
+  requiredSchema = PRODUCTION_SCHEMA,
+}) {
   assertObject(report, path);
   assertExactKeys(report, [
     "schemaVersion",
@@ -433,7 +535,12 @@ export function validateProductionReport(report, { date, slug, policy, path = "r
     "papers",
     "audit",
   ], path);
-  if (report.schemaVersion !== PRODUCTION_SCHEMA) fail(`${path}.schemaVersion`, `must be ${PRODUCTION_SCHEMA}`);
+  if (!isStructuredSchema(report.schemaVersion)) {
+    fail(`${path}.schemaVersion`, `must be ${STRUCTURED_SCHEMAS.join(" or ")}`);
+  }
+  if (requiredSchema !== undefined && report.schemaVersion !== requiredSchema) {
+    fail(`${path}.schemaVersion`, `must be ${requiredSchema}`);
+  }
   validateDate(date, "expected date");
   if (report.reportDate !== date) fail(`${path}.reportDate`, `must equal ${date}`);
   if (report.slug !== slug) fail(`${path}.slug`, `must equal ${slug}`);
@@ -452,9 +559,22 @@ export function validateProductionReport(report, { date, slug, policy, path = "r
   }
   const ids = new Set();
   for (const [index, paper] of report.papers.entries()) {
-    validatePaper(paper, slug, `${path}.papers[${index}]`, { production: true });
+    validatePaper(paper, slug, `${path}.papers[${index}]`, { structuredSchema: report.schemaVersion });
     if (ids.has(paper.arxivId)) fail(`${path}.papers[${index}].arxivId`, "is duplicated in this report");
     ids.add(paper.arxivId);
+  }
+  if (report.schemaVersion === PRODUCTION_SCHEMA) {
+    for (const key of SCORE_KEYS) {
+      validateCategoryProseDiversity(
+        report.papers.map((paper) => paper.scoreReasons[key]),
+        `${path}.papers.scoreReasons.${key}`,
+      );
+    }
+    validateCategoryProseDiversity(report.papers.map((paper) => paper.assessment), `${path}.papers.assessment`);
+    validateCategoryProseDiversity(
+      report.papers.filter((paper) => paper.fullTextEvaluated).map((paper) => paper.fullTextReviewStatus),
+      `${path}.papers.fullTextReviewStatus`,
+    );
   }
   const ranked = [...report.papers].sort(comparePapers);
   ranked.forEach((paper, index) => {
@@ -473,7 +593,13 @@ export function validateProductionReport(report, { date, slug, policy, path = "r
   return report;
 }
 
-export function validateProductionReportSet(reports, { date, policy, existingRunIds = new Set(), paths = {} }) {
+export function validateProductionReportSet(reports, {
+  date,
+  policy,
+  existingRunIds = new Set(),
+  paths = {},
+  requiredSchema = PRODUCTION_SCHEMA,
+}) {
   validateDate(date);
   validateModelPolicy(policy);
   assertExactKeys(reports, CATEGORIES, "reports");
@@ -486,6 +612,7 @@ export function validateProductionReportSet(reports, { date, policy, existingRun
       slug,
       policy,
       path: paths[slug] ?? `reports.${slug}`,
+      requiredSchema,
     });
     const runJson = evaluationRunFingerprint(report.evaluationRun);
     canonicalRun ??= runJson;
@@ -523,8 +650,8 @@ function validateBadgeList(value, authors, path) {
 
 function validatePublicCategory(category, slug, schema, path) {
   assertObject(category, path);
-  if (schema === PRODUCTION_SCHEMA && category.schemaVersion !== PRODUCTION_SCHEMA) {
-    fail(`${path}.schemaVersion`, `must be ${PRODUCTION_SCHEMA}`);
+  if (isStructuredSchema(schema) && category.schemaVersion !== schema) {
+    fail(`${path}.schemaVersion`, `must be ${schema}`);
   }
   if (category.slug !== slug) fail(`${path}.slug`, `must be ${slug}`);
   assertNonNegativeInteger(category.totalNew, `${path}.totalNew`);
@@ -543,13 +670,13 @@ function validatePublicCategory(category, slug, schema, path) {
   all.forEach((paper, index) => {
     validatePaper(paper, slug, `${path}.${index < expectedTop ? "topPapers" : "otherPapers"}[${index < expectedTop ? index : index - expectedTop}]`, {
       requireDetailed: index < expectedTop,
-      production: schema === PRODUCTION_SCHEMA,
-      allowEminentAuthors: schema === PRODUCTION_SCHEMA && index < expectedTop,
+      structuredSchema: isStructuredSchema(schema) ? schema : undefined,
+      allowEminentAuthors: isStructuredSchema(schema) && index < expectedTop,
     });
     if (paper.rank !== index + 1) fail(`${path}.papers`, "ranks must be consecutive");
     if (ids.has(paper.arxivId)) fail(`${path}.papers`, `duplicate arXiv ID ${paper.arxivId}`);
     ids.add(paper.arxivId);
-    if (schema === PRODUCTION_SCHEMA) validateBadgeList(paper.eminentAuthors, paper.authors, `${path}.papers[${index}].eminentAuthors`);
+    if (isStructuredSchema(schema)) validateBadgeList(paper.eminentAuthors, paper.authors, `${path}.papers[${index}].eminentAuthors`);
   });
   if (category.topPapers.some((paper) => !paper.fullTextEvaluated)) {
     fail(`${path}.topPapers`, "every top paper must have a full-text review");
@@ -563,7 +690,7 @@ function validatePublicCategory(category, slug, schema, path) {
       fail(`${path}.papers`, "total scores must be non-increasing by rank");
     }
   }
-  if (schema === PRODUCTION_SCHEMA) {
+  if (isStructuredSchema(schema)) {
     const fullTextCount = category.topPapers.filter((paper) => paper.fullTextEvaluated).length;
     if (category.fullTextEvaluatedCount < fullTextCount) fail(`${path}.fullTextEvaluatedCount`, "is smaller than the detailed top-paper count");
     if (category.eminentAuthorPaperCount !== all.filter((paper) => paper.eminentAuthors.length > 0).length) {
@@ -576,8 +703,8 @@ function validatePublicCategory(category, slug, schema, path) {
 
 export function validatePublicEdition(edition, { expectedDate, policy, path = "edition" } = {}) {
   assertObject(edition, path);
-  if (![LEGACY_SCHEMA, PRODUCTION_SCHEMA].includes(edition.schemaVersion)) {
-    fail(`${path}.schemaVersion`, `must be ${LEGACY_SCHEMA} or ${PRODUCTION_SCHEMA}`);
+  if (!SUPPORTED_SCHEMAS.includes(edition.schemaVersion)) {
+    fail(`${path}.schemaVersion`, `must be ${SUPPORTED_SCHEMAS.join(" or ")}`);
   }
   validateDate(edition.date, `${path}.date`);
   if (expectedDate && edition.date !== expectedDate) fail(`${path}.date`, `must equal filename date ${expectedDate}`);
@@ -595,7 +722,7 @@ export function validatePublicEdition(edition, { expectedDate, policy, path = "e
       if (allIds.has(id)) fail(`${path}.categories`, `duplicate arXiv ID across categories: ${id}`);
       allIds.add(id);
     }
-    if (edition.schemaVersion === PRODUCTION_SCHEMA) {
+    if (isStructuredSchema(edition.schemaVersion)) {
       validateAudit(
         edition.categories[slug].audit,
         edition.categories[slug],
@@ -605,9 +732,12 @@ export function validatePublicEdition(edition, { expectedDate, policy, path = "e
       );
     }
   }
-  if (edition.schemaVersion === PRODUCTION_SCHEMA) {
+  if (isStructuredSchema(edition.schemaVersion)) {
     const pipeline = assertObject(edition.pipeline, `${path}.pipeline`);
-    if (pipeline.rubricVersion !== "2.0" || pipeline.scoreMaximum !== 100) fail(`${path}.pipeline`, "must use rubric 2.0 and a 100-point maximum");
+    const expectedRubric = edition.schemaVersion === PRODUCTION_SCHEMA ? "3.0" : "2.0";
+    if (pipeline.rubricVersion !== expectedRubric || pipeline.scoreMaximum !== 100) {
+      fail(`${path}.pipeline`, `must use rubric ${expectedRubric} and a 100-point maximum`);
+    }
     validateEvaluationRun(pipeline.evaluationRun, policy, `${path}.pipeline.evaluationRun`);
     assertExactKeys(pipeline.audit, CATEGORIES, `${path}.pipeline.audit`);
     for (const slug of CATEGORIES) {
@@ -646,7 +776,7 @@ export function validatePublicArchive(root, policy) {
       policy,
       path: `public/data/${date}.json`,
     });
-    if (edition.schemaVersion === PRODUCTION_SCHEMA) {
+    if (isStructuredSchema(edition.schemaVersion)) {
       const runId = edition.pipeline.evaluationRun.runId;
       if (runIds.has(runId)) fail(`public/data/${date}.json`, `duplicate runId ${runId}`);
       runIds.add(runId);
@@ -751,8 +881,13 @@ export function validateReportsArchive(root, policy, publicArchive) {
       }
     } else {
       const otherRunIds = new Set(publicArchive.runIds);
-      if (edition?.schemaVersion === PRODUCTION_SCHEMA) otherRunIds.delete(edition.pipeline.evaluationRun.runId);
-      validateProductionReportSet(reports, { date, policy, existingRunIds: otherRunIds });
+      if (isStructuredSchema(edition?.schemaVersion)) otherRunIds.delete(edition.pipeline.evaluationRun.runId);
+      validateProductionReportSet(reports, {
+        date,
+        policy,
+        existingRunIds: otherRunIds,
+        requiredSchema: edition?.schemaVersion,
+      });
       if (!edition) fail(`data/reports/${date}`, "production reports have no corresponding public edition");
       if (edition.pipeline.evaluationRun.runId !== reports[CATEGORIES[0]].evaluationRun.runId) {
         fail(`data/reports/${date}`, "runId does not match the public edition");
@@ -805,7 +940,7 @@ export function validateReportsArchive(root, policy, publicArchive) {
     }
   }
   for (const [date, edition] of publicArchive.editions) {
-    if (edition.schemaVersion === PRODUCTION_SCHEMA && !groups.has(date)) {
+    if (isStructuredSchema(edition.schemaVersion) && !groups.has(date)) {
       fail(`public/data/${date}.json`, "production edition is missing its three immutable source reports");
     }
   }
@@ -928,7 +1063,7 @@ export function buildEdition({ root, date, reportsDir = resolve(root, "data/repo
       path: `public/data/${existingDate}.json`,
     });
     existingEditions.set(existingDate, edition);
-    if (edition.schemaVersion === PRODUCTION_SCHEMA && existingDate !== date) {
+    if (isStructuredSchema(edition.schemaVersion) && existingDate !== date) {
       existingRunIds.add(edition.pipeline.evaluationRun.runId);
     }
   }
@@ -937,6 +1072,9 @@ export function buildEdition({ root, date, reportsDir = resolve(root, "data/repo
   }
   if (existingEditions.get(date)?.schemaVersion === LEGACY_SCHEMA) {
     fail(`public/data/${date}.json`, "legacy schema-1.2 editions are immutable");
+  }
+  if (existingEditions.get(date)?.schemaVersion === PREVIOUS_PRODUCTION_SCHEMA) {
+    fail(`public/data/${date}.json`, "historical schema-1.3 editions are immutable");
   }
   const { reports, paths } = readProductionReports(reportsDir, date);
   validateProductionReportSet(reports, { date, policy, existingRunIds, paths });
@@ -993,7 +1131,7 @@ export function buildEdition({ root, date, reportsDir = resolve(root, "data/repo
     categories: categoryData,
     pipeline: {
       mode: "scheduled-abstract-screen-fulltext-top10",
-      rubricVersion: "2.0",
+      rubricVersion: "3.0",
       scoreMaximum: 100,
       evaluationRun,
       authorPolicy: "Author identity and reputation never affect scores. Verified distinction badges are non-scoring and non-exhaustive.",

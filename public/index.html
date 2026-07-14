@@ -77,6 +77,13 @@
     dt{color:var(--cyan);font-weight:800}
     dd{margin:0}
     .assessment{border-left:3px solid var(--gold);padding-left:12px;color:#dce8ee}
+    .score-reasons{margin:14px 0}
+    .score-reasons h4{margin:0 0 7px;font-size:16px}
+    .reason-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+    .score-reason{border:1px solid var(--line-soft);border-radius:9px;background:#091925;padding:9px 11px}
+    .score-reason h5{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 5px;color:var(--cyan);font-size:14px}
+    .score-reason h5 b{color:var(--green);white-space:nowrap}
+    .score-reason p{margin:0;color:#dce8ee}
     .evaluation-note{margin:11px 0 0;color:var(--muted);font-size:13px}
     .detail-state{min-height:78px;display:flex;gap:12px;align-items:center;justify-content:center;color:var(--muted);text-align:center}
     .detail-state.error{color:var(--danger)}
@@ -110,6 +117,7 @@
       .mini-scores span{padding:4px 1px}.mini-scores b{font-size:13px}.mini-scores small{font-size:8px}
       .row-badges .badge:not(.full):not(.abstract){display:none}
       .scores{grid-template-columns:repeat(2,1fr)}
+      .reason-grid{grid-template-columns:1fr}
       dl{grid-template-columns:1fr;gap:3px}dd{margin-bottom:8px}
       .detail-heading h3{font-size:18px}
     }
@@ -130,7 +138,7 @@
   <main id="app"><div class="status" role="status">最新の評価データを読み込んでいます…</div></main>
   <script>
     const cats=['hep-th','gr-qc','quant-ph'];
-    const scoreFields=[['broadImpact','物理全体への影響','全体'],['categoryImpact','カテゴリ内の重要度','分野'],['originality','独創性','独創'],['technicalStrength','方法・結果の説得力','技術']];
+    const scoreFields=[['broadImpact','科学的重要性','重要性'],['categoryImpact','分野への貢献','分野貢献'],['originality','独創性','独創'],['technicalStrength','厳密性・信頼性','信頼性']];
     const DATA_CACHE_PREFIX='daily-arxiv:data:';
     const LAST_GOOD_CACHE='daily-arxiv:last-known-good';
     const INDEX_CACHE='daily-arxiv:index';
@@ -138,7 +146,8 @@
     const openPapers=new Set();
     let data,active='hep-th',selectedFile='current.json',dataLoadNotice='',indexLoadNotice='';
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-    const lines=a=>(a||[]).map(x=>esc(x)).join('<br>');
+    const multiline=s=>esc(s).replace(/\r\n?|\n/g,'<br>');
+    const lines=a=>(a||[]).map(multiline).join('<br>');
     const nonEmpty=value=>typeof value==='string'&&value.trim()!=='';
     const validDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(String(value));
     const validData=x=>Boolean(x&&typeof x==='object'&&!Array.isArray(x)&&validDate(x.date)&&x.categories&&typeof x.categories==='object');
@@ -186,8 +195,9 @@
     function render({restoreFocusId}={}){
       const run=data.evaluationRun||data.pipeline?.evaluationRun;
       const model=run?`${run.modelDisplayName||run.modelId||'モデル未記録'} / ${run.reasoningEffort==='ultra'?'Ultra':run.reasoningEffort||'推論設定未記録'}`:'未記録（旧データ）';
+      const rubric=data.pipeline?.rubricVersion?`Daily arXiv rubric ${data.pipeline.rubricVersion}`:'未記録（旧データ）';
       document.title=`Daily arXiv — ${data.date}`;
-      document.querySelector('#meta').innerHTML=`評価日 ${esc(data.date)}<br>最終更新 ${esc(data.generatedAtJst||'—')}<br>前回正常更新 ${esc(data.lastSuccessfulAtJst||'—')}<br>評価モデル ${esc(model)}`;
+      document.querySelector('#meta').innerHTML=`評価日 ${esc(data.date)}<br>最終更新 ${esc(data.generatedAtJst||'—')}<br>前回正常更新 ${esc(data.lastSuccessfulAtJst||'—')}<br>評価モデル ${esc(model)}<br>評価基準 ${esc(rubric)}`;
       document.querySelector('#tabs').innerHTML=cats.map(slug=>`<button type="button" class="${slug===active?'active':''}" aria-pressed="${slug===active}" data-cat="${slug}">${slug}</button>`).join('');
       const category=data.categories?.[active];
       if(!category){document.querySelector('#app').innerHTML='<div class="error" role="alert">カテゴリデータがありません。</div>';wireInteractions();return}
@@ -213,14 +223,14 @@
     function lowerSection(papers){
       if(!papers.length)return'';
       return `<section class="lower-section" aria-labelledby="lower-heading">
-        <div class="section-head"><h2 id="lower-heading">11位以下（${papers.length}件）</h2><p>各論文を選ぶと、採点内訳・要約・評定まで取得して表示します。</p></div>
+        <div class="section-head"><h2 id="lower-heading">11位以下（${papers.length}件）</h2><p>各論文を選ぶと、採点内訳・要約・総合評定まで取得して表示します。</p></div>
         <div class="paper-list">${papers.map(p=>paperRow(p,'report')).join('')}</div>
       </section>`;
     }
     function mergedReportPaper(summary){
       const state=reportState();
       const detail=state.status==='ready'?state.byId.get(summary.arxivId):null;
-      return detail?{...detail,...summary,titleJa:detail.titleJa,scores:detail.scores,abstractLines:detail.abstractLines,curiosity:detail.curiosity,concept:detail.concept,conclusion:detail.conclusion,assessment:detail.assessment,evaluationBasis:detail.evaluationBasis,fullTextEvaluated:detail.fullTextEvaluated,fullTextReviewStatus:detail.fullTextReviewStatus,sourceUrls:detail.sourceUrls}:summary;
+      return detail?{...detail,...summary,titleJa:detail.titleJa,scores:detail.scores,scoreReasons:detail.scoreReasons,abstractLines:detail.abstractLines,curiosity:detail.curiosity,concept:detail.concept,conclusion:detail.conclusion,assessment:detail.assessment,evaluationBasis:detail.evaluationBasis,fullTextEvaluated:detail.fullTextEvaluated,fullTextReviewStatus:detail.fullTextReviewStatus,sourceUrls:detail.sourceUrls}:summary;
     }
     function paperRow(summary,source){
       const paper=source==='report'?mergedReportPaper(summary):summary;
@@ -247,8 +257,25 @@
       if(!scores)return'<span class="mini-scores pending">選択して詳細を表示</span>';
       return `<span class="mini-scores">${scoreFields.map(([key,,short])=>`<span><b>${scores[key]??'—'}</b><small>${short}</small></span>`).join('')}</span>`;
     }
+    function validOptionalScoreReasons(scoreReasons){
+      if(scoreReasons===undefined)return true;
+      if(!scoreReasons||typeof scoreReasons!=='object'||Array.isArray(scoreReasons))return false;
+      const expected=scoreFields.map(([key])=>key).sort();
+      const actual=Object.keys(scoreReasons).sort();
+      return actual.join('\0')===expected.join('\0')&&expected.every(key=>nonEmpty(scoreReasons[key]));
+    }
+    function validScoreReasonsForEdition(scoreReasons){
+      return data?.schemaVersion==='1.4'?scoreReasons!==undefined&&validOptionalScoreReasons(scoreReasons):validOptionalScoreReasons(scoreReasons);
+    }
     function hasDetailedPaper(paper){
-      return Boolean(paper&&nonEmpty(paper.titleJa)&&paper.scores&&Array.isArray(paper.abstractLines)&&paper.abstractLines.length===3&&nonEmpty(paper.curiosity)&&nonEmpty(paper.concept)&&nonEmpty(paper.conclusion)&&nonEmpty(paper.assessment));
+      return Boolean(paper&&nonEmpty(paper.titleJa)&&paper.scores&&Array.isArray(paper.abstractLines)&&paper.abstractLines.length===3&&nonEmpty(paper.curiosity)&&nonEmpty(paper.concept)&&nonEmpty(paper.conclusion)&&nonEmpty(paper.assessment)&&validScoreReasonsForEdition(paper.scoreReasons));
+    }
+    function assessmentDetail(paper,scores){
+      const overall=`<div class="assessment"><b>総合評定：</b>${multiline(paper.assessment)}</div>`;
+      if(paper.scoreReasons!==undefined){
+        return `<section class="score-reasons" aria-label="採点理由"><h4>採点理由</h4><div class="reason-grid">${scoreFields.map(([key,label])=>`<div class="score-reason"><h5><span>${esc(label)}</span><b>${scores[key]??'—'}/25</b></h5><p>${multiline(paper.scoreReasons[key])}</p></div>`).join('')}</div></section>${overall}`;
+      }
+      return overall;
     }
     function paperDetail(paper,summary){
       const scores=paper.scores||{};
@@ -257,9 +284,9 @@
       return `<div class="detail-heading"><div><h3>${esc(paper.titleJa||paper.title)}</h3><div class="english-title">${esc(paper.title)}</div><div class="authors">${esc((paper.authors||[]).join(', '))}</div><a class="paper-arxiv" href="${esc(canonicalAbstractUrl(paper))}" target="_blank" rel="noreferrer">arXiv ${esc(unversionedArxivId(paper.arxivId))} ↗</a></div><div class="links">${detailLinks(paper)}</div></div>
         <div class="badges"><span class="badge">${esc(paper.paperType||'未分類')}</span><span class="badge ${paper.fullTextEvaluated?'full':'abstract'}">${paper.fullTextEvaluated?'全文確認済み':'要旨による評価'}</span>${stars.map(name=>`<span class="badge star">★ ${esc(name)}</span>`).join('')}</div>
         <div class="scores">${scoreFields.map(([key,label])=>`<div><b>${scores[key]??'—'}/25</b>${esc(label)}</div>`).join('')}</div>
-        <dl><dt>Abstract</dt><dd>${lines(paper.abstractLines)}</dd><dt>Curiosity</dt><dd>${esc(paper.curiosity)}</dd><dt>Concept</dt><dd>${esc(paper.concept)}</dd><dt>Conclusion</dt><dd>${esc(paper.conclusion)}</dd></dl>
-        <div class="assessment"><b>評定：</b>${esc(paper.assessment)}</div>
-        <p class="evaluation-note"><b>評価根拠：</b>${esc(basis)}${paper.fullTextReviewStatus?`<br><b>全文確認範囲：</b>${esc(paper.fullTextReviewStatus)}`:''}</p>`;
+        <dl><dt>3行要約</dt><dd>${lines(paper.abstractLines)}</dd><dt>着眼点</dt><dd>${multiline(paper.curiosity)}</dd><dt>中核アイデア・方法</dt><dd>${multiline(paper.concept)}</dd><dt>結論と限界</dt><dd>${multiline(paper.conclusion)}</dd></dl>
+        ${assessmentDetail(paper,scores)}
+        <p class="evaluation-note"><b>評価根拠：</b>${esc(basis)}${paper.fullTextReviewStatus?`<br><b>全文確認範囲：</b>${multiline(paper.fullTextReviewStatus)}`:''}</p>`;
     }
     function unversionedArxivId(value){return String(value??'').trim().replace(/v\d+$/i,'')}
     function canonicalAbstractUrl(paper){return `https://arxiv.org/abs/${encodeURIComponent(unversionedArxivId(paper.arxivId))}`}
@@ -299,6 +326,7 @@
       if(scoreFields.reduce((sum,[key])=>sum+paper.scores[key],0)!==paper.totalScore)throw Error('invalid score total');
       if(!Array.isArray(paper.abstractLines)||paper.abstractLines.length!==3||paper.abstractLines.some(line=>!nonEmpty(line)))throw Error('invalid abstract');
       if([paper.curiosity,paper.concept,paper.conclusion,paper.assessment,paper.evaluationBasis].some(value=>!nonEmpty(value)))throw Error('invalid evaluation detail');
+      if(!validScoreReasonsForEdition(paper.scoreReasons))throw Error('invalid score reasons');
       if(typeof paper.fullTextEvaluated!=='boolean')throw Error('invalid evaluation basis');
       if(paper.fullTextEvaluated&&!nonEmpty(paper.fullTextReviewStatus))throw Error('missing full-text review status');
     }
