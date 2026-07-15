@@ -122,6 +122,8 @@ node scripts/extract-arxiv-source.mjs <unversioned-arXiv-ID>
 
 helperは`https://arxiv.org/e-print/<ID>v1`だけを取得し、最終URLが同じ公式ドメインの版固定`/src/<ID>v1`であることを検証します。run内で最低3秒の要求間隔を保ち、HTTP 429・一時的server error・転送中断をbounded retryします。さらにarchive path、checksum、展開量、UTF-8 text file種別を検証して、ホスト指定run root内の`$TMPDIR/sources/<ID>/`へTeX・参考文献等のbounded textだけを原子的に書きます。PDFやsourceをGit worktreeへ保存しません。追加package、Homebrew、`pdftotext`、Python packageは不要です。取得した主TeXと参照先を実際に読み、導入、前提、導出または手法、主結果、検証・比較、結論、限界、関連付録を確認して再評価します。PDF/sourceの取得成功、ファイルサイズ、節名の検索だけを全文確認の代用にしてはいけません。
 
+ホストはCodex起動前に当日バッチ末尾の版固定PDFとe-printを軽量確認済みです。モデルは暫定候補全件へ一括`HEAD`したり、その後に同じ全件へ`Range GET`を重ねたりして配信準備を再判定しません。候補は1件ずつ上のhelperで確認し、その候補でe-printが取得不能なら同じ候補の公式HTMLまたはPDFだけを確認します。いずれも利用不能なら他候補の可用性検査を続けず、直ちに`ACTION_REQUIRED: SOURCE_INCOMPLETE`で終了します。
+
 入力消費を抑えるため、TeX全文や参考文献全体を一度にterminalへ出力しません。まず主ファイルと節構造を特定し、上記の確認対象に対応する前後だけをboundedな範囲で読みます。ただし、節を未読のまま節名だけで内容を推測してはいけません。
 
 公式e-printが提供されない場合は、公式arXiv HTMLまたは実行環境から内容を読める公式PDFで同じ範囲を確認します。いずれの再現可能な本文経路も使えなければ、その論文を全文確認済みとせず異常終了します。いずれの軸も24点以上は全文確認なしに付けません。`technicalStrength`の18点以上は全文確認を必須とします。

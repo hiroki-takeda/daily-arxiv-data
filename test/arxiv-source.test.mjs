@@ -17,8 +17,10 @@ import {
   fingerprintSnapshotContent,
   parseArxivNewListing,
   parseArxivPastweekListing,
+  probeOfficialFullTextReadiness,
   revalidatePastweekSnapshot,
   selectBackfillSnapshot,
+  selectFullTextReadinessCanary,
   validateReportsAgainstSnapshot,
 } from "../scripts/lib/arxiv-source.mjs";
 
@@ -177,6 +179,101 @@ function responseFor(html, url, { contentLength = true, chunks } = {}) {
     }),
   };
 }
+
+function readinessResponse(url, {
+  status = 200,
+  contentType = "application/pdf",
+} = {}) {
+  return {
+    status,
+    ok: status >= 200 && status < 300,
+    url,
+    headers: new Headers({ "content-type": contentType }),
+  };
+}
+
+test("full-text readiness canary is the greatest primary-new ID across all categories", () => {
+  assert.equal(selectFullTextReadinessCanary(snapshotFixture()), "2607.08999");
+  const empty = buildOfficialListingSnapshot(ARXIV_CATEGORIES.map((slug) => parsedListing(slug, {
+    ids: [],
+    crosslistCount: 0,
+  })));
+  assert.equal(selectFullTextReadinessCanary(empty), null);
+});
+
+test("full-text readiness uses only paced HEAD checks for the exact v1 PDF and e-print", async () => {
+  const calls = [];
+  const sleeps = [];
+  const result = await probeOfficialFullTextReadiness(snapshotFixture(), {
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.includes("/pdf/")) return readinessResponse(url);
+      return readinessResponse("https://arxiv.org/src/2607.08999v1", { contentType: "application/gzip" });
+    },
+    sleepImpl: async (milliseconds) => { sleeps.push(milliseconds); },
+  });
+  assert.equal(result.ready, true);
+  assert.equal(result.arxivId, "2607.08999");
+  assert.deepEqual(result.checks.map(({ kind, status }) => ({ kind, status })), [
+    { kind: "pdf", status: 200 },
+    { kind: "source", status: 200 },
+  ]);
+  assert.deepEqual(sleeps, [3000]);
+  assert.deepEqual(calls.map(({ url }) => url), [
+    "https://arxiv.org/pdf/2607.08999v1",
+    "https://arxiv.org/e-print/2607.08999v1",
+  ]);
+  assert.deepEqual(calls.map(({ options }) => options.method), ["HEAD", "HEAD"]);
+  assert.deepEqual(calls.map(({ options }) => options.redirect), ["manual", "follow"]);
+  for (const { options } of calls) {
+    assert.equal(options.cache, "no-store");
+    assert.equal(options.credentials, "omit");
+    assert.equal(options.referrerPolicy, "no-referrer");
+    assert.ok(options.signal instanceof AbortSignal);
+  }
+});
+
+test("an unavailable canary short-circuits before e-print and can defer without Codex", async () => {
+  const calls = [];
+  const result = await probeOfficialFullTextReadiness(snapshotFixture(), {
+    fetchImpl: async (url) => {
+      calls.push(url);
+      return readinessResponse(url, { status: 404, contentType: "text/html" });
+    },
+    sleepImpl: async () => assert.fail("sleep must not run after the first unavailable check"),
+  });
+  assert.equal(result.ready, false);
+  assert.equal(result.unavailable.kind, "pdf");
+  assert.equal(result.unavailable.status, 404);
+  assert.deepEqual(calls, ["https://arxiv.org/pdf/2607.08999v1"]);
+});
+
+test("a readiness transport failure is reported as unavailable instead of starting expensive work", async () => {
+  const result = await probeOfficialFullTextReadiness(snapshotFixture(), {
+    fetchImpl: async () => { throw new TypeError("temporary network failure"); },
+    sleepImpl: async () => {},
+  });
+  assert.equal(result.ready, false);
+  assert.equal(result.unavailable.status, null);
+  assert.equal(result.unavailable.reason, "fetch_error");
+});
+
+test("readiness rejects a successful response with the wrong URL or media type", async () => {
+  await assert.rejects(
+    probeOfficialFullTextReadiness(snapshotFixture(), {
+      fetchImpl: async (url) => readinessResponse("https://example.com/paper.pdf"),
+      sleepImpl: async () => {},
+    }),
+    /unexpected final URL/,
+  );
+  await assert.rejects(
+    probeOfficialFullTextReadiness(snapshotFixture(), {
+      fetchImpl: async (url) => readinessResponse(url, { contentType: "text/html" }),
+      sleepImpl: async () => {},
+    }),
+    /application\/pdf/,
+  );
+});
 
 test("parser accepts the exact English announcement and reads IDs only from New-submission dt entries", () => {
   const result = parseArxivNewListing(listingHtml({ newIds: [...IDS["hep-th"]].reverse() }), "hep-th");

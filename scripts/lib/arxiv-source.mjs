@@ -18,6 +18,8 @@ export const ARXIV_PASTWEEK_FETCH_URLS = Object.freeze(Object.fromEntries(
 export const MAX_ARXIV_LISTING_BYTES = 8 * 1024 * 1024;
 
 const FETCH_TIMEOUT_MS = 30_000;
+const FULL_TEXT_READINESS_TIMEOUT_MS = 30_000;
+const FULL_TEXT_READINESS_DELAY_MS = 3_000;
 const ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}$/;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SECTION_COUNT_PATTERN = /^(New submissions|Cross submissions) \(showing (0|[1-9]\d*) of (0|[1-9]\d*) entries\)$/;
@@ -739,6 +741,148 @@ function assertSnapshot(snapshot) {
     }
   }
   return snapshot;
+}
+
+function compareModernArxivIds(left, right) {
+  const [leftMonth, leftSequence] = left.split(".").map(Number);
+  const [rightMonth, rightSequence] = right.split(".").map(Number);
+  return leftMonth - rightMonth || leftSequence - rightSequence;
+}
+
+export function selectFullTextReadinessCanary(snapshot) {
+  assertSnapshot(snapshot);
+  // One global tail canary detects normal same-batch propagation lag without
+  // sending a readiness request for every New-submission ID. Individual
+  // full-text failures still fail closed during the model's bounded review.
+  const ids = ARXIV_CATEGORIES.flatMap((slug) => snapshot.categories[slug].newIds);
+  if (ids.length === 0) return null;
+  return ids.reduce((latest, candidate) => (
+    compareModernArxivIds(candidate, latest) > 0 ? candidate : latest
+  ));
+}
+
+function readinessCheckResult({ kind, arxivId, requestedUrl, response }) {
+  if (response === null || typeof response !== "object") {
+    fail("SOURCE_FETCH", `${requestedUrl} did not return a Response.`);
+  }
+  if (!Number.isInteger(response.status) || response.status < 100 || response.status > 599) {
+    fail("SOURCE_FETCH", `${requestedUrl} returned an invalid HTTP status.`);
+  }
+  const contentType = response.headers?.get?.("content-type") ?? null;
+  if (response.status !== 200 || response.ok !== true) {
+    return Object.freeze({
+      kind,
+      arxivId,
+      url: requestedUrl,
+      status: response.status,
+      contentType,
+      ready: false,
+    });
+  }
+  const expectedFinalUrl = kind === "pdf"
+    ? requestedUrl
+    : `https://arxiv.org/src/${arxivId}v1`;
+  if (response.url !== expectedFinalUrl) {
+    fail("SOURCE_FETCH", `${requestedUrl} redirected to an unexpected final URL.`);
+  }
+  if (kind === "pdf" && (typeof contentType !== "string" || !/^application\/pdf(?:\s*;|$)/i.test(contentType))) {
+    fail("SOURCE_FETCH", `${requestedUrl} did not return application/pdf.`);
+  }
+  if (kind === "source" && (typeof contentType !== "string" || !/^application\/(?:gzip|x-gzip|x-eprint|x-eprint-tar|x-tar|octet-stream|pdf)(?:\s*;|$)/i.test(contentType))) {
+    fail("SOURCE_FETCH", `${requestedUrl} did not return an expected e-print content type.`);
+  }
+  return Object.freeze({
+    kind,
+    arxivId,
+    url: requestedUrl,
+    status: response.status,
+    contentType,
+    ready: true,
+  });
+}
+
+export async function probeOfficialFullTextReadiness(snapshot, {
+  fetchImpl = globalThis.fetch,
+  signal,
+  sleepImpl = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+} = {}) {
+  assertSnapshot(snapshot);
+  if (typeof fetchImpl !== "function") fail("SOURCE_INVALID", "fetchImpl must be a function.");
+  if (signal !== undefined && !(signal instanceof AbortSignal)) fail("SOURCE_INVALID", "signal must be an AbortSignal.");
+  if (typeof sleepImpl !== "function") fail("SOURCE_INVALID", "sleepImpl must be a function.");
+  const arxivId = selectFullTextReadinessCanary(snapshot);
+  if (arxivId === null) {
+    return Object.freeze({ ready: true, arxivId: null, checks: Object.freeze([]) });
+  }
+
+  const requests = Object.freeze([
+    Object.freeze({ kind: "pdf", url: `https://arxiv.org/pdf/${arxivId}v1`, redirect: "manual" }),
+    Object.freeze({ kind: "source", url: `https://arxiv.org/e-print/${arxivId}v1`, redirect: "follow" }),
+  ]);
+  const checks = [];
+  for (const [index, request] of requests.entries()) {
+    if (index > 0) await sleepImpl(FULL_TEXT_READINESS_DELAY_MS);
+    const timeoutController = new AbortController();
+    const timer = setTimeout(
+      () => timeoutController.abort(new Error("arXiv full-text readiness probe timed out")),
+      FULL_TEXT_READINESS_TIMEOUT_MS,
+    );
+    timer.unref?.();
+    const combinedSignal = signal === undefined
+      ? timeoutController.signal
+      : AbortSignal.any([signal, timeoutController.signal]);
+    let response;
+    try {
+      response = await fetchImpl(request.url, {
+        method: "HEAD",
+        headers: {
+          Accept: request.kind === "pdf"
+            ? "application/pdf"
+            : "application/gzip, application/x-eprint-tar, application/octet-stream, application/pdf",
+          "User-Agent": "daily-arxiv-data/1.1 (+https://github.com/hiroki-takeda/daily-arxiv-data)",
+        },
+        redirect: request.redirect,
+        cache: "no-store",
+        credentials: "omit",
+        referrerPolicy: "no-referrer",
+        signal: combinedSignal,
+      });
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      return Object.freeze({
+        ready: false,
+        arxivId,
+        checks: Object.freeze(checks),
+        unavailable: Object.freeze({
+          kind: request.kind,
+          arxivId,
+          url: request.url,
+          status: null,
+          contentType: null,
+          ready: false,
+          reason: "fetch_error",
+        }),
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+    const check = readinessCheckResult({
+      kind: request.kind,
+      arxivId,
+      requestedUrl: request.url,
+      response,
+    });
+    checks.push(check);
+    if (!check.ready) {
+      return Object.freeze({
+        ready: false,
+        arxivId,
+        checks: Object.freeze(checks),
+        unavailable: check,
+      });
+    }
+  }
+  return Object.freeze({ ready: true, arxivId, checks: Object.freeze(checks) });
 }
 
 export function fingerprintSnapshot(snapshot) {

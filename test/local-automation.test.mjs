@@ -14,6 +14,7 @@ import {
   buildAutomationPrompt,
   buildCodexArgs,
   codexBinaryIdentity,
+  classifyFullTextReadiness,
   copyReportsToHostStaging,
   discoverCodex,
   makeRunId,
@@ -83,6 +84,15 @@ test("runtime update barrier covers every scheduled runtime dependency", () => {
 
 test("runId generation is stable-format and injectable for tests", () => {
   assert.equal(makeRunId(new Date("2099-01-05T12:34:56.789Z"), "abcdef123456"), RUN_ID);
+});
+
+test("full-text readiness defers fresh propagation and transient failures but rejects persistent invalid access", () => {
+  assert.equal(classifyFullTextReadiness({ ready: true }, { isLatestAnnouncement: true }), "ready");
+  assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: 404 } }, { isLatestAnnouncement: true }), "defer");
+  assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: 404 } }, { isLatestAnnouncement: false }), "fail");
+  assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: 429 } }, { isLatestAnnouncement: false }), "defer");
+  assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: null } }, { isLatestAnnouncement: true }), "defer");
+  assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: 403 } }, { isLatestAnnouncement: true }), "fail");
 });
 
 test("Codex invocation fixes Sol, High reasoning, beta permissions, network, approvals, and web search", () => {
@@ -187,6 +197,9 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /`STAGED_REPORTS_VALID`になった場合は、それを最後のコマンドとして直ちに終了/);
   assert.match(specification, /`data\/reports\/`、`public\/data\/`、`scripts\/lib\/pipeline\.mjs`、testsを例として読みません/);
   assert.match(specification, /取得成功、ファイルサイズ、節名の検索だけを全文確認の代用にしてはいけません/);
+  assert.match(specification, /暫定候補全件へ一括`HEAD`/);
+  assert.match(specification, /同じ全件へ`Range GET`を重ねたりして/);
+  assert.match(specification, /他候補の可用性検査を続けず/);
   assert.match(specification, /`titleJa`:[^\n]*日本語として自然に読める表示題名/);
   assert.match(specification, /固有名・数式・標準略語だけを英字で残し/);
   assert.match(specification, /`title`にはarXivの原題を一字一句そのまま保存/);

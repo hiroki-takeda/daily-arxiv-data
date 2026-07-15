@@ -16,6 +16,7 @@ OpenAI API課金なしで現在もっとも確実な本番経路は、ChatGPTア
 - ChatGPTログイン済みCodex CLIを使うため、契約中ChatGPTプランのCodex利用枠を消費します。
 - 全abstractを一次評価し、各カテゴリの暫定上位12件だけをPDFで確認します。最終上位10件の全文確認を維持しつつ、全文取得を最大36件へ制限します。利用枠、モデル利用可否、ネットワークのいずれかで失敗した場合は公開せず、午後または翌営業日に再試行します。
 - 公式一覧の日付が既に公開済みならCodexを起動しないため、午後runを含め利用枠を消費しません。
+- 公式一覧だけが先に更新された場合は、全New IDを取得せず、当日バッチの最大arXiv IDをcanaryとして版固定PDFとe-printへ順次`HEAD`します。未配信なら`AUTOMATION_DEFERRED`で正常終了し、Codexを起動せず次の定時runへ回します。これはバッチ伝播の軽量確認であり、個別論文の可用性はモデル側でも引き続き安全確認します。
 
 ## 本番構成
 
@@ -27,6 +28,7 @@ launchd（平日11:30・16:30 JST）
      日付・New ID全件・New/Cross件数をsnapshot化
   → 未公開日が複数ならpastweekから最古の完全な1日を選択
   → 公開済みならNO_CHANGE（Codex未使用）
+  → v1 PDF・e-print canaryが未配信ならAUTOMATION_DEFERRED（Codex未使用）
   → 別のdaily-arxiv-data-agent worktree
   → Codex CLI（GPT-5.6-Sol / High）
   → 公式v1 PDFの版確認 + 公式e-print TeXのbounded抽出（追加package不要）
@@ -156,7 +158,7 @@ node scripts/configure-macos-schedule.mjs print
 node scripts/configure-macos-schedule.mjs install
 ```
 
-`install`でserviceを読み込んだ直後にも追いつき確認が1回走ります。既に公開済みならCodexを呼ばず`NO_CHANGE`で終了します。未公開日が複数ある場合は最古の1日を評価・公開し、次の定時runで次の日へ進みます。以後もMac再起動後のユーザーログイン時に同じ確認を行います。
+`install`でserviceを読み込んだ直後にも追いつき確認が1回走ります。既に公開済みならCodexを呼ばず`NO_CHANGE`で終了します。当日一覧に対して公式本文の配信がまだなら、Codexを呼ばず`AUTOMATION_DEFERRED`で終了し、次の定時runに再確認します。未公開日が複数ある場合は最古の1日を評価・公開し、次の定時runで次の日へ進みます。以後もMac再起動後のユーザーログイン時に同じ確認を行います。
 
 公式`pastweek`は直近5発表日の見出しを提供しますが、最古日は一覧の時間境界で一部だけの場合があります。最古日は公開済み日を特定する基準として使い、復元には3カテゴリすべてが完全表示された後続日だけを使います。公開済み日が5発表日の範囲外なら、自動で日付を飛ばさず手動確認を求めます。
 
@@ -196,7 +198,7 @@ tail -n 200 "$HOME/Library/Application Support/Daily arXiv/logs/launchd.stderr.l
 git -C /Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data status --short --branch
 ```
 
-正常時は`AUTOMATION_PUBLISHED`、既発表なら`NO_CHANGE`です。`NO_CHANGE`ではデスクトップ通知を出しません。push完了時の通知はPages公開完了ではなく、GitHub Actionsによる検証・配信開始を示します。失敗時は`ACTION_REQUIRED:`で始まり、`current.json`と`origin/main`を維持します。
+正常時は`AUTOMATION_PUBLISHED`、既発表なら`NO_CHANGE`です。公式本文の配信待ちは`AUTOMATION_DEFERRED`で、Codexを起動せず次の定時runへ回します。`NO_CHANGE`と`AUTOMATION_DEFERRED`ではデスクトップ通知を出しません。push完了時の通知はPages公開完了ではなく、GitHub Actionsによる検証・配信開始を示します。失敗時は`ACTION_REQUIRED:`で始まり、`current.json`と`origin/main`を維持します。
 
 異常終了したlockはすぐ削除せず保存します。元processが存在せず5時間以上経過したlockだけを`stale-locks`へ移し、午後または翌日のrunを継続します。正常lockも削除せず`lock-history`へ移して監査履歴にします。
 

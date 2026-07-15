@@ -24,6 +24,7 @@ import {
   classifySnapshotDate,
   fetchOfficialListingSnapshot,
   fetchOfficialPastweekWindow,
+  probeOfficialFullTextReadiness,
   revalidatePastweekSnapshot,
   selectBackfillSnapshot,
   validateReportsAgainstSnapshot,
@@ -84,6 +85,23 @@ export function makeRunId(now = new Date(), randomHex = randomBytes(6).toString(
   if (!/^[a-f0-9]{12}$/.test(randomHex)) fail("runId random suffix must be 12 lowercase hexadecimal characters.");
   const timestamp = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
   return validateRunId(`run-${timestamp}-${randomHex}`);
+}
+
+export function classifyFullTextReadiness(readiness, { isLatestAnnouncement }) {
+  if (readiness === null || typeof readiness !== "object" || Array.isArray(readiness)) {
+    fail("Full-text readiness result must be an object.");
+  }
+  if (typeof isLatestAnnouncement !== "boolean") {
+    fail("Full-text readiness classification requires isLatestAnnouncement.");
+  }
+  if (readiness.ready === true) return "ready";
+  const status = readiness.unavailable?.status;
+  if (status !== null && !Number.isInteger(status)) {
+    fail("Full-text readiness result has an invalid HTTP status.");
+  }
+  if (status === null || [408, 425, 429, 500, 502, 503, 504].includes(status)) return "defer";
+  if (status === 404 && isLatestAnnouncement) return "defer";
+  return "fail";
 }
 
 export function validateDate(value) {
@@ -1141,6 +1159,33 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
     if (totalNew === 0) {
       fail("Backfill selector returned an empty publication snapshot.");
     }
+
+    const readiness = await probeOfficialFullTextReadiness(snapshot, { fetchImpl });
+    const readinessDisposition = classifyFullTextReadiness(readiness, {
+      isLatestAnnouncement: snapshot.announcementDate === currentSnapshot.announcementDate,
+    });
+    if (readinessDisposition !== "ready") {
+      const unavailable = readiness.unavailable;
+      const status = unavailable.status === null ? "network error" : `HTTP ${unavailable.status}`;
+      if (readinessDisposition === "defer") {
+        console.log(
+          `AUTOMATION_DEFERRED: official ${unavailable.kind} for ${readiness.arxivId}v1 is not ready (${status}); `
+          + `Codex was not started (runId ${runId}).`,
+        );
+        return Object.freeze({
+          status: "deferred",
+          runId,
+          date: snapshot.announcementDate,
+          reason: "full_text_not_ready",
+          arxivId: readiness.arxivId,
+        });
+      }
+      fail(
+        `Official ${unavailable.kind} for ${readiness.arxivId}v1 is unavailable (${status}) `
+        + `after its announcement propagation window.`,
+      );
+    }
+    console.log(`FULL_TEXT_READY: official v1 PDF and e-print canary ${readiness.arxivId} passed before Codex start (runId ${runId}).`);
 
     prepareRunDirectories(paths);
     const codexBin = discoverCodex({ env });
