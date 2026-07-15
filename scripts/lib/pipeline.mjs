@@ -18,7 +18,8 @@ export const PRODUCTION_SCHEMA = "1.4";
 export const PREVIOUS_PRODUCTION_SCHEMA = "1.3";
 export const LEGACY_SCHEMA = "1.2";
 export const RUBRIC_3_MARKER = "Daily arXiv rubric 3.0";
-export const CATEGORIES = Object.freeze(["hep-th", "gr-qc", "quant-ph"]);
+export const CATEGORIES = Object.freeze(["quant-ph", "gr-qc", "hep-th"]);
+export const MAX_FULL_TEXT_EVALUATED_PER_CATEGORY = 12;
 export const SCORE_KEYS = Object.freeze([
   "broadImpact",
   "categoryImpact",
@@ -35,6 +36,7 @@ const TEXT_FIELDS = ["title", "titleJa", "paperType", "curiosity", "concept", "c
 const STRUCTURED_SCHEMAS = Object.freeze([PREVIOUS_PRODUCTION_SCHEMA, PRODUCTION_SCHEMA]);
 const SUPPORTED_SCHEMAS = Object.freeze([LEGACY_SCHEMA, ...STRUCTURED_SCHEMAS]);
 const JAPANESE_TEXT_PATTERN = /[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]/u;
+const JAPANESE_BOUNDARY_SPACE_PATTERN = /(?:[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]\x20+(?=[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}\p{Script=Latin}\p{N}$\\])|[\p{Script=Latin}\p{N}$}]\x20+(?=[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}]))/u;
 const LOWERCASE_LATIN_TITLE_TOKEN_PATTERN = /(?<![\p{Script=Latin}\p{N}])([a-z][a-z-]{3,})(?![\p{Script=Latin}\p{N}])/gu;
 const ALLOWED_LOWERCASE_TITLE_TOKENS = new Set(["arxiv", "hep-th", "gr-qc", "quant-ph"]);
 const FORMAL_ENGLISH_NAME_PATTERN = /\b(?:[A-Z][\p{Script=Latin}0-9'’-]*\s+){1,7}(?:Antenna|Array|Collaboration|Collider|Detector|Experiment|Explorer|Instrument|Mission|Observatory|Project|Survey|Telescope)\b/gu;
@@ -43,8 +45,11 @@ const LOWERCASE_LATIN_PROSE_PHRASE_PATTERN = /(?<![\p{Script=Latin}\p{N}])([a-z]
 const LOWERCASE_LATIN_WITH_JAPANESE_PATTERN = /(?<![\p{Script=Latin}\p{N}])([a-z][a-z-]{3,})(?=[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Han}・])/gu;
 const LOWERCASE_LATIN_PARENTHETICAL_PATTERN = /[（(]\s*([a-z][a-z-]{3,})\s*[）)]/gu;
 const ALLOWED_LOWERCASE_PROSE_TOKENS = new Set(["arxiv", "coth", "gr-qc", "hep-th", "quant-ph"]);
+const UNTRANSLATED_GENERAL_ENGLISH_PROSE_PATTERN = /(?<![\p{Script=Latin}\p{N}])(?:depolarizing|truncated(?:\s+|[-–—])Wigner|software|quantum\s+discord|blockade|qubitization|rank[-‐‑‒–—]1|polar(?:\s+|[-–—])CSS)(?![\p{Script=Latin}\p{N}])/iu;
 const ASSESSMENT_TOTAL_RECAP_PATTERN = /総合(?:評定|評価|点)?\s*(?:は|:)?\s*[(]?\s*\d{1,3}\s*(?:\/\s*100|点)/u;
 const ASSESSMENT_AXIS_RECAP_PATTERN = /(?:科学的重要性|物理(?:学)?全体|重要性|分野への貢献|分野貢献|(?:hep-th|gr-qc|quant-ph)内|カテゴリ(?:ー)?|独創性|厳密性・信頼性|技術(?:的)?信頼性|信頼性|方法・結果)\s*(?:は|:)?\s*[(]?\s*\d{1,2}\s*(?:\/\s*25|点)/u;
+const READER_PROSE_REVIEW_PROVENANCE_PATTERN = /(?:公式(?:v1)?(?:本文|概要|抄録)|(?:本文|全文)(?:未確認|確認を欠き|では照合しておらず|(?:で|を|では|には)(?:確認|精査|追跡|照合|検証))|(?:要旨|抄録|概要)(?:から|だけ|では|には|に|は|で|上(?:では|は)?|の(?:記述|記載)?))/u;
+const SCORE_REASON_REVIEW_PROVENANCE_PATTERN = /(?:公式(?:v1)?本文(?:では|で|を)?|公式(?:概要|抄録)(?:では|で|に)?|(?:本文|全文)(?:未確認|確認を欠き|では照合しておらず|(?:で|を|では|には)(?:確認|精査|追跡|照合|検証))|(?:要旨|抄録|概要)(?:から|だけ|では|には|に|は|で|上(?:では|は)?|の(?:記述|記載)?)|(?:を|まで|と)(?:確認|精査|追跡|照合)したが|独立(?:に)?(?:再現|再計算|再導出|証明|検証|評価|確認|照合|コンパイル|ビルド)(?:していない|しておらず|は行っていない|は未実施))/u;
 const KNOWN_GENERIC_RATIONALE_PHRASES = Object.freeze([
   "主題の分野横断的な射程を評価",
   "分野内での重要度を評価",
@@ -53,12 +58,49 @@ const KNOWN_GENERIC_RATIONALE_PHRASES = Object.freeze([
   "v1本文の主要導出・検証・限界を根拠に評価した",
   "v1本文の主要導出・数値/定理検証・限界を根拠に評価した",
   "v1本文の定理・実験/数値検証・限界を根拠に評価した",
+  "に関する結果を報告する",
+  "点に価値がある",
+  "本文を未確認のため、主張の頑健性は判断していない",
+  "では届かなかった何を、どの仕組みで実現できるか",
+  "に焦点を絞り、比較可能な問いへ具体化している",
+  "誤差評価、条件依存性、既存法との差の全体は本文確認を要する",
+  "問題設定から中心手法、定量的または厳密な主結果までを結んだ点が強み",
 ]);
+const KNOWN_UNNATURAL_JAPANESE_PHRASES = Object.freeze([
+  "一ループ",
+  "模型切断",
+  "技術的強度",
+  "ブートストラップを回転させる",
+  "無質量フェルミオンSchwinger対の電流",
+  "ローレンツ時空スレッド",
+]);
+const PROSE_MAX_CHARACTERS = Object.freeze({
+  titleJa: 100,
+  abstractLine: 120,
+  curiosity: 100,
+  concept: 140,
+  conclusion: 180,
+  scoreReason: 180,
+  assessment: 160,
+  fullTextReviewStatus: 200,
+});
+const STRUCTURAL_DIVERSITY = Object.freeze({
+  minimumSampleSize: 16,
+  anchorCharacters: 12,
+  anchorLeftCharacters: 6,
+  longAnchorCharacters: 20,
+  longAnchorLeftCharacters: 10,
+  minimumAnchorHiragana: 4,
+  minimumLongAnchorHiragana: 6,
+  maximumPunctuationGap: 4,
+});
+const STRUCTURAL_PUNCTUATION_PATTERN = /[、。；：！？]/u;
+const HIRAGANA_PATTERN = /\p{Script=Hiragana}/u;
 const EXPECTED_POLICY = Object.freeze({
   schemaVersion: "1.1",
   requiredModelId: "gpt-5.6-sol",
   requiredModelDisplayName: "GPT-5.6-Sol",
-  requiredReasoningEffort: "ultra",
+  requiredReasoningEffort: "high",
   requireExplicitModelSelection: true,
   qualificationStatus: "not_benchmarked",
   qualificationRequiredForPublication: false,
@@ -93,6 +135,20 @@ function assertNaturalJapanese(value, path, minimumCharacters = 1) {
     fail(path, `must contain natural Japanese text with at least ${minimumCharacters} Japanese-script characters`);
   }
   assertNoUntranslatedEnglishProse(value, path);
+  if (JAPANESE_BOUNDARY_SPACE_PATTERN.test(value)) {
+    fail(path, "must not insert ASCII spaces at Japanese word boundaries");
+  }
+  const unnatural = KNOWN_UNNATURAL_JAPANESE_PHRASES.find((phrase) => value.includes(phrase));
+  if (unnatural) {
+    fail(path, `must replace the known unnatural Japanese phrase ${JSON.stringify(unnatural)}`);
+  }
+}
+
+function assertMaxCharacters(value, maximumCharacters, path) {
+  const actual = [...String(value)].length;
+  if (actual > maximumCharacters) {
+    fail(path, `must be at most ${maximumCharacters} characters (got ${actual})`);
+  }
 }
 
 function proseOutsideMathAndIdentifiers(value) {
@@ -106,6 +162,10 @@ function proseOutsideMathAndIdentifiers(value) {
 
 function assertNoUntranslatedEnglishProse(value, path) {
   const prose = proseOutsideMathAndIdentifiers(value);
+  const generalEnglish = UNTRANSLATED_GENERAL_ENGLISH_PROSE_PATTERN.exec(prose.normalize("NFKC"))?.[0];
+  if (generalEnglish) {
+    fail(path, `must translate the general English prose term ${JSON.stringify(generalEnglish)} into natural Japanese or katakana`);
+  }
   const phrase = LOWERCASE_LATIN_PROSE_PHRASE_PATTERN.exec(prose)?.[1];
   if (phrase) {
     fail(path, `must translate the lowercase English phrase ${JSON.stringify(phrase)} into natural Japanese or katakana`);
@@ -145,10 +205,13 @@ function assertJapaneseDisplayTitle(value, originalTitle, path) {
   assertNaturalJapanese(value, path, 2);
 }
 
-function assertNarrativeAssessment(value, path) {
+function assertNarrativeAssessment(value, titleJa, path) {
   const normalized = String(value).normalize("NFKC");
   if (ASSESSMENT_TOTAL_RECAP_PATTERN.test(normalized) || ASSESSMENT_AXIS_RECAP_PATTERN.test(normalized)) {
     fail(path, "must explain overall merit and the principal limitation without repeating total or axis scores");
+  }
+  if ([...titleJa].length >= 8 && normalizedProse(value).includes(normalizedProse(titleJa))) {
+    fail(path, "must not repeat the complete Japanese display title");
   }
 }
 
@@ -160,6 +223,12 @@ function assertNoKnownGenericRationale(value, path) {
   const normalized = normalizedProse(value);
   const phrase = KNOWN_GENERIC_RATIONALE_PHRASES.find((candidate) => normalized.includes(candidate));
   if (phrase) fail(path, `must not use the generic rationale phrase ${JSON.stringify(phrase)}`);
+}
+
+function assertNoReaderReviewProvenance(value, path) {
+  if (READER_PROSE_REVIEW_PROVENANCE_PATTERN.test(value)) {
+    fail(path, "must describe paper content rather than evaluator review provenance");
+  }
 }
 
 function isStructuredSchema(schema) {
@@ -231,6 +300,7 @@ export function validateModelPolicy(policy, path = "data/model-policy.json") {
   assertObject(policy, path);
   assertExactKeys(policy, [
     ...Object.keys(EXPECTED_POLICY),
+    "historicalRunExceptions",
     "verificationScope",
     "publicationRule",
     "lastReviewed",
@@ -241,13 +311,50 @@ export function validateModelPolicy(policy, path = "data/model-policy.json") {
   assertNonEmptyString(policy.verificationScope, `${path}.verificationScope`);
   assertNonEmptyString(policy.publicationRule, `${path}.publicationRule`);
   validateDate(policy.lastReviewed, `${path}.lastReviewed`);
+  if (!Array.isArray(policy.historicalRunExceptions)) {
+    fail(`${path}.historicalRunExceptions`, "must be an array");
+  }
+  const exceptionRunIds = new Set();
+  policy.historicalRunExceptions.forEach((exception, index) => {
+    const exceptionPath = `${path}.historicalRunExceptions[${index}]`;
+    assertExactKeys(exception, [
+      "runId",
+      "reportDate",
+      "reasoningEffort",
+      "maximumFullTextEvaluated",
+      "reason",
+    ], exceptionPath);
+    if (typeof exception.runId !== "string" || !RUN_ID_PATTERN.test(exception.runId)) {
+      fail(`${exceptionPath}.runId`, "must be a stable run identifier");
+    }
+    if (exceptionRunIds.has(exception.runId)) fail(`${exceptionPath}.runId`, "must be unique");
+    exceptionRunIds.add(exception.runId);
+    validateDate(exception.reportDate, `${exceptionPath}.reportDate`);
+    if (exception.reasoningEffort !== "ultra") {
+      fail(`${exceptionPath}.reasoningEffort`, "must be ultra for a grandfathered completed run");
+    }
+    assertExactKeys(exception.maximumFullTextEvaluated, CATEGORIES, `${exceptionPath}.maximumFullTextEvaluated`);
+    for (const slug of CATEGORIES) {
+      const count = exception.maximumFullTextEvaluated[slug];
+      if (!Number.isInteger(count) || count < 10) {
+        fail(`${exceptionPath}.maximumFullTextEvaluated.${slug}`, "must be an integer of at least 10");
+      }
+    }
+    assertNonEmptyString(exception.reason, `${exceptionPath}.reason`);
+  });
   if (/\bqualified\b/i.test(String(policy.qualificationStatus))) {
     fail(`${path}.qualificationStatus`, "must not claim benchmark qualification");
   }
   return policy;
 }
 
-export function validateEvaluationRun(run, policy, path = "evaluationRun") {
+function historicalRunException(policy, date, runId) {
+  if (typeof date !== "string" || typeof runId !== "string") return undefined;
+  return policy.historicalRunExceptions.find((exception) =>
+    exception.reportDate === date && exception.runId === runId);
+}
+
+export function validateEvaluationRun(run, policy, path = "evaluationRun", { date } = {}) {
   assertObject(run, path);
   assertExactKeys(run, [
     "modelId",
@@ -260,8 +367,10 @@ export function validateEvaluationRun(run, policy, path = "evaluationRun") {
   if (run.modelDisplayName !== policy.requiredModelDisplayName) {
     fail(`${path}.modelDisplayName`, `must be ${policy.requiredModelDisplayName}`);
   }
-  if (run.reasoningEffort !== policy.requiredReasoningEffort) {
-    fail(`${path}.reasoningEffort`, `must be ${policy.requiredReasoningEffort}`);
+  const historicalException = historicalRunException(policy, date, run.runId);
+  const expectedEffort = historicalException?.reasoningEffort ?? policy.requiredReasoningEffort;
+  if (run.reasoningEffort !== expectedEffort) {
+    fail(`${path}.reasoningEffort`, `must be ${expectedEffort}`);
   }
   if (run.modelSelectionVerified !== true) fail(`${path}.modelSelectionVerified`, "must be true");
   if (typeof run.runId !== "string" || !RUN_ID_PATTERN.test(run.runId)) {
@@ -360,7 +469,11 @@ function validateScoreReasons(paper, path) {
   assertExactKeys(paper.scoreReasons, SCORE_KEYS, `${path}.scoreReasons`);
   for (const key of SCORE_KEYS) {
     assertNaturalJapanese(paper.scoreReasons[key], `${path}.scoreReasons.${key}`, 12);
+    assertMaxCharacters(paper.scoreReasons[key], PROSE_MAX_CHARACTERS.scoreReason, `${path}.scoreReasons.${key}`);
     assertNoKnownGenericRationale(paper.scoreReasons[key], `${path}.scoreReasons.${key}`);
+    if (SCORE_REASON_REVIEW_PROVENANCE_PATTERN.test(paper.scoreReasons[key])) {
+      fail(`${path}.scoreReasons.${key}`, "must justify the score from paper evidence without describing evaluator review provenance");
+    }
   }
   const normalized = SCORE_KEYS.map((key) => normalizedProse(paper.scoreReasons[key]));
   if (new Set(normalized).size !== SCORE_KEYS.length) {
@@ -378,6 +491,63 @@ function validateCategoryProseDiversity(values, path, paperCount = values.length
   const repeated = [...counts.values()].find((count) => count >= 3 && count / paperCount > 0.25);
   if (repeated !== undefined) {
     fail(path, `must not reuse identical text for ${repeated} of ${paperCount} papers (maximum 25%, with at least three matches)`);
+  }
+}
+
+function punctuationAnchors(value, length, leftCharacters, minimumHiragana) {
+  const characters = [...normalizedProse(value).replace(/\s+/gu, "")];
+  if (characters.length < length) return [];
+  const maximumStart = characters.length - length;
+  const anchors = [];
+  for (const [index, character] of characters.entries()) {
+    if (!STRUCTURAL_PUNCTUATION_PATTERN.test(character)) continue;
+    const start = Math.max(0, Math.min(index - leftCharacters, maximumStart));
+    const anchor = characters.slice(start, start + length).join("");
+    const hiraganaCount = [...anchor].filter((candidate) => HIRAGANA_PATTERN.test(candidate)).length;
+    if (hiraganaCount >= minimumHiragana) anchors.push(anchor);
+  }
+  return anchors;
+}
+
+function structuralProseSignatures(value) {
+  const signatures = new Set();
+  const longAnchors = punctuationAnchors(
+    value,
+    STRUCTURAL_DIVERSITY.longAnchorCharacters,
+    STRUCTURAL_DIVERSITY.longAnchorLeftCharacters,
+    STRUCTURAL_DIVERSITY.minimumLongAnchorHiragana,
+  );
+  for (const anchor of longAnchors) signatures.add(`long\0${anchor}`);
+
+  const anchors = punctuationAnchors(
+    value,
+    STRUCTURAL_DIVERSITY.anchorCharacters,
+    STRUCTURAL_DIVERSITY.anchorLeftCharacters,
+    STRUCTURAL_DIVERSITY.minimumAnchorHiragana,
+  );
+  for (let first = 0; first < anchors.length; first += 1) {
+    const last = Math.min(anchors.length, first + STRUCTURAL_DIVERSITY.maximumPunctuationGap + 1);
+    for (let second = first + 1; second < last; second += 1) {
+      signatures.add(`pair\0${anchors[first]}\0${anchors[second]}`);
+    }
+  }
+  return signatures;
+}
+
+function validateCategoryStructuralDiversity(values, path, paperCount = values.length) {
+  if (values.length < STRUCTURAL_DIVERSITY.minimumSampleSize) return;
+  const counts = new Map();
+  for (const value of values) {
+    for (const signature of structuralProseSignatures(value)) {
+      counts.set(signature, (counts.get(signature) ?? 0) + 1);
+    }
+  }
+  const repeated = [...counts.values()].find((count) => count / paperCount > 0.25);
+  if (repeated !== undefined) {
+    fail(
+      path,
+      `must not reuse a punctuation-anchored sentence skeleton for ${repeated} of ${paperCount} papers (maximum 25%)`,
+    );
   }
 }
 
@@ -403,6 +573,9 @@ function validatePaper(paper, slug, path, {
   assertNonEmptyString(paper.title, `${path}.title`);
   validateAuthors(paper.authors, `${path}.authors`);
   assertNonEmptyString(paper.paperType, `${path}.paperType`);
+  if (structuredSchema === PRODUCTION_SCHEMA) {
+    assertNaturalJapanese(paper.paperType, `${path}.paperType`);
+  }
   if (!Number.isInteger(paper.totalScore) || paper.totalScore < 0 || paper.totalScore > 100) {
     fail(`${path}.totalScore`, "must be an integer from 0 through 100");
   }
@@ -449,11 +622,21 @@ function validatePaper(paper, slug, path, {
   paper.abstractLines.forEach((line, index) => assertNonEmptyString(line, `${path}.abstractLines[${index}]`));
   if (structuredSchema === PRODUCTION_SCHEMA) {
     assertJapaneseDisplayTitle(paper.titleJa, paper.title, `${path}.titleJa`);
+    assertMaxCharacters(paper.titleJa, PROSE_MAX_CHARACTERS.titleJa, `${path}.titleJa`);
     for (const field of ["curiosity", "concept", "conclusion"]) {
       assertNaturalJapanese(paper[field], `${path}.${field}`, 6);
+      assertMaxCharacters(paper[field], PROSE_MAX_CHARACTERS[field], `${path}.${field}`);
+      assertNoKnownGenericRationale(paper[field], `${path}.${field}`);
+      assertNoReaderReviewProvenance(paper[field], `${path}.${field}`);
     }
     assertNaturalJapanese(paper.assessment, `${path}.assessment`, 12);
-    paper.abstractLines.forEach((line, index) => assertNaturalJapanese(line, `${path}.abstractLines[${index}]`, 6));
+    assertMaxCharacters(paper.assessment, PROSE_MAX_CHARACTERS.assessment, `${path}.assessment`);
+    assertNoReaderReviewProvenance(paper.assessment, `${path}.assessment`);
+    paper.abstractLines.forEach((line, index) => {
+      assertNaturalJapanese(line, `${path}.abstractLines[${index}]`, 6);
+      assertMaxCharacters(line, PROSE_MAX_CHARACTERS.abstractLine, `${path}.abstractLines[${index}]`);
+      assertNoReaderReviewProvenance(line, `${path}.abstractLines[${index}]`);
+    });
     validateScoreReasons(paper, path);
     const namedSections = ["curiosity", "concept", "conclusion"];
     paper.abstractLines.forEach((line, lineIndex) => {
@@ -463,7 +646,7 @@ function validatePaper(paper, slug, path, {
     if (normalizedProse(paper.assessment).includes(normalizedProse(paper.conclusion))) {
       fail(`${path}.assessment`, "must not copy the conclusion");
     }
-    assertNarrativeAssessment(paper.assessment, `${path}.assessment`);
+    assertNarrativeAssessment(paper.assessment, paper.titleJa, `${path}.assessment`);
     assertNoKnownGenericRationale(paper.assessment, `${path}.assessment`);
   }
   const requiredAbstractUrl = structuredSchema !== undefined ? arxivVersionedAbsUrl(paper.arxivId) : arxivAbsUrl(paper.arxivId);
@@ -481,6 +664,11 @@ function validatePaper(paper, slug, path, {
     assertNonEmptyString(paper.fullTextReviewStatus, `${path}.fullTextReviewStatus`);
     if (structuredSchema === PRODUCTION_SCHEMA) {
       assertNaturalJapanese(paper.fullTextReviewStatus, `${path}.fullTextReviewStatus`, 6);
+      assertMaxCharacters(
+        paper.fullTextReviewStatus,
+        PROSE_MAX_CHARACTERS.fullTextReviewStatus,
+        `${path}.fullTextReviewStatus`,
+      );
     }
     const requiredPdfUrl = structuredSchema !== undefined ? arxivVersionedPdfUrl(paper.arxivId) : arxivPdfUrl(paper.arxivId);
     if (!paper.sourceUrls.includes(requiredPdfUrl)) {
@@ -620,7 +808,7 @@ export function validateProductionReport(report, {
     fail(`${path}.evaluatedCount`, "must equal totalNew");
   }
   assertNonNegativeInteger(report.fullTextEvaluatedCount, `${path}.fullTextEvaluatedCount`);
-  validateEvaluationRun(report.evaluationRun, policy, `${path}.evaluationRun`);
+  validateEvaluationRun(report.evaluationRun, policy, `${path}.evaluationRun`, { date });
   validateAudit(report.audit, report, date, slug, `${path}.audit`);
 
   if (!Array.isArray(report.papers) || report.papers.length !== report.totalNew) {
@@ -633,17 +821,38 @@ export function validateProductionReport(report, {
     ids.add(paper.arxivId);
   }
   if (report.schemaVersion === PRODUCTION_SCHEMA) {
+    for (const field of ["curiosity", "concept", "conclusion"]) {
+      validateCategoryStructuralDiversity(
+        report.papers.map((paper) => paper[field]),
+        `${path}.papers.${field}`,
+      );
+    }
+    for (let lineIndex = 0; lineIndex < 3; lineIndex += 1) {
+      validateCategoryStructuralDiversity(
+        report.papers.map((paper) => paper.abstractLines[lineIndex]),
+        `${path}.papers.abstractLines[${lineIndex}]`,
+      );
+    }
     for (const key of SCORE_KEYS) {
       validateCategoryProseDiversity(
         report.papers.map((paper) => paper.scoreReasons[key]),
         `${path}.papers.scoreReasons.${key}`,
       );
+      validateCategoryStructuralDiversity(
+        report.papers.map((paper) => paper.scoreReasons[key]),
+        `${path}.papers.scoreReasons.${key}`,
+      );
     }
     validateCategoryProseDiversity(report.papers.map((paper) => paper.assessment), `${path}.papers.assessment`);
-    validateCategoryProseDiversity(
-      report.papers.filter((paper) => paper.fullTextEvaluated).map((paper) => paper.fullTextReviewStatus),
-      `${path}.papers.fullTextReviewStatus`,
+    validateCategoryStructuralDiversity(
+      report.papers.map((paper) => paper.assessment),
+      `${path}.papers.assessment`,
     );
+    const fullTextReviewStatuses = report.papers
+      .filter((paper) => paper.fullTextEvaluated)
+      .map((paper) => paper.fullTextReviewStatus);
+    validateCategoryProseDiversity(fullTextReviewStatuses, `${path}.papers.fullTextReviewStatus`);
+    validateCategoryStructuralDiversity(fullTextReviewStatuses, `${path}.papers.fullTextReviewStatus`);
   }
   const ranked = [...report.papers].sort(comparePapers);
   ranked.forEach((paper, index) => {
@@ -659,6 +868,16 @@ export function validateProductionReport(report, {
   if (ranked.slice(0, topCount).some((paper) => !paper.fullTextEvaluated)) {
     fail(`${path}.papers`, `every final top-${topCount} paper must have a documented full-text review`);
   }
+  const exception = historicalRunException(policy, date, report.evaluationRun.runId);
+  const configuredFullTextLimit = exception?.maximumFullTextEvaluated?.[slug]
+    ?? MAX_FULL_TEXT_EVALUATED_PER_CATEGORY;
+  const fullTextLimit = Math.min(configuredFullTextLimit, report.totalNew);
+  if (actualFullTextCount > fullTextLimit) {
+    fail(
+      `${path}.fullTextEvaluatedCount`,
+      `must not exceed the resource-budget limit ${fullTextLimit}`,
+    );
+  }
   return report;
 }
 
@@ -666,6 +885,7 @@ export function validateProductionReportSet(reports, {
   date,
   policy,
   existingRunIds = new Set(),
+  expectedRunId,
   paths = {},
   requiredSchema = PRODUCTION_SCHEMA,
 }) {
@@ -695,6 +915,9 @@ export function validateProductionReportSet(reports, {
     }
   }
   const runId = reports[CATEGORIES[0]].evaluationRun.runId;
+  if (expectedRunId !== undefined && runId !== expectedRunId) {
+    fail("reports.evaluationRun.runId", `must equal the host runId ${expectedRunId}`);
+  }
   if (existingRunIds.has(runId)) fail("reports.evaluationRun.runId", "was already used by another edition");
   return reports;
 }
@@ -814,7 +1037,7 @@ export function validatePublicEdition(edition, { expectedDate, policy, path = "e
     if (pipeline.rubricVersion !== expectedRubric || pipeline.scoreMaximum !== 100) {
       fail(`${path}.pipeline`, `must use rubric ${expectedRubric} and a 100-point maximum`);
     }
-    validateEvaluationRun(pipeline.evaluationRun, policy, `${path}.pipeline.evaluationRun`);
+    validateEvaluationRun(pipeline.evaluationRun, policy, `${path}.pipeline.evaluationRun`, { date: edition.date });
     assertExactKeys(pipeline.audit, CATEGORIES, `${path}.pipeline.audit`);
     for (const slug of CATEGORIES) {
       if (JSON.stringify(pipeline.audit[slug]) !== JSON.stringify(edition.categories[slug].audit)) {
@@ -1038,6 +1261,7 @@ const SECRET_CONTENT_PATTERNS = [
   /\b(?:api[_-]?key|access[_-]?token|client[_-]?secret|password)\s*[=:]\s*["']?(?!example|placeholder|redacted|changeme)[A-Za-z0-9._~+\/-]{16,}/i,
   /https?:\/\/[^\s/:]+:[^\s/@]+@/i,
 ];
+const PDF_MAGIC = Buffer.from("%PDF-", "ascii");
 
 export function findForbiddenRepositoryArtifacts(root) {
   const problems = [];
@@ -1048,16 +1272,16 @@ export function findForbiddenRepositoryArtifacts(root) {
       if (relativePath === ".git" || relativePath === "node_modules") continue;
       const absolutePath = resolve(directory, entry.name);
       const stat = lstatSync(absolutePath);
+      if (entry.name === ".git") {
+        problems.push(`${relativePath}: nested .git entry is forbidden`);
+        continue;
+      }
       if (stat.isSymbolicLink()) {
         problems.push(`${relativePath}: symbolic links are not allowed`);
         continue;
       }
       if (entry.isDirectory()) {
-        if (entry.name === ".git") {
-          problems.push(`${relativePath}: nested .git directory is forbidden`);
-        } else {
-          visit(absolutePath, relativePath);
-        }
+        visit(absolutePath, relativePath);
         continue;
       }
       if (!entry.isFile()) {
@@ -1070,6 +1294,9 @@ export function findForbiddenRepositoryArtifacts(root) {
       }
       if (stat.size <= 10 * 1024 * 1024) {
         const bytes = readFileSync(absolutePath);
+        if (bytes.subarray(0, PDF_MAGIC.length).equals(PDF_MAGIC) && !/\.pdf$/i.test(entry.name)) {
+          problems.push(`${relativePath}: PDF content is forbidden regardless of filename`);
+        }
         if (!bytes.includes(0)) {
           const source = bytes.toString("utf8");
           if (SECRET_CONTENT_PATTERNS.some((pattern) => pattern.test(source))) {

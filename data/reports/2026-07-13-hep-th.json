@@ -4,283 +4,194 @@
   "evaluationRun": {
     "modelId": "gpt-5.6-sol",
     "modelDisplayName": "GPT-5.6-Sol",
-    "reasoningEffort": "ultra",
+    "reasoningEffort": "high",
     "modelSelectionVerified": true,
-    "runId": "run-20260714T064316Z-af28a3fac6a5"
+    "runId": "run-20260714T141955Z-82ed77cc13e0"
   },
   "slug": "hep-th",
   "label": "High Energy Physics - Theory",
   "totalNew": 14,
   "crosslistsExcluded": 17,
   "evaluatedCount": 14,
-  "fullTextEvaluatedCount": 14,
+  "fullTextEvaluatedCount": 12,
   "papers": [
     {
       "rank": 1,
-      "arxivId": "2607.09233",
-      "arxivVersion": "v1",
-      "submissionType": "new",
-      "url": "https://arxiv.org/abs/2607.09233",
-      "title": "Quantum field nucleating and Wigner functions",
-      "titleJa": "Wigner関数による量子場の核生成",
-      "authors": [
-        "Joonas Hirvonen"
-      ],
-      "primaryCategory": "hep-th",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 19,
-        "categoryImpact": 20,
-        "originality": 19,
-        "technicalStrength": 20
-      },
-      "scoreReasons": {
-        "broadImpact": "Wigner関数の境界流束として崩壊率を表す形式は、宇宙相転移と冷却原子などのアナログ核生成を同じ実時間言語で扱う経路を与える。ただし具体的な一ループ式は、平衡に近い単一実スカラー場と中間温度に限られる。",
-        "categoryImpact": "有限温度の偽真空崩壊という中心課題に対し、Affleck率を場の理論へ拡張し、高温でLanger率と次元縮約EFTへ接続する式を導いた。Linde率との差を前因子まで特定した一方、熱的再和が必要な高温域は未完成である。",
-        "originality": "ユークリッド・バウンスや切断Wigner近似とは異なり、完全なWigner準確率の流束から非摂動的な率公式を定義し、それをCTP形式で摂動評価する手順を組み立てた。量子トンネルと障壁越え核生成を単一の公式へ含める点が固有の差分である。",
-        "technicalStrength": "連続の式、CTP上の実時間線形化、平衡密度行列のWigner変換から一ループ行列式を導き、高温EFT極限と一粒子Affleck極限で照合している。低温側の特異点の真の位置、二ループ補正、熱化仮定と逆反応は未検証である。"
-      },
-      "totalScore": 78,
-      "abstractLines": [
-        "準安定な量子場の崩壊には、低温の量子トンネルと有限温度の障壁越え核生成を同時に記述する必要がある。",
-        "著者はWigner関数の位相空間流束で非摂動的崩壊率を定義し、CTP形式と平衡密度行列を用いて単一実スカラー場の一ループ率を計算した。",
-        "得られた前因子は量子補正を含み、高温ではLinde率でなくLanger率と次元縮約EFTへ漸近するが、具体的評価の適用域は概ね中間温度である。"
-      ],
-      "curiosity": "量子場がまだ古典的熱分布になっていない温度で、臨界泡を横切る確率流はどのように定義され、標準的な有限温度崩壊率をどう修正するのか。",
-      "concept": "準安定領域の境界を臨界泡の負固有モードに直交する面として選び、そこを通過する完全なWigner関数の流束を率とみなすことで、初期状態の量子性を保ったまま実時間核生成を取り出す。",
-      "conclusion": "障壁越え核生成の前因子は中間温度でも本質的に量子的であり、高温極限はLanger理論へ接続することが分かった。ただし低温特異点の解消と漸近高温での熱的再和には高次計算が必要である。",
-      "assessment": "実時間の非摂動的定義から既知の低温・高温像を結ぶ構成は、有限温度偽真空崩壊の整理を大きく進める。現段階の明示式は平衡、単一スカラー場、一ループに依存し、宇宙論的高温域や逆反応を直接扱わない。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節の流束公式、第3節のCTP導出、第4節の一ループ行列式、第5・6節の低温特異点と高温EFT極限、付録のWigner発展と密度行列を確認した。行列式や二ループ項の独立再計算は行っていない。",
-      "sourceUrls": [
-        "https://arxiv.org/abs/2607.09233v1",
-        "https://arxiv.org/pdf/2607.09233v1"
-      ]
-    },
-    {
-      "rank": 2,
       "arxivId": "2607.09486",
       "arxivVersion": "v1",
       "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.09486",
       "title": "Factorization Algebras and Quantum Groups from Generalized Poisson Sigma Models",
-      "titleJa": "一般化Poissonシグマ模型から得られる因子化代数と量子群",
+      "titleJa": "一般化Poissonシグマ模型からの因子化代数と量子群",
       "authors": [
         "Keyou Zeng"
       ],
       "primaryCategory": "hep-th",
-      "paperType": "理論",
+      "paperType": "理論・数理",
       "scores": {
-        "broadImpact": 18,
-        "categoryImpact": 20,
-        "originality": 20,
-        "technicalStrength": 18
+        "broadImpact": 22,
+        "categoryImpact": 23,
+        "originality": 24,
+        "technicalStrength": 22
       },
       "scoreReasons": {
-        "broadImpact": "シフトPoisson幾何を場の理論、因子化代数、量子群へ運ぶ枠組みは、数理物理と超対称ゲージ理論の双方へ具体的な利用先を持つ。境界Koszul双対を介した量子群構成と、ツイストした5次元理論からのYangian構成がその接続経路である。",
-        "categoryImpact": "ラグランジアンを持ちにくい退化場理論の量子化という課題に対し、高次元の一般化Poissonシグマ模型、境界代数、界面・欠陥を一体系として与えた。全量子補正の厳密構成は残るが、正則トポロジカル理論の標準的道具を広げる実質的前進である。",
-        "originality": "二次元Poissonシグマ模型と既存の三次元正則トポロジカル版を、シフトしたカイラルPoisson構造を標的データとする任意次元の族へ拡張した。派生幾何による拡張演算子と境界Koszul双対を同じ模型から導く組合せは、単純な次元拡張ではない。",
-        "technicalStrength": "古典マスター方程式、境界二次括弧、普遍的バルク・境界積分の定理7.1と角の定理7.2を導き、多数の具体例と付録計算で支えている。一方、変形量子化の完全な厳密証明、量子群の全ループ同定、いくつかの角の公式は予想として残る。"
+        "broadImpact": "トポロジカルQFT、導来代数的幾何、因子化代数、量子群、SUSYツイストへ複数の具体的生成経路を持つ。",
+        "categoryImpact": "2d Poissonシグマ模型を高次元・正則トポロジカルへ拡張し、バルク・境界・欠陥を統一した。",
+        "originality": "シフトしたカイラルPoissonデータから量子群をKoszul双対で生成する枠組みは既存例を再編する新原理である。",
+        "technicalStrength": "BVマスター方程式、ツリーレベルのFeynman積分、境界括弧、Hopf・準Hopf例、超対称ツイストを統合するが、高ループアノマリーとHilbert空間対応の一部は形式的である。"
       },
-      "totalScore": 76,
+      "totalScore": 91,
       "abstractLines": [
-        "退化した古典場理論の因子化代数を量子化するには、通常のシンプレクティックなラグランジアン形式を越える構成が必要である。",
-        "論文はシフトしたカイラルPoisson構造から正則トポロジカルな一般化Poissonシグマ模型を作り、派生幾何とKoszul双対で境界・界面・欠陥の代数を解析した。",
-        "木レベルの境界括弧を普遍積分公式で回収し、準Hopf代数やYangianを含む量子群の例を得たが、複数の全ループ同定は予想に留まる。"
+        "Poissonシグマ模型、因子化代数、量子群の対応は、高次元の正則トポロジカル理論では統一的な枠組みを欠いていた。",
+        "シフトしたカイラルPoisson構造を標的データとする一般化模型をBV形式で構成し、境界・インターフェース・欠陥を導来幾何で分類した。",
+        "境界代数のKoszul双対からHopf・準Hopf・Yangian型量子群を再現し、SUSYツイストを越える多数例を与えた。"
       ],
-      "curiosity": "ラグランジアンを内在的に持たない正則トポロジカル因子化代数を、一高次元の局所場理論の境界としてどこまで系統的に量子化できるか。",
-      "concept": "与えられたシフトPoisson代数を境界データとする普遍バルク理論を構成し、半空間の反射伝播関数を積分して境界括弧を再現したうえで、境界代数のKoszul双対を量子群として読む。",
-      "conclusion": "一般化Poissonシグマ模型は、広い因子化代数とその拡張演算子を場の理論的に実現し、境界から量子群を生成する統一的な母体になり得る。現状で確立している範囲は主に古典および木レベルであり、完全量子化には未証明部分がある。",
-      "assessment": "132頁にわたり幾何、境界代数、欠陥、量子群、超対称ツイストを同一構成へ収めた射程は大きい。主要な量子群同定の一部と変形量子化の厳密性が将来課題で、完成済みの全摂動論としては読めない。",
+      "curiosity": "任意のシフトしたカイラルPoisson構造をQFTへ持ち上げ、その拡張対象と量子群を同じ原理から生成できるか。",
+      "concept": "高次元AKSZ/BVバルクを構成し、ツリーレベルの境界括弧から入力Poisson構造を回収した後、普遍欠陥のKoszul双対を取る。",
+      "conclusion": "広い正則トポロジカルQFTと量子群を統一する研究プログラムが成立したが、量子化の高ループアノマリーと一部因子化ホモロジー主張は未完である。",
+      "assessment": "132頁にわたる新枠組みと多数の非自明例は突出するが、形式的・摂動的構成が中心で、完全な非摂動定義ではない。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2・3節の模型と境界括弧、第4節のKoszul双対、第5・6節のカイラル構造とYangian例、第7節の普遍積分定理、関連付録の証明を確認した。高次Feynman積分と全ループ量子群同定は独立検証していない。",
+      "fullTextReviewStatus": "BV/AKSZ構成、拡張対象、ツリーレベルでの境界Poisson構造の回収、Koszul双対欠陥、Hopf・準Hopf・Yangianの例、SUSYツイストを確認した。高ループ量子化と因子化ホモロジーの一部は未証明である。",
       "sourceUrls": [
         "https://arxiv.org/abs/2607.09486v1",
         "https://arxiv.org/pdf/2607.09486v1"
       ]
     },
     {
-      "rank": 3,
-      "arxivId": "2607.09550",
+      "rank": 2,
+      "arxivId": "2607.09233",
       "arxivVersion": "v1",
       "submissionType": "new",
-      "url": "https://arxiv.org/abs/2607.09550",
-      "title": "Spinning the Large-Charge Bootstrap: Parity-Even Operators",
-      "titleJa": "大電荷ブートストラップへのスピン導入：パリティ偶演算子",
+      "url": "https://arxiv.org/abs/2607.09233",
+      "title": "Quantum field nucleating and Wigner functions",
+      "titleJa": "量子場の核生成とWigner関数",
       "authors": [
-        "Kasra Kiaee",
-        "Alexander Monin"
+        "Joonas Hirvonen"
       ],
       "primaryCategory": "hep-th",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 17,
-        "categoryImpact": 20,
-        "originality": 18,
-        "technicalStrength": 21
+        "broadImpact": 23,
+        "categoryImpact": 22,
+        "originality": 23,
+        "technicalStrength": 19
       },
       "scoreReasons": {
-        "broadImpact": "大電荷CFTの普遍Goldstone分散を交差対称性から導く結果は、共形ブートストラップと共形超流動EFTを直接結ぶ。三次元U(1)対称性、有限本のRegge軌道、パリティ偶交換に限定されるため、Fermi液体や共形固体へは直ちに及ばない。",
-        "categoryImpact": "大電荷相がいつ超流動EFTで強制されるかという中心問題に対し、応力テンソルに結合する軌道が標準Goldstone分散を持ち、少なくとも一本存在することを最小仮定下で示した。追加仮定下では非Goldstone成分をスカラー・スカラー経路だけに閉じ込める。",
-        "originality": "従来のスカラー探針および電流を用いた解析に応力テンソルを加え、TT経路の正値性からGoldstone軌道を強制した点が新しい。保存電流と応力テンソルという全CFTに必須の演算子を使うため、特定のEFTを初めから仮定していない。",
-        "technicalStrength": "六つの相関経路の交差方程式、保存則、巨視的極限、低スピン例外を一貫して処理し、非Goldstone軌道の電流からの分離を可除性と母関数の二通りで証明した。有限軌道数、非縮退、パリティ偶性と有限励起エネルギーは明示的な適用境界である。"
+        "broadImpact": "宇宙論的位相遷移、アナログ実験、実時間QFT、熱的EFTへ具体的に波及する。",
+        "categoryImpact": "Linde式の前因子を修正し、量子・熱核生成を一つのWigner流束で扱った。",
+        "originality": "非摂動Wigner率とAffleck粒子式のQFT一般化という二つの新要素を持つ。",
+        "technicalStrength": "Moyal連続方程式の臨界泡流束と1ループ行列式からLanger・EFT極限を再現するが、低温零モード域と高温の熱的再総和では近似が破れる。"
       },
-      "totalScore": 76,
+      "totalScore": 87,
       "abstractLines": [
-        "三次元U(1)対称CFTの大電荷領域が、どの条件で共形超流動のGoldstoneモードを必ず含むかが問題となる。",
-        "著者らは大電荷演算子とスカラー・保存電流・応力テンソル探針の六相関経路を、巨視的極限と交差対称性の下で次主要次数まで解析した。",
-        "最小仮定で標準Goldstone分散を持つRegge軌道が少なくとも一本必要となり、追加の非縮退仮定などの下ではそれが一意になる。"
+        "準安定量子場の熱的崩壊はトンネルと障壁越え核生成を統一して実時間記述する必要がある。",
+        "Wigner関数の準安定領域からの確率流束で非摂動率式を定義し、実時間積分路上で1ループ評価した。",
+        "得た率はLinde高温前因子と異なり、Affleck式のQFT拡張としてLanger率と次元的に縮約EFTへ漸近する。"
       ],
-      "curiosity": "大電荷基底状態を超流動と仮定せず、交差対称性と普遍的な保存演算子だけからGoldstone分散を強制できるか。",
-      "concept": "TT経路の交差方程式を正値なスペクトル和へ還元し、各項が消える条件から応力テンソルに結合する軌道の分散を固定し、低スピン方程式でその存在を示す。",
-      "conclusion": "指定された有限エネルギー・パリティ偶セクターでは、標準的な共形超流動Goldstone軌道がCFT整合性から必須である。ただし無限本の低エネルギー軌道やパリティ奇演算子を持つ相は解析の外にある。",
-      "assessment": "スピンを持つ普遍探針を組み込んだ解析は、大電荷EFTの普遍性を仮定から結論へ近づけた。結論の強さは有限Regge軌道数と非縮退条件に敏感で、Fermi液体や共形固体を排除するものではない。",
+      "curiosity": "量子トンネルと熱的な障壁越えを、ユークリッド・バウンスの選択に頼らず、同じ実時間の率で記述できるか。",
+      "concept": "場配置空間の臨界泡境界を横切るWigner確率電流を核生成率とする。",
+      "conclusion": "熱的真空崩壊の量子–古典移行像を修正する統一式を得たが、低温零モードと高温再総和の間に制御範囲がある。",
+      "assessment": "広く引用される率を再検討する潜在的影響は大きいが、1ループスカラー例と平衡準安定仮定での検証に留まる。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2–4節のテンソル基底・大電荷展開・交差方程式、第5節の正値性によるGoldstone軌道、第6節の適用外、付録C–Hの保存則・完全方程式・二つの分離証明を確認した。全スペクトル和の独立導出は行っていない。",
+      "fullTextReviewStatus": "Wigner確率流束の非摂動定義、実時間方程式、平衡1ループ率、低温妥当域、高温EFT/Langer極限、打ち切りWigner近似との比較を確認した。多場・逆反応は未検証である。",
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.09550v1",
-        "https://arxiv.org/pdf/2607.09550v1"
+        "https://arxiv.org/abs/2607.09233v1",
+        "https://arxiv.org/pdf/2607.09233v1"
       ]
     },
     {
-      "rank": 4,
+      "rank": 3,
       "arxivId": "2607.08813",
       "arxivVersion": "v1",
       "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.08813",
       "title": "Higgsless Lagrangian SCFTs and Strongly Finite VOAs",
-      "titleJa": "Higgs枝を持たないラグランジアンSCFTと強有限VOA",
+      "titleJa": "Higgs分枝を持たないラグランジアンSCFTと強有限VOA",
       "authors": [
         "Siqi Chen",
         "Anirudh Deb",
         "Leonardo Rastelli"
       ],
       "primaryCategory": "hep-th",
-      "paperType": "理論",
+      "paperType": "理論・数理",
       "scores": {
-        "broadImpact": 17,
-        "categoryImpact": 19,
-        "originality": 18,
+        "broadImpact": 21,
+        "categoryImpact": 23,
+        "originality": 22,
         "technicalStrength": 20
       },
       "scoreReasons": {
-        "broadImpact": "四次元N=2 SCFTのHiggs枝分類から対数的VOAの新例を生成し、超対称場の理論と非半単純表現論を結ぶ。閉形式の指標、モジュラー軌道、表現圏の研究へ波及するが、対象は共形ラグランジアン・ゲージ理論に限られる。",
-        "categoryImpact": "Higgs枝を持たないN=2ラグランジアンSCFTを、SO/USpクイバーの一つの無限系列と三つの散発例まで絞り込んだ。二つの散発例では対応VOAを実際に構成したが、残る散発例と無限系列のVOAは未構成である。",
-        "originality": "既存のArgyres–Douglas型や自由ベクトル多重項とは異なる相互作用的なHiggs枝なしラグランジアン理論を分類し、強有限かつ非有理なVOAを二例提示した。既知のSCFT/VOA対応を使いつつ、分類の疎性と新しい対数的代数を得た点が非自明である。",
-        "technicalStrength": "部分クイバー補題と場合分け、OPE結合性と零関係、随伴多様体、閉形式の真空指標とモジュラー擬指標を組み合わせている。Rains関数の高温漸近も独立な整合性検査になるが、全分類の解釈にはHiggs枝に関する予想を一部用いる。"
+        "broadImpact": "4d SCFT、頂点代数、モジュール型テンソル/対数的表現論へ二方向に波及し、具体的新例を供給する。",
+        "categoryImpact": "ラグランジアンN=2候補を網羅的に分類し、Higgs分枝を持たない理論が1つの無限列と3つの散発例に限られることを示した。",
+        "originality": "部分クイバー補題で既存SCFT分類を再編し、物理側から強有限VOAを生成する枠組みが新しい。",
+        "technicalStrength": "場合分け分類とHilbert・Hall–Littlewood・Schur指標を組み合わせ、二つのVOAでモジュール性とヌル関係を示すが、残る候補と一部低階数の完全性は未証明である。"
       },
-      "totalScore": 74,
+      "totalScore": 86,
       "abstractLines": [
-        "強有限だが非有理なVOAの既知例は少なく、SCFT/VOA対応ではHiggs枝を持たない四次元N=2 SCFTが候補を与える。",
-        "著者らは共形ラグランジアン・ゲージ理論を組合せ的に分類し、候補のHiggs指標と二つの散発例のOPE・指標・モジュラー性を解析した。",
-        "相互作用的候補は一つのSO/USpクイバー無限系列と三つの散発例に限られ、調べた二つの散発例のVOAは強有限で対数的だが、他候補の構成は残された。"
+        "強有限非有理VOAは例が少なく、4次元N=2 SCFTのHiggs分枝との対応が生成原理を与える。",
+        "ラグランジアンSCFTの全分類を部分クイバー補題とHiggs分枝不変量で絞り、Higgs分枝を持たない候補を網羅的に探索した。",
+        "相互作用理論は一つのSO/USp無限列と三散発例に限られ、二例の新VOAが強有限かつ対数的と確認した。"
       ],
-      "curiosity": "Higgs枝を欠く相互作用的ラグランジアンSCFTはどれだけ存在し、その対応VOAは本当に強有限かつ非有理になるのか。",
-      "concept": "連続的風味対称性やHiggsカイラル演算子の有無で既存のN=2ラグランジアン分類をふるい、残った理論ではBRST由来の生成子OPEとSchur指標のモジュラー軌道からVOAの有限性と対数性を診断する。",
-      "conclusion": "Higgs枝なしラグランジアンSCFTの景観は予想外に疎であり、二つの散発理論は新しい強有限・非有理VOAを与える。分類された無限列と第三の散発例で同じ性質を確立することは未解決である。",
-      "assessment": "完全に近い組合せ分類と二つの具体的VOA構成を結び付けた点が強く、対数的VOAの例不足へ直接応える。中心予想の一般証明と未構成候補の表現圏が残り、全候補についての結論ではない。",
+      "curiosity": "Higgs分枝を持たないすべてのラグランジアンN=2 SCFTを分類し、希少な対数的VOAを系統生成できるか。",
+      "concept": "連続フレーバー対称性の不在を必要条件、半ハイパーから作る非零ゲージ不変量をHiggs分枝の十分証拠として部分クイバーごとに除外する。",
+      "conclusion": "Higgs分枝を持たないラグランジアン理論が稀少であることと新しいVOA族が明らかになったが、無限列と残る散発例のVOA構成は未完である。",
+      "assessment": "4次元SCFT分類と対数的VOAを結ぶ大規模な成果だが、一部候補がHiggs分枝を持たないことの確認は、低階数計算と仮定に依存する。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節のHiggs枝条件、第3節の部分クイバー補題と全場合分け、第4節の二VOAのOPE・随伴多様体・モジュラー擬指標、第5節と付録の指標検査を確認した。BRSTコホモロジーと全表現圏は独立再構成していない。",
+      "fullTextReviewStatus": "分類戦略と部分クイバー補題、場合ごとの除外、散発例のHilbert・Schur指標、二つのVOAの生成元とモジュール性を確認した。無限列VOAと残る候補の完全証明は未確認である。",
       "sourceUrls": [
         "https://arxiv.org/abs/2607.08813v1",
         "https://arxiv.org/pdf/2607.08813v1"
       ]
     },
     {
+      "rank": 4,
+      "arxivId": "2607.09550",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.09550",
+      "title": "Spinning the Large-Charge Bootstrap: Parity-Even Operators",
+      "titleJa": "スピンを持つ大電荷ブートストラップ：パリティ偶演算子",
+      "authors": [
+        "Kasra Kiaee",
+        "Alexander Monin"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論・数理",
+      "scores": {
+        "broadImpact": 20,
+        "categoryImpact": 22,
+        "originality": 22,
+        "technicalStrength": 20
+      },
+      "scoreReasons": {
+        "broadImpact": "CFTブートストラップ、有限密度EFT、臨界多体理論へ波及し、Goldstone普遍性への具体的経路がある。",
+        "categoryImpact": "大電荷セクターの中心的Goldstone軌道を最小交差仮定から強制した。",
+        "originality": "スカラーだけでなく電流・応力テンソルプローブを統合し、Regge軌道を分類する枠組みが新しい。",
+        "technicalStrength": "テンソル構造と独立な交差方程式を解き、最小解と追加仮定下の解を生成関数で検算するが、パリティ奇演算子と例外的場合は未処理である。"
+      },
+      "totalScore": 84,
+      "abstractLines": [
+        "大電荷CFTのGoldstone有効理論を交差とユニタリ性からどこまで強制できるかが問題である。",
+        "3d U(1) CFTでスカラー・電流・応力テンソルの各プローブについてパリティ偶交換を大電荷展開し、独立交差方程式を解いた。",
+        "最小仮定で標準Goldstone分散のRegge軌道が少なくとも一つ必要で、追加仮定下では一意と証明した。"
+      ],
+      "curiosity": "共形超流動のGoldstoneモードはEFT仮定でなくCFTブートストラップだけから必然化できるか。",
+      "concept": "複数スピンのプローブに対する3点構造と交差を荷の逆冪で展開し、スペクトルモーメントの再帰と正軌道を分類する。",
+      "conclusion": "大電荷Goldstoneスペクトルのブートストラップ必然性が得られたが、一意性と非Goldstone分離には追加の解析性・軌道仮定が要る。",
+      "assessment": "EFTの普遍像を交差から再構成する強い理論結果だが、パリティ奇セクターと例外的分母は残る。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "大電荷展開、3種のプローブのテンソル構造、独立な交差方程式、最小仮定での解、1軌道・2軌道の分類、生成関数による検算を確認した。パリティ奇セクターは範囲外である。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.09550v1",
+        "https://arxiv.org/pdf/2607.09550v1"
+      ]
+    },
+    {
       "rank": 5,
-      "arxivId": "2607.09500",
-      "arxivVersion": "v1",
-      "submissionType": "new",
-      "url": "https://arxiv.org/abs/2607.09500",
-      "title": "Monodromy and geometry of heavy-light Virasoro blocks",
-      "titleJa": "重い・軽いVirasoroブロックのモノドロミーと幾何",
-      "authors": [
-        "Mikhail Belakovskiy",
-        "Vladimir Belavin"
-      ],
-      "primaryCategory": "hep-th",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 13,
-        "categoryImpact": 17,
-        "originality": 17,
-        "technicalStrength": 18
-      },
-      "scoreReasons": {
-        "broadImpact": "モノドロミーとAdS3内の測地線網を直接対応させる算法は、二次元CFTブロックと半古典ホログラフィーで再利用できる。ただし重い・軽い極限のVirasoroブロックという限定された領域に届く成果である。",
-        "categoryImpact": "重い・軽いブロックの計算で難所となる付随パラメータを、背景に依存しない内部網の代数方程式へ置き換え、非真空五点HHLLLブロックを完全形で得た。閉形式の可解範囲が重い三演算子・軽い三演算子までという境界も明示した。",
-        "originality": "モノドロミー行列の固有ベクトルをバルク測地線の二端点として解釈し、作用を四点・五点の基本寄与の和へ分解した。従来の測地線網対応を継承しながら、背景から独立した内部方程式という新しい構造を抽出している。",
-        "technicalStrength": "モノドロミー導出を二つの重い演算子の場合にユークリッド幾何から再導出し、四点への縮退極限でも照合した。一般n点算法は与えるが、方程式次数と未知の重い背景により六点を越える閉形式は得られず、量子補正も対象外である。"
-      },
-      "totalScore": 65,
-      "abstractLines": [
-        "半古典AdS3/CFT2では、重い・軽いVirasoroブロックを境界モノドロミーとバルク測地線網の双方から計算できる。",
-        "著者らはホログラフィック座標でモノドロミー行列の固有ベクトルを測地線端点に対応させ、内部網を決める代数方程式と作用の再構成法を導いた。",
-        "完全な非真空五点HHLLLブロックを得て、閉形式で扱える最大構成をHHHLLL六点と特定したが、それ以後も算法自体は暗黙的にのみ適用できる。"
-      ],
-      "curiosity": "境界のモノドロミーデータは、バルク測地線網の端点と結節条件をどのように直接符号化しているのか。",
-      "concept": "背景方程式の二独立解の比を座標に選ぶと、各モノドロミー固有ベクトルが測地線の両端を与え、内部頂点の釣合いが重い背景から分離した交比方程式になる。",
-      "conclusion": "重い部分と軽い測地線網を分離する算法により、従来は超軽量近似だけだった五点ブロックを求められる。一般化は可能だが、代数方程式の次数と重い背景の可解性が閉形式を制限する。",
-      "assessment": "境界モノドロミーを幾何的端点へ翻訳する見通しのよい方法と、独立な平面幾何検算を備える。成果は半古典・重い軽い近似に依存し、六点を越える一般ブロックを明示的に解くものではない。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節の固有ベクトル同定、第3節の平面幾何による再導出、第4節の四・五点作用と一般n点次数評価、第5節の限界を確認した。五点式の記号計算による独立再現は行っていない。",
-      "sourceUrls": [
-        "https://arxiv.org/abs/2607.09500v1",
-        "https://arxiv.org/pdf/2607.09500v1"
-      ]
-    },
-    {
-      "rank": 6,
-      "arxivId": "2607.09485",
-      "arxivVersion": "v1",
-      "submissionType": "new",
-      "url": "https://arxiv.org/abs/2607.09485",
-      "title": "Unified description of color-electric and color-magnetic strings in hybrid vacua of $\\mathcal{N}=2$ supersymmetric QCD",
-      "titleJa": "N=2超対称QCDの混成真空における色電気・色磁気弦の統一記述",
-      "authors": [
-        "E. Ievlev",
-        "D. Vasilev",
-        "A. Yung"
-      ],
-      "primaryCategory": "hep-th",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 13,
-        "categoryImpact": 17,
-        "originality": 16,
-        "technicalStrength": 19
-      },
-      "scoreReasons": {
-        "broadImpact": "色電気弦と色磁気弦を同じ二次元世界面理論で扱う結果は、超対称ゲージ理論の閉じ込めと2D–4D対応を結ぶ。保護BPS量に強いが、小さい随伴質量を持つN=2 SQCDの混成真空に対象が限られる。",
-        "categoryImpact": "従来r=Nとr=N−1で知られていた非可換弦の世界面記述を、任意のr≤N−2の混成真空へ拡張した。凝縮クォークと凝縮モノポールが共存する領域で、クォーク・モノポール双方の閉じ込めを一つの真空集合として記述する。",
-        "originality": "Gaiotto–Gukov–Seibergレゾルベントから、四次元グルイーノ凝縮で変形された厳密な捩れ超ポテンシャルを導いた。既知の重み付き射影模型を継承しつつ、可換な色電気弦を同じ非可換世界面理論の特定真空として含める点が新しい。",
-        "technicalStrength": "厳密超ポテンシャルのカイラル環根をSeiberg–Witten曲線の根と対応させ、二次元キンク質量を四次元周期積分による閉じ込め粒子質量と一致させた。U(3)とU(5)の例、電荷表、レゾルベント付録で検算するが、BPS保護と小さい変形を仮定する。"
-      },
-      "totalScore": 65,
-      "abstractLines": [
-        "N=2超対称QCDのr<N混成真空ではクォークとモノポールが同時に凝縮し、色磁気・色電気の二種類の閉じ込め弦が現れる。",
-        "著者らはレゾルベント法から非可換弦の厳密な世界面捩れ超ポテンシャルを導き、その真空とSeiberg–Witten曲線の根を対応させた。",
-        "二次元キンクと四次元の閉じ込めモノポールまたはクォークのBPS質量が一致し、r=N−2以下を統一記述するが、小さいN=2破れの範囲である。"
-      ],
-      "curiosity": "電気的凝縮と磁気的凝縮が共存する混成真空で、二種類の閉じ込め弦とその端点を単一の世界面理論に収められるか。",
-      "concept": "四次元レゾルベントを世界面超ポテンシャルの質量微分として積分し、その臨界点をSeiberg–Witten根へ写すことで、弦真空間のキンクを四次元の閉じ込め粒子へ同定する。",
-      "conclusion": "混成r真空の色電気弦と色磁気弦は一つの非可換弦世界面理論の異なる真空として記述でき、2D–4D BPS質量対応が保たれる。非BPS量や大きな随伴質量への外挿は示されていない。",
-      "assessment": "厳密超ポテンシャルとSeiberg–Witten周期の一致が、統一像を定量的に支える。保護スペクトルと制御された超対称変形に依存するため、一般の非超対称閉じ込めへ直接移せる結論ではない。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2–4節のr真空と弦・閉じ込め像、第5節のレゾルベント超ポテンシャル、第6節の2D–4D質量一致、第7節と付録A–Cの電荷・具体例・曲線根を確認した。周期積分の全例は独立計算していない。",
-      "sourceUrls": [
-        "https://arxiv.org/abs/2607.09485v1",
-        "https://arxiv.org/pdf/2607.09485v1"
-      ]
-    },
-    {
-      "rank": 7,
       "arxivId": "2607.08903",
       "arxivVersion": "v1",
       "submissionType": "new",
@@ -294,87 +205,132 @@
       "primaryCategory": "hep-th",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 14,
-        "categoryImpact": 16,
-        "originality": 17,
-        "technicalStrength": 17
+        "broadImpact": 19,
+        "categoryImpact": 21,
+        "originality": 21,
+        "technicalStrength": 20
       },
       "scoreReasons": {
-        "broadImpact": "非摂動効果がアノマリー媒介による軟らかい超対称性破れを質的に変える機構は、強結合ゲージ理論へのAMSB外挿の信頼性に関わる。解析はSU(2)のSeiberg–Witten理論とNf≤3に集中し、一般性はまだ推測である。",
-        "categoryImpact": "UV摂動論ではN=1保存変形と同一に見えるAMSBが、インスタントン補正によって完全に超対称性を破ることを示した。IRではモノポール凝縮と閉じ込めを計算し、強結合スケールを跨ぐ真空変化という具体的な問題を提起する。",
-        "originality": "Seiberg–Witten変形との摂動的同値性の背後で、インスタントン補正されたベータ関数が随伴多重項の質量分裂を生む点を抽出した。既存のAMSBと厳密N=2有効作用を組み合わせ、弱結合両端の間に不可視な変化を見いだす。",
-        "technicalStrength": "Nf=0,1,2,3についてUV軟質量と特異点近傍のIRポテンシャルを導き、付録で正規化、Higgs枝、周期を補っている。ただし中間領域の真空移動は重い状態の分離と物理的連続性に基づく間接論証で、明示的な強結合計算ではない。"
+        "broadImpact": "SUSY破れ、閉じ込め、非摂動ゲージ動力学へ波及するが、SU(2) N=2族が対象である。",
+        "categoryImpact": "AMSBによる真空と対称性破れを厳密SW情報で再評価し、N=1類似像を修正した。",
+        "originality": "全摂動次数で同じ変形をインスタントンが区別する機構と真空補間の不可視性が新しい。",
+        "technicalStrength": "UVインスタントン、Coulomb分枝、特異点近傍EFTをフレーバー数別に導出するが、重力子質量が強結合尺度に近い領域の補間は制御できない。"
       },
-      "totalScore": 64,
+      "totalScore": 81,
       "abstractLines": [
-        "アノマリー媒介をN=2のSU(2) Seiberg–Witten理論へ加えると、摂動的には随伴カイラル多重項のN=1保存質量変形と等価に見える。",
-        "論文はインスタントンを含むUVベータ関数と、Coulomb枝特異点の弱結合IR有効作用の双方で軟質量・真空・凝縮を解析した。",
-        "有限の破れ尺度では超対称性が完全に破れつつモノポール凝縮と閉じ込めが起こり、中間の強結合域で凝縮値が変わると論じるが、その遷移過程は計算不能域にある。"
+        "AMSBで超対称ゲージ理論から非SUSY動力学へ接続する際、強結合スケールを跨ぐ真空の連続性が問題となる。",
+        "N=2 SU(2) Seiberg–Witten理論へAMSBを結合し、UVインスタントンとIRモノポール有効理論の双方を解析した。",
+        "摂動的にはN=1質量変形と同じでもインスタントンがSUSYを完全破り、凝縮は同普遍性クラス内で非摂動的に変わると示した。"
       ],
-      "curiosity": "UVで摂動論的にN=1変形と同じAMSBは、インスタントンと強結合IRを通過しても同じ真空を保つのか。",
-      "concept": "N=2理論では定義可能なインスタントン補正ベータ関数をAMSB軟質量へ入れ、Seiberg–Witten特異点の双対QEDで得る凝縮と大破れ極限のN=1真空を比較する。",
-      "conclusion": "非摂動的共形異常は、全摂動次数で保存される超対称性を破り、AMSB真空をSeiberg–Witten変形と量的に異ならせる。両極限を結ぶ変化は通常の相転移ではないが、その力学は弱結合有効理論の外にある。",
-      "assessment": "厳密に制御できるN=2模型でAMSB外挿の盲点を露出させた点が有用で、物質数を変えた解析も厚い。最も重要な中間域の真空再配置は合理的仮定に依存し、直接導出された主張ではない。",
+      "curiosity": "摂動論で同一なAMSB変形とN=1保存変形は、非摂動真空でも同じなのか。",
+      "concept": "UVベータ関数へのインスタントン項とSW特異点近傍のモノポールポテンシャルを別々に計算し、SUSY破れが小さい領域と大きい領域の真空を接続する。",
+      "conclusion": "非摂動効果が全摂動次数で同一な変形を区別すると分かったが、強結合スケール付近の補間は弱結合EFTでは計算不能である。",
+      "assessment": "Seiberg–Witten制御下でAMSBの盲点を明示するが、中央領域の真空発展は物理的仮定に依存する。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節のAMSBとSeiberg–Witten予備事項、第3–6節のUVインスタントン・IR真空・Nf一般化、第7節の結論、付録の軟質量と周期を確認した。計算不能なm3/2と強結合尺度が同程度の領域は独立に解けていない。",
+      "fullTextReviewStatus": "AMSB予備論、UVインスタントン破れ、Coulomb/特異点有効ポテンシャル、N_f=0とN_f>0の真空比較、付録導出を確認した。強結合クロスオーバーは独立計算不能である。",
       "sourceUrls": [
         "https://arxiv.org/abs/2607.08903v1",
         "https://arxiv.org/pdf/2607.08903v1"
       ]
     },
     {
-      "rank": 8,
-      "arxivId": "2607.09531",
+      "rank": 6,
+      "arxivId": "2607.09500",
       "arxivVersion": "v1",
       "submissionType": "new",
-      "url": "https://arxiv.org/abs/2607.09531",
-      "title": "Perusing confining pseudoreal theories: a story of emerging massless spin-1 bosons",
-      "titleJa": "閉じ込めを起こす擬実表現理論の精査：創発する質量ゼロのスピン1ボソン",
+      "url": "https://arxiv.org/abs/2607.09500",
+      "title": "Monodromy and geometry of heavy-light Virasoro blocks",
+      "titleJa": "重い・軽いVirasoroブロックのモノドロミーと幾何",
       "authors": [
-        "Giacomo Cacciapaglia",
-        "Konstantinos Kollias"
+        "Mikhail Belakovskiy",
+        "Vladimir Belavin"
       ],
       "primaryCategory": "hep-th",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 16,
-        "categoryImpact": 18,
-        "originality": 17,
-        "technicalStrength": 11
+        "broadImpact": 18,
+        "categoryImpact": 20,
+        "originality": 20,
+        "technicalStrength": 21
       },
       "scoreReasons": {
-        "broadImpact": "予測が正しければ、広い擬実表現ゲージ理論で質量ゼロの複合ベクトルが一般的に残ることになり、強結合QFTと格子検証へ波及する。経路は明確だが、現状は非摂動的実証でなく、汎関数繰り込み群や格子計算による反証を待つ。",
-        "categoryImpact": "最小擬実表現理論の未知のIR相を一覧化し、共形候補と閉じ込め候補を分け、後者のほぼ全てに質量ゼロのスピン1状態を予測した。非超対称強結合相という中心問題への大胆な基準だが、相の確定そのものではない。",
-        "originality": "全次数ベータ関数の仮定、段階的対称性破れ、離散・一形式異常、最低次複合演算子を15個の一種模型と4個の二種模型へ一貫して適用した。各道具は既知でも、異常U(1)電流と創発ベクトルを横断的予測へまとめた点が新しい。",
-        "technicalStrength": "共形窓は予想ベータ関数、閉じ込め相はゲージ非不変な二フェルミオン凝縮を置く段階的対称性破れと最強引力経路に依存する。異常整合性は候補相を排除するが質量ゼロベクトルを証明せず、正則最大部分群だけの探索で非摂動数値検証もない。"
+        "broadImpact": "2d CFTブートストラップとAdS3バルク幾何を結ぶが、大中心荷重い–軽い領域が前提である。",
+        "categoryImpact": "モノドロミーから測地線端点を抽出し、非真空5-点ブロックを従来近似の外で解いた。",
+        "originality": "固有ベクトルの幾何解釈と背景に依存しないネットワーク方程式が新しい。",
+        "technicalStrength": "真空4点関数をモノドロミー法と独立なユークリッド幾何から導き、5点関数まで計算するが、一般のn点閉形式はネットワーク方程式の根式可解性に制限される。"
       },
-      "totalScore": 62,
+      "totalScore": 79,
       "abstractLines": [
-        "質量項を持たない擬実表現Weylフェルミオンの漸近自由ゲージ理論では、強結合IR相がほとんど分かっていない。",
-        "著者らは予想全次数ベータ関数で共形窓を見積もり、残る理論を段階的対称性破れ、離散・高形式異常、複合演算子で分類した。",
-        "閉じ込め候補の一種模型は一例を除き質量ゼロのスピン1状態を持ち、唯一の二種候補は二ベクトルと一Nambu–Goldstoneボソンを持つと予測する。"
+        "半古典的AdS3/CFT2ではVirasoroブロックをモノドロミーとバルク測地線ネットワークの両方で計算できる。",
+        "モノドロミー方程式の二解の比をホログラフィック座標とし、モノドロミー行列の固有ベクトルを測地線端点へ対応させた。",
+        "内部ネットワーク方程式が重い背景非依存と示し、超軽量近似を越えた非真空5-点HHLLLブロックを計算した。"
       ],
-      "curiosity": "スカラー質量演算子を作れない擬実表現ゲージ理論は、強結合でどの対称性を破り、どの質量ゼロ複合状態を残すのか。",
-      "concept": "最強引力の二フェルミオン経路を仮想的なHiggs化として追跡し、残る可換ゲージ場を、四フェルミオン凝縮のFierz分解で現れるU(1)電流の複合スピン1状態として読み替える。",
-      "conclusion": "著者らの仮定体系では、非共形の擬実表現理論はほぼ普遍的に質量ゼロの非相互作用ベクトルを残す。この像は格子計算や汎関数繰り込み群で反証可能だが、現時点では条件付き予測である。",
-      "assessment": "未整理だった理論群を一表へまとめ、驚くほど明確で検証可能なIR予測を与えた価値は高い。結論は予想ベータ関数と段階的対称性破れ相を重ねた推論に依存し、解析だけで閉じ込めや質量ゼロ極を確定してはいない。",
+      "curiosity": "モノドロミーの線形代数データからバルク測地線ネットワークを直接復元し、一般重い–軽いブロックを算法化できるか。",
+      "concept": "モノドロミー固有ベクトルをP1上の二端点として読み、複比条件を解いて初等ブロック作用を加法合成する。",
+      "conclusion": "重いと軽いの役割を分離する計算法が得られたが、閉形式はネットワーク方程式が根式で解ける6-点程度までに限られる。",
+      "assessment": "独立なユークリッド幾何による検算と新たな5点関数の結果を備えるが、半古典的な重い–軽い極限の外には直接適用できない。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "共形窓の式(1)–(3)、全模型表、最強引力経路と部分群分解、離散・一形式異常、二種Sp(6)例、付録の残余模型を確認した。ベータ関数仮定、凝縮形成、質量ゼロ極の非摂動再現は行っていない。",
+      "fullTextReviewStatus": "モノドロミー固有ベクトルの導出、バルク測地線との対応、ユークリッド幾何による独立検算、既知の4点関数の再現、非真空5点関数の算法と可解性限界を確認した。有限c補正は未検証である。",
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.09531v1",
-        "https://arxiv.org/pdf/2607.09531v1"
+        "https://arxiv.org/abs/2607.09500v1",
+        "https://arxiv.org/pdf/2607.09500v1"
       ]
     },
     {
-      "rank": 9,
+      "rank": 7,
+      "arxivId": "2607.09485",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.09485",
+      "title": "Unified description of color-electric and color-magnetic strings in hybrid vacua of $\\mathcal{N}=2$ supersymmetric QCD",
+      "titleJa": "N=2超対称QCDのハイブリッド真空における色電気・色磁気弦の統一記述",
+      "authors": [
+        "E. Ievlev",
+        "D. Vasilev",
+        "A. Yung"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 20,
+        "originality": 18,
+        "technicalStrength": 21
+      },
+      "scoreReasons": {
+        "broadImpact": "非可換弦、閉じ込め、2d–4d対応へ波及するが、超対称BPS設定に限られる。",
+        "categoryImpact": "クォーク・モノポール双方を閉じ込めるハイブリッド弦の世界面理論を完成させた。",
+        "originality": "4dゲージーノ凝縮を捩れた超ポテンシャルへ入れ電気/磁気スペクトルを統一する点が新しい。",
+        "technicalStrength": "厳密レゾルベント、カイラルリング、準古典極限、複数のU(N)例が2次元・4次元BPS質量の接合を支えるが、非BPS補正は解析されていない。"
+      },
+      "totalScore": 77,
+      "abstractLines": [
+        "N=2 SQCDのr<N真空ではクォークとモノポールが同時凝縮し、電気・磁気流束弦が共存する。",
+        "Gaiotto–Gukov–Seibergレゾルベントから、ゲージーノ凝縮で変形された世界面上の厳密な捩れ超ポテンシャルを導いた。",
+        "2次元キンク質量と4次元閉じ込められたモノポール・クォーク質量の精密一致を示し、ハイブリッド閉じ込め像を統一した。"
+      ],
+      "curiosity": "電気と磁気凝縮が共存する真空で、一つの世界面理論が両種の閉じ込めスペクトルを記述できるか。",
+      "concept": "Seiberg–Witten曲線のレゾルベントで弦上の捩れた超ポテンシャルを固定し、その真空群差を4d BPS中心荷と照合する。",
+      "conclusion": "ハイブリッド真空でも2d–4dスペクトル対応が成立すると分かったが、対応の外挿とBPS保護に依存する。",
+      "assessment": "厳密量による強い一致を持つが、特定N=2 SQCDとBPSセクターを越える一般性は未確立である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "4dハイブリッド真空、弦モジュライ、厳密捩れた超ポテンシャル、根解析、2dキンクと4d閉じ込められた構成粒子の質量一致、複数例を確認した。非BPSスペクトルは扱っていない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.09485v1",
+        "https://arxiv.org/pdf/2607.09485v1"
+      ]
+    },
+    {
+      "rank": 8,
       "arxivId": "2607.09594",
       "arxivVersion": "v1",
       "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.09594",
       "title": "Massless fermionic current of Schwinger pairs in 3D de Sitter spacetime",
-      "titleJa": "3次元de Sitter時空におけるSchwinger対の質量ゼロフェルミオン電流",
+      "titleJa": "3次元de Sitter時空におけるSchwinger対生成による無質量フェルミオン電流",
       "authors": [
         "Manizheh Botshekananfarda",
         "Clément Stahl"
@@ -382,33 +338,77 @@
       "primaryCategory": "hep-th",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 12,
-        "categoryImpact": 15,
-        "originality": 14,
-        "technicalStrength": 19
+        "broadImpact": 17,
+        "categoryImpact": 19,
+        "originality": 17,
+        "technicalStrength": 22
       },
       "scoreReasons": {
-        "broadImpact": "曲がった時空でのSchwinger生成と真空分極に、次元と統計がどう効くかを定量化し、宇宙論的電磁場の逆反応研究へ基準を与える。質量ゼロ、dS3、一定外場、固定背景に限定されるため直接の現象範囲は狭い。",
-        "categoryImpact": "未計算だったdS3の質量ゼロフェルミオン電流を有限な解析式として与え、赤外超伝導とdS4で見られる符号反転がないことを示した。既知の次元別Schwinger効果の空白を埋める明確な前進である。",
-        "originality": "Bunch–Daviesモードと断熱減算は標準手法だが、奇数次元の質量ゼロスピノルへ適用して、全電場域の単調電流を初めて抽出した。新規性は新原理よりも未解決の次元・スピン組合せの解析にある。",
-        "technicalStrength": "Diracモード、真空期待値、二次断熱減算を導き、弱電場の線形極限、強電場のEの3/2乗則、平坦時空・ボソン結果、数値積分の傾きを相互照合した。真空選択外の感度、質量、時間依存場とMaxwell逆反応は扱っていない。"
+        "broadImpact": "曲時空QFT、インフレーション中の電場、Schwinger逆反応の研究へ接続するが、対象はdS3の無質量の場合に限られる。",
+        "categoryImpact": "未解明だったdS3における無質量フェルミオン電流を有限な式として確立し、スピン依存性と次元依存性を明確にした。",
+        "originality": "赤外超伝導の不在、単調性、dS4との符号差を一つの解析解で示す点が新しい。",
+        "technicalStrength": "モード規格化、Hadamard真空、断熱的差引きを用い、強・弱電場極限と平坦極限を数値補間へ接続するが、逆反応と質量項は含まれない。"
       },
-      "totalScore": 60,
+      "totalScore": 75,
       "abstractLines": [
-        "一定電場を持つdS3での質量ゼロフェルミオン対生成は、次元とスピンに依存する誘導電流の未解決例である。",
-        "著者らはBunch–Davies真空のDiracモードを解き、電流期待値へ二次の断熱減算を施して有限な解析表式を得た。",
-        "電流は弱電場で線形、強電場で標準Schwinger則へ移り、全範囲で単調かつ符号反転を示さないが、背景への逆反応は含まない。"
+        "de Sitter時空の電場中における無質量フェルミオン電流は、次元とスピンに依存する赤外応答を調べる基準になる。",
+        "dS3のDiracモードをBunch–Davies真空で解き、電流期待値を断熱的差引きで繰り込みした。",
+        "強い場でE^(3/2) Schwingerスケーリングと平坦極限、弱い場で線形応答を得て、IR超伝導と符号変化がないと示した。"
       ],
-      "curiosity": "奇数次元de Sitter時空の質量ゼロフェルミオンは、弱い電場で赤外増強や電流の符号反転を起こすのか。",
-      "concept": "Whittaker関数でBunch–Daviesスピノルモードを構成し、紫外発散だけを断熱対項で除いた後、残る特殊関数積分を弱・強電場展開と数値積分で読む。",
-      "conclusion": "dS3の質量ゼロフェルミオン電流は外場を遮蔽し、電場ゼロで滑らかに消えるため赤外超伝導を示さない。質量項や動的電磁場を入れたときの単調性と逆反応は今後の問題である。",
-      "assessment": "解析式、漸近展開、数値適合、既知極限が揃い、限定された問題への答えは堅い。固定された真空と背景に依存する一ループ計算なので、質量や逆反応を含む宇宙論的結論までは支えない。",
+      "curiosity": "3次元de Sitter時空の無質量フェルミオンは、ボソンで見られる赤外超伝導や4次元での電流反転を示すか。",
+      "concept": "Whittakerモードの裸電流から断熱的相殺項を引き、残る特殊関数式を強・弱電場で漸近展開する。",
+      "conclusion": "dS3フェルミオン電流は全パラメータで有限・単調・遮蔽向きだと分かったが、質量、逆反応、時間依存場は未包含である。",
+      "assessment": "解析式を複数の物理極限で検算する完成度が高いが、固定外部電場の1ループ量に限られる。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節のDiracモード、第3・4節の電流積分と断熱減算、第5節の数値曲線・弱強電場極限、第6節と積分付録を確認した。特殊関数積分と数値傾きは独立再計算していない。",
+      "fullTextReviewStatus": "Diracモード、裸電流積分、断熱的正則化、数値補間、強い/弱い場、平坦時空極限と符号解析を確認した。大質量/トポロジカル質量と逆反応は扱っていない。",
       "sourceUrls": [
         "https://arxiv.org/abs/2607.09594v1",
         "https://arxiv.org/pdf/2607.09594v1"
+      ]
+    },
+    {
+      "rank": 9,
+      "arxivId": "2607.09531",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.09531",
+      "title": "Perusing confining pseudoreal theories: a story of emerging massless spin-1 bosons",
+      "titleJa": "閉じ込め型擬実理論を探る：創発する無質量スピン1ボソン",
+      "authors": [
+        "Giacomo Cacciapaglia",
+        "Konstantinos Kollias"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論・現象論",
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 19,
+        "technicalStrength": 15
+      },
+      "scoreReasons": {
+        "broadImpact": "強く結合したゲージ動力学、複合模型、格子検定へ波及するが、予測は擬実少数種に限られる。",
+        "categoryImpact": "全候補を整理し、閉じ込め型理論のIR質量ゼロスペクトルへ統一予測を与えた。",
+        "originality": "四フェルミオン凝縮による部分的ゲージ破れと質量ゼロのスピン1ボソンが広く現れることを結ぶ点が意外である。",
+        "technicalStrength": "群論的列挙、ユニタリ性境界、最大引力チャネル、アノマリー整合を組み合わせるが、共形窓と逐次凝縮チャネルは仮定に依存し、格子計算で反証可能である。"
+      },
+      "totalScore": 69,
+      "abstractLines": [
+        "少数の質量ゼロWeylフェルミオンを含む漸近的に自由擬実ゲージ理論のIR相はよく分かっていない。",
+        "全候補を列挙し、共形窓の仮定式、最強引力チャネルによる逐次凝縮、アノマリー、大域対称性を組み合わせた。",
+        "閉じ込めを起こす1種類のフェルミオンを含む理論のほぼすべてに無質量スピン1ボソンを予測し、2種類を含む1つの理論には2つのスピン1ボソンとNambu–Goldstoneボソンを予測した。"
+      ],
+      "curiosity": "擬実ゲージ理論の閉じ込めは、通常の質量ギャップではなく創発する可換ゲージボソンを普遍的に残すか。",
+      "concept": "四フェルミオン凝縮のチャネルをCasimirで順位付けし、ゲージ破れ後に残るU(1)とアノマリー整合を追う。",
+      "conclusion": "質量ゼロベクトルを持つIR相の体系的候補を得たが、全次数ベータ仮定形と逐次凝縮は非摂動証明でなく格子反証可能な予測である。",
+      "assessment": "広い分類と鋭い予測を与えるが、技術的な裏付けは予想に基づく動力学的仮定によって制限される。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "候補表、共形窓の仮定式、逐次凝縮とMAC、大域アノマリー、一種類・二種類のフェルミオンを含む例と予測を確認した。非摂動格子またはFRG検証は行われていない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.09531v1",
+        "https://arxiv.org/pdf/2607.09531v1"
       ]
     },
     {
@@ -425,32 +425,32 @@
         "A. Popolitov"
       ],
       "primaryCategory": "hep-th",
-      "paperType": "理論",
+      "paperType": "数理・理論",
       "scores": {
-        "broadImpact": 10,
-        "categoryImpact": 13,
-        "originality": 15,
-        "technicalStrength": 15
+        "broadImpact": 13,
+        "categoryImpact": 17,
+        "originality": 18,
+        "technicalStrength": 17
       },
       "scoreReasons": {
-        "broadImpact": "一般固有値のCherednik固有関数はDAHA・Macdonald理論と量子可積分系の計算に使えるが、物理的応用経路は本文で具体化されていない。主な射程は専門的な数理物理共同体に留まる。",
-        "categoryImpact": "特殊固有値の非対称Macdonald多項式から、一般固有値のCherednik固有関数を構成する分岐則を与えた。計算効率の高い表示だが、全枝の公式と他根系への拡張は後続研究に残される。",
-        "originality": "Noumi–Shiraishi級数の対称系での解析接続を非対称Cherednik系へ移し、一般解が単一級数でなくN!個の枝を持つ非対称三項組になることを見いだした。既知手法の移植に、分岐構造という新要素が加わる。",
-        "technicalStrength": "一変数の歪非対称Macdonald係数をq-Pochhammer記号で因数分解し、N=2、N=3、一般Nの表示と二つの多項式縮約を示す。一般複素固有値では形式冪級数として扱い、全N!枝の明示式、収束、Baker–Akhiezer側の性質は未完である。"
+        "broadImpact": "DAHA、Macdonald理論、量子可積分系へ接続するが、数学的対象が専門的である。",
+        "categoryImpact": "特殊多項式固有関数から一般固有値の分枝構造へ進めた。",
+        "originality": "Noumi–Shiraishi型級数がWeyl群のN!枚に分岐する発見が新しい。",
+        "technicalStrength": "粒子数に関する再帰を導き低Nの固有関数を明示するが、一般Nでの解析的完全性、接続係数、モノドロミーは未証明である。"
       },
-      "totalScore": 53,
+      "totalScore": 65,
       "abstractLines": [
-        "非対称Macdonald多項式はCherednik多体系の特殊固有値での固有関数だが、一般固有値の解の構造はより複雑である。",
-        "著者らは歪非対称Macdonald多項式の因数分解された分岐係数を求め、粒子数についての再帰を複素固有値へ解析接続した。",
-        "一般固有関数はNoumi–Shiraishi型冪級数からなるN!枝を持ち二種の多項式縮約を備えるが、全枝の詳細と収束解析は提示されない。"
+        "非対称Macdonald多項式はCherednik系の特殊固有値を与えるが、一般固有値の固有関数構造は不明だった。",
+        "Noumi–ShiraishiのN再帰と解析接続をDAHA A型Cherednik系へ移した。",
+        "一般固有関数が単一冪級数でなく、各々Noumi–Shiraishi型のN!分枝から成ると示し、低N式を与えた。"
       ],
-      "curiosity": "非対称Macdonald多項式の離散的な固有値を連続化すると、Cherednik固有関数はどのような枝構造を持つのか。",
-      "concept": "一変数を順次切り離す歪多項式の分岐係数を因数分解し、弱合成の整数ラベルを複素数へ延長することで、多項式を各Weyl室の形式冪級数へ変える。",
-      "conclusion": "Cherednik系の一般固有値解はN!枝の非対称三項組として構成でき、非対称Macdonald多項式とBaker–Akhiezer型関数へ縮約する。今回の明示公式は代表枝が中心で、完全な解析論は残る。",
-      "assessment": "明示的な分岐係数と一般N表示は、非対称多項式を計算する実用的な進展である。一般解は形式級数で、全枝・収束・物理的利用が未整理なため、完成したスペクトル理論ではない。",
+      "curiosity": "非対称Macdonald固有関数を一般スペクトルへ解析接続すると、Weyl群分枝はどう現れるか。",
+      "concept": "粒子数Nの分枝規則を固有値パラメータへ継続し、置換ごとの局所級数解を貼る。",
+      "conclusion": "Cherednik系の一般固有関数のN!分枝構造が明らかになったが、完全性・接続係数・物理スペクトルへの応用は残る。",
+      "assessment": "可積分系の解析構造を前進させるが、明示検証は特殊例中心である。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節の歪多項式例、第3節のハミルトニアン、第4・5節のN=2、3と一般N係数、第6節のN!枝と二縮約、第7節・付録の限界を確認した。一般固有値級数の収束と全枝の固有方程式は独立検証していない。",
+      "fullTextReviewStatus": "一般固有値への再帰、N!分枝構成、低N明示式と既知Macdonald極限を確認した。一般Nの収束・完全性は独立証明していない。",
       "sourceUrls": [
         "https://arxiv.org/abs/2607.09203v1",
         "https://arxiv.org/pdf/2607.09203v1"
@@ -458,50 +458,6 @@
     },
     {
       "rank": 11,
-      "arxivId": "2607.09177",
-      "arxivVersion": "v1",
-      "submissionType": "new",
-      "url": "https://arxiv.org/abs/2607.09177",
-      "title": "A note on Zamolodchikov's recursion relation for the torus conformal block and its light limit",
-      "titleJa": "トーラス共形ブロックのZamolodchikov再帰関係と軽い極限について",
-      "authors": [
-        "Armen Poghosyan",
-        "Hasmik Poghosyan"
-      ],
-      "primaryCategory": "hep-th",
-      "paperType": "理論",
-      "scores": {
-        "broadImpact": 9,
-        "categoryImpact": 13,
-        "originality": 13,
-        "technicalStrength": 18
-      },
-      "scoreReasons": {
-        "broadImpact": "トーラス一点共形ブロックの明示計算を改善するが、Liouville理論とA2 Toda理論の軽い極限に用途が集中する。一般のCFT観測量や別位相面への波及は本文では示されない。",
-        "categoryImpact": "A2 Todaの軽いブロックについて、偽極や解析接続の問題を避ける再帰計算法を与えた。既存の閉形式を置き換える有用な技法だが、対象は特定のブロックと極限である。",
-        "originality": "既知のZamolodchikov型再帰を軽い極限へ直接落とし、Liouvilleでは既知超幾何式を回収し、A2 Todaでは結合再帰を新たに得た。核となる再帰原理は既知で、新規性は非自明な極限操作と計算形式にある。",
-        "technicalStrength": "Liouville結果の解析的回収、A2結果のqの20次までの既存式との一致、補遺での留数と大きな共形次元の比較を備える。Mathematica資料も付くが、軽い極限外の誤差や一般的な収束性は扱わない。"
-      },
-      "totalScore": 53,
-      "abstractLines": [
-        "Liouville理論とA2 Toda理論のトーラス一点共形ブロックにはZamolodchikov型再帰があり、その軽い極限の効率的表示が求められる。",
-        "著者らは一般再帰の小結合定数極限を解析し、Liouvilleの単一再帰とA2 Todaの結合再帰を導いた。",
-        "前者は既知のGauss超幾何関数を再現し、後者は既存結果とqの20次まで一致するが、扱うのは軽い漸近極限である。"
-      ],
-      "curiosity": "A2 Todaの軽いトーラスブロックを、偽極や超幾何関数の解析接続なしに反復計算できるか。",
-      "concept": "中心電荷を大きくする極限で再帰の留数と縮退次元のスケーリングを追い、生き残る添字だけを選別して閉じた軽い極限再帰へ落とす。",
-      "conclusion": "軽い極限のZamolodchikov再帰はLiouvilleの既知解を再現し、A2 Todaでは高次数展開に適した式を与える。一般中心電荷や他のToda階数への拡張はこの論文の範囲外である。",
-      "assessment": "新再帰は既知結果との高次数照合と解析的留数証明を持ち、限定問題には信頼できる計算法である。概念的枠組みは既知で、適用範囲が軽い一点ブロックに狭い。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節のLiouville極限と超幾何解、第3節のA2結合再帰とqの20次照合、付録Aの極限式、付録Bの留数証明を確認した。添付Mathematicaノートの実行と20次係数の独立再生成は行っていない。",
-      "sourceUrls": [
-        "https://arxiv.org/abs/2607.09177v1",
-        "https://arxiv.org/pdf/2607.09177v1"
-      ]
-    },
-    {
-      "rank": 12,
       "arxivId": "2607.09406",
       "arxivVersion": "v1",
       "submissionType": "new",
@@ -514,45 +470,45 @@
         "G.S. Santiago"
       ],
       "primaryCategory": "hep-th",
-      "paperType": "理論",
+      "paperType": "理論・数値",
       "scores": {
-        "broadImpact": 10,
-        "categoryImpact": 13,
-        "originality": 12,
-        "technicalStrength": 16
+        "broadImpact": 13,
+        "categoryImpact": 17,
+        "originality": 15,
+        "technicalStrength": 18
       },
       "scoreReasons": {
-        "broadImpact": "不純物を含むBPSソリトンの統制は場の理論と欠陥系に有用だが、本文の結果は1+1次元のスカラー多場模型に限られる。ベクトル場、高次元、実在材料への接続は将来案に留まる。",
-        "categoryImpact": "単一場で知られたスプリオン超場による不純物実装を多場へ拡張し、共通射影条件、結合BPS方程式、Bogomol'nyi境界を系統化した。局所エネルギーを変えつつ全BPSエネルギーが位相境界項で固定されることを明示する。",
-        "originality": "不純物を固定スプリオン多重項として扱う既知構成を、任意個の物質場と不純物へ非自明に一般化した。中心発想は継承されるが、全不純物が同じ半超対称射影を満たす条件と空間再媒介表示が新しい差分である。",
-        "technicalStrength": "オフシェル成分作用から補助場、射影、BPS式、エネルギー境界を導き、一・二・三場模型で解析解と数値形状を示す。線形安定性、揺らぎスペクトル、数値収束、より高次元での頑健性は検証していない。"
+        "broadImpact": "トポロジカル欠陥、物性系の不純物、超対称場理論へ接続するが、1+1次元の古典セクターが中心である。",
+        "categoryImpact": "多場スプリオン形式でBPS方程式とエネルギー境界を統一した。",
+        "originality": "1～3場の模型を同じ超空間完備化から生成する体系化が新しい。",
+        "technicalStrength": "成分作用、超対称射影、Bogomolny境界を導出し多数の不純物プロファイルを構成するが、量子補正と動力学的不純物は扱われていない。"
       },
-      "totalScore": 51,
+      "totalScore": 63,
       "abstractLines": [
-        "局在不純物を含む多スカラー場で、超対称性とBPS構造を同時に保つ一般形式が必要となる。",
-        "著者らは1+1次元N=(1,1)超空間で不純物をスプリオン超場として導入し、オフシェル作用から結合一次方程式とエネルギー境界を導出した。",
-        "不純物は局所形状とエネルギー密度を変える一方で全BPSエネルギーを変えず、一・二・三場例で解を示すが安定性解析は行わない。"
+        "局在不純物を持つ多スカラー模型ではBPS構造と超対称性の整合的定式化が必要である。",
+        "2次元剛体N=(1,1)超空間で物質場をスプリオン背景へ結合し、オフシェル作用と半-BPS方程式を導いた。",
+        "不純物はプロファイルと局所エネルギーを変えるが、BPS全エネルギーはトポロジカル境界項で不変となることを、1～3場の例で示した。"
       ],
-      "curiosity": "複数の局在不純物がある多場系で、単一の残存超電荷が全てのBPS流を同時に選べる条件は何か。",
-      "concept": "不純物の空間分布を固定スプリオン超多重項のスカラー成分に入れ、補助成分をその微分へ結び付けることで、同じ射影が物質場の一次方程式と位相的エネルギー境界を選ぶ。",
-      "conclusion": "局在不純物を持つ多場模型にも一貫した半BPSセクターが存在し、全エネルギーは漸近真空だけで決まる。構成の動的安定性とベクトル場・高次元への一般化は未確認である。",
-      "assessment": "超空間からBPS境界までを一貫して導き、複数の具体解で局所変形を可視化している。既知の単一場構成に近い拡張であり、物理的安定性や散乱への新しい予測はまだない。",
+      "curiosity": "外部不純物を入れても、どのスプリオン結合なら半超対称性とBogomolny境界を厳密に保てるか。",
+      "concept": "固定スプリオン超場で非一様性を超対称完備化し、保存射影から一次BPS流れを選ぶ。",
+      "conclusion": "多場不純物模型を体系的に作れるが、剛体1+1次元と所与背景が範囲を限る。",
+      "assessment": "オフシェル構成と多数例で技術的に堅いが、中心物理は既知BPS不純物系の整理・拡張である。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節の超空間作用・共通射影・Bogomol'nyi平方完成、第3節の一・二・三場の解析例と数値図、第4節の適用限界を確認した。数値境界値問題の再実行と揺らぎ安定性の独立検査は行っていない。",
+      "fullTextReviewStatus": "超空間作用、成分消去、半BPS射影と境界、1場・2場・3場模型の数値プロファイル、展望を確認した。量子ループと動的不純物は扱われていない。",
       "sourceUrls": [
         "https://arxiv.org/abs/2607.09406v1",
         "https://arxiv.org/pdf/2607.09406v1"
       ]
     },
     {
-      "rank": 13,
+      "rank": 12,
       "arxivId": "2607.09343",
       "arxivVersion": "v1",
       "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.09343",
       "title": "$T\\bar{T}$ deformation and multiple-flavor Lorentzian threads",
-      "titleJa": "$T\\bar{T}$変形と多成分Lorentz符号スレッド",
+      "titleJa": "$T\\bar{T}$変形と多成分ローレンツ型スレッド",
       "authors": [
         "Mojtaba Shahbazi",
         "Mehdi Sadeghi"
@@ -560,33 +516,75 @@
       "primaryCategory": "hep-th",
       "paperType": "理論",
       "scores": {
-        "broadImpact": 9,
-        "categoryImpact": 11,
-        "originality": 11,
-        "technicalStrength": 11
+        "broadImpact": 14,
+        "categoryImpact": 16,
+        "originality": 16,
+        "technicalStrength": 14
       },
       "scoreReasons": {
-        "broadImpact": "有限カットオフ・ホログラフィー、一般化複雑性、Lorentz符号スレッドを結ぶが、境界量子回路への対応は模式的である。具体的背景や観測量への適用がなく、現時点の波及先は狭いホログラフィー研究線に留まる。",
-        "categoryImpact": "複雑性=何でもよいという幾何汎関数について、有限カットオフ補正を一般化Willmore汎関数の階層として整理した。従来の体積複雑性からの拡張だが、有限次数の明示計算と局所スレッド分解が中心である。",
-        "originality": "曲率不変量ごとに別種のLorentz符号スレッドを割り当てる局所分解を提案し、有限カットオフ補正の線形構造と結び付けた。多成分スレッド自体は既知で、今回は一般化複雑性からの幾何的導出が差分となる。",
-        "technicalStrength": "Fefferman–Graham展開から先頭補正を導き、局所発散方程式の可解性を命題として示す。一方、全球分解には追加の葉層条件が必要で一般存在定理がなく、量子ゲート解釈は発見的で、具体的重力背景による検算もない。"
+        "broadImpact": "ホログラフィック複雑性、イレレバント変形、スレッド幾何を結ぶが、境界観測量への経路は未確立である。",
+        "categoryImpact": "CV以外の任意曲率複雑性へ有限カットオフ補正を拡張した。",
+        "originality": "Willmore項をスレッドの成分へ写す解釈は新しいが、線形分解に強く依存する。",
+        "technicalStrength": "Fefferman–Graham展開の1次で無発散の補償流れを構成するが、極値化の非線形性、明示的背景、微視的な境界資源との照合は未解決である。"
       },
-      "totalScore": 42,
+      "totalScore": 60,
       "abstractLines": [
-        "有限カットオフに対応する一般化$T\\bar{T}$変形は、ホログラフィック複雑性の幾何汎関数を修正する。",
-        "著者らはFefferman–Graham展開で一般曲率汎関数の補正を求め、各曲率不変量に対応するLorentz符号流の局所分解を構成した。",
-        "補正は一般化Willmore項の階層となるが、多成分スレッドの全球存在と境界量子ゲートへの同定は仮定的である。"
+        "有限カットオフ・ホログラフィーの$T\\bar{T}$変形は、境界の非局所性をバルクの複雑性へ反映する。",
+        "Fefferman–Graham展開で一般曲率複雑性汎関数のカットオフ補正を導き、Willmore型項の級数に整理した。",
+        "各曲率不変量をローレンツ型スレッドの別成分へ対応させる流れ分解を提案した。"
       ],
-      "curiosity": "有限カットオフが生む非局所性は、一般化ホログラフィック複雑性の流を曲率ごとの複数スレッドへ分解するのか。",
-      "concept": "カットオフ近傍の曲率展開を一般化Willmore密度へ並べ替え、その線形な各成分に発散なしのベクトル場を局所的に補って別々の流束として表す。",
-      "conclusion": "一般化複雑性の先頭カットオフ補正は、曲率依存の複数スレッドとして局所的に表現できる。全球構成と微視的回路資源の対応は証明されておらず、現段階では幾何的解釈である。",
-      "assessment": "一般曲率汎関数をWillmore階層へ整理した式は明快な拡張を与える。物理的な多成分スレッド像は局所存在と追加仮定に依存し、具体例や境界側の検証を欠く。",
+      "curiosity": "$T\\bar{T}$変形に由来する非局所性は、一般化ホログラフィック複雑性のどの幾何学的セクターに符号化されるか。",
+      "concept": "曲率密度をカットオフ次数と不変量ごとに線形分解し、補償ベクトルで各重み付き流れを無発散にする。",
+      "conclusion": "多成分スレッドという幾何学的描像を得たが、境界回路資源との対応はヒューリスティックで、明示的な背景での検証も少ない。",
+      "assessment": "形式的接続は興味深いが、主要な物理解釈を著者自身が概念的と認め、微視的裏付けがない。",
       "evaluationBasis": "full_text_major_sections",
       "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2・3節の有限カットオフ展開と式(29)、第4節の共形再尺度化・局所分解命題・全球存在の条件、第5節の未解決点を確認した。具体的時空での偏微分方程式解と境界回路対応は独立検証していない。",
+      "fullTextReviewStatus": "FGカットオフ展開、一般曲率汎関数のWillmore級数、多フレーバー流れの補償構成、回路解釈と結論の限界を確認した。明示重力背景での数値検証はない。",
       "sourceUrls": [
         "https://arxiv.org/abs/2607.09343v1",
         "https://arxiv.org/pdf/2607.09343v1"
+      ]
+    },
+    {
+      "rank": 13,
+      "arxivId": "2607.09177",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.09177",
+      "title": "A note on Zamolodchikov's recursion relation for the torus conformal block and its light limit",
+      "titleJa": "トーラス共形ブロックのZamolodchikov再帰関係と軽演算子極限に関する覚書",
+      "authors": [
+        "Armen Poghosyan",
+        "Hasmik Poghosyan"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論・数理",
+      "scores": {
+        "broadImpact": 9,
+        "categoryImpact": 12,
+        "originality": 10,
+        "technicalStrength": 15
+      },
+      "scoreReasons": {
+        "broadImpact": "2d CFT計算に有用だが、トーラス一点ブロックの限定技法である。",
+        "categoryImpact": "A2 Toda軽いブロックの明示計算法を改善した。",
+        "originality": "既知Zamolodchikov再帰の極限導出が中心で新規性は中低程度である。",
+        "technicalStrength": "Liouville理論の超幾何関数と既知のA2 Toda係数を再現する検算がある一方、級数の収束域と高次数での打切り誤差は定量化されていない。"
+      },
+      "totalScore": 46,
+      "abstractLines": [
+        "トーラス一点共形ブロックの再帰はLiouvilleとA2 Todaで明示計算の基盤になる。",
+        "既知のZamolodchikov型再帰から軽い漸近的極限の再帰式を導いた。",
+        "LiouvilleではGauss超幾何関数を再現し、A2 Todaでは既知結果と一致する効率的計算法を得た。"
+      ],
+      "curiosity": "重い内部重みの軽い極限を再帰式の段階で取り、Todaブロックを効率計算できるか。",
+      "concept": "極再帰の留数と重みスケーリングを極限へ運び、次数ごとの冪級数を生成する。",
+      "conclusion": "A2 Toda計算の実用的な式を与えたが、中心的内容は既知の再帰関係の概説と漸近化である。",
+      "assessment": "整合検算は明確だが、適用範囲と概念的新規性が限られる。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.09177v1"
       ]
     },
     {
@@ -596,59 +594,57 @@
       "submissionType": "new",
       "url": "https://arxiv.org/abs/2607.09408",
       "title": "Circuit and Krylov complexity of primordial perturbations of modified gravity in inflation",
-      "titleJa": "インフレーション中の修正重力原始摂動に対する回路複雑性とKrylov複雑性",
+      "titleJa": "インフレーションにおける修正重力原始摂動の回路・Krylov複雑性",
       "authors": [
         "Tao Li",
         "Hai-Bing Fu"
       ],
       "primaryCategory": "hep-th",
-      "paperType": "理論",
+      "paperType": "理論・数値",
       "scores": {
-        "broadImpact": 8,
-        "categoryImpact": 8,
-        "originality": 8,
-        "technicalStrength": 7
+        "broadImpact": 10,
+        "categoryImpact": 12,
+        "originality": 11,
+        "technicalStrength": 12
       },
       "scoreReasons": {
-        "broadImpact": "原始摂動の圧縮状態を複雑性で比較する試みは量子宇宙論へ接続し得るが、観測量への写像を示していない。単一のf(ϕ,R)設定と任意の規格化パラメータに基づくため、広い修正重力への帰結は確認できない。",
-        "categoryImpact": "二モード圧縮に既知の回路・Krylov診断を適用し、標準インフレーションとの数値比較を提示した。中心的なインフレーション予測や修正重力の制約を改善せず、近接した手法の模型適用に留まる。",
-        "originality": "f(ϕ,R)原始摂動に回路複雑性、Krylov複雑性、Lanczos係数、開放系の散逸項を同時に計算した組合せは新しい。各診断と二モード圧縮形式は既存研究からほぼそのまま継承している。",
-        "technicalStrength": "二次作用と圧縮方程式は示すが、K=sinh²rでKrylov複雑性が小さい結果と、修正重力が成長を増強するという説明が本文内で併存する。地平線退出位置も図間でy=−2とy=0に変わり、単一パラメータ組だけで収束・感度・誤差評価がない。"
+        "broadImpact": "インフレーションと量子情報を結ぶが、複雑性の観測経路は未提示である。",
+        "categoryImpact": "f(φ,R)摂動へ複数複雑性診断を適用した。",
+        "originality": "既知スクイーズ状態指標の別重力模型への適用が中心である。",
+        "technicalStrength": "正準模型とf(φ,R)模型を数値比較するが、$K=\\sinh^2 r$とスクイージング増加時の傾向が整合せず、開放系効果とパラメータ感度も扱われていない。"
       },
-      "totalScore": 31,
+      "totalScore": 45,
       "abstractLines": [
-        "インフレーション原始曲率摂動の二モード圧縮状態は、回路複雑性とKrylov空間量で特徴付けられる。",
-        "著者らは標準単一スカラー模型とf(ϕ,R)模型の圧縮方程式を数値積分し、回路複雑性、Krylov複雑性、Lanczos係数と散逸項を計算した。",
-        "選んだパラメータでは修正重力の回路複雑性は大きく、地平線退出後の圧縮強度とKrylov複雑性は標準模型より小さいが、解釈に内部不整合が残る。"
+        "インフレーションの摂動の二モードスクイーズ状態は量子複雑性診断の試験場になる。",
+        "正準スカラーインフレーションとf(φ,R)模型でスクイージングパラメータを解き、回路・Krylov複雑性とエントロピーを数値計算した。",
+        "修正重力はスクイージングを強め、回路複雑性を増す一方でKrylov量の成長を小さくすると報告した。"
       ],
-      "curiosity": "修正重力が原始摂動の二モード圧縮を変えるとき、回路長と演算子成長は同じ変化を示すのか。",
-      "concept": "曲率摂動の二次ハミルトニアンをSU(1,1)二モード圧縮へ写し、圧縮強度と角度から回路測地線とKrylov占有数を同じ数値解上で比較する。",
-      "conclusion": "特定の数値設定ではf(ϕ,R)項が回路複雑性を増す一方、地平線退出後のKrylov複雑性を抑える曲線が得られた。結果の一般性はパラメータ感度と記述上の矛盾を解消する再解析なしには確定しない。",
-      "assessment": "複数の複雑性診断を同一の原始摂動模型で並べた点には探索的価値がある。数式と物理解釈の対応、図の規約、数値頑健性に重大な未確認点があり、定量的結論の信頼性を制限する。",
-      "evaluationBasis": "full_text_major_sections",
-      "fullTextEvaluated": true,
-      "fullTextReviewStatus": "第2節の複雑性定義、第3節の二模型の圧縮方程式、第4節の図1–6・Lanczos係数・K=sinh²r、第5節の主張を照合した。常微分方程式の再積分、パラメータ走査、図データの独立再現は行っていない。",
+      "curiosity": "同じ原始スクイージングに対し、回路とKrylov複雑性は修正重力を同じ向きに診断するか。",
+      "concept": "二モードBogoliubov発展をスクイージング強度・角へ還元し、異なる複雑性汎関数へ代入する。",
+      "conclusion": "回路複雑性とKrylov複雑性は修正重力に異なる応答を示すが、$K=\\sinh^2 r$とスクイージング増加時のKrylov成長減少を両立させる定義・規格化が明確でなく、解釈に不整合が残る。",
+      "assessment": "修正重力比較は具体的だが、複雑性の物理的観測量性と報告された傾向の整合性が総合評価を抑える。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
       "sourceUrls": [
-        "https://arxiv.org/abs/2607.09408v1",
-        "https://arxiv.org/pdf/2607.09408v1"
+        "https://arxiv.org/abs/2607.09408v1"
       ]
     }
   ],
   "audit": {
     "listingUrl": "https://arxiv.org/list/hep-th/pastweek",
     "announcementDate": "2026-07-13",
-    "selectionRule": "ホスト指定の公式pastweekスナップショットにあるNew submissionsのうち、primary categoryがhep-thのv1だけを採用し、Cross submissions 17件とReplacementsを除外した。",
+    "selectionRule": "公式snapshotのprimary-category New v1全件をabstract比較し、決定的tie-breakで暫定上位12件を固定して全文確認後に再採点",
     "sourceCounts": {
       "newPrimary": 14,
       "crosslistsExcluded": 17,
       "titleAuthorAbstractEvaluated": 14
     },
-    "evaluationPolicy": "14件すべてについて原題、完全著者列、abstract、primary category、commentsを公式abs v1で確認し、著者属性を用いず4軸採点した。順位境界を含む全14件の完全なv1 PDFを再評価した。",
-    "scoreRubric": "Daily arXiv rubric 3.0：broadImpact、categoryImpact、originality、technicalStrengthを各0〜25の整数で採点し、単純和をtotalScoreとした。18点以上は本文の具体的波及先、中心課題、先行比較、検証を確認し、24点以上は例外的な全文証拠がある場合に限定する。",
-    "fullTextPolicy": "全14件について、導入、前提、主要導出または手法、主結果、検証・比較、結論、限界、関連付録を完全な公式v1 PDFで確認し、論文固有の確認範囲と未再現事項を記録した。",
-    "fullTextEvaluatedCount": 14,
-    "authorPolicy": "著者の知名度、所属、受賞、引用、経歴を採点に用いず、論文本文の主張と証拠だけを評価した。著名著者バッジはレポートに含めない。",
-    "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv ID昇順。",
-    "generatedAtJst": "2026-07-14T15:53:13+09:00"
+    "evaluationPolicy": "全abstractを独立評価し、著者属性を採点せず、最終上位10件を含む暫定上位12件だけ公式v1本文の主要節で確認",
+    "scoreRubric": "Daily arXiv rubric 3.0：broadImpact、categoryImpact、originality、technicalStrengthを各0〜25の整数で採点し、18点以上は本文の具体的比較・検証・限界を要求",
+    "fullTextPolicy": "各カテゴリ暫定上位12件について公式v1 e-printの導入、前提、中心導出、結果、検証、限界を確認し、それ以外はtitle・authors・abstractだけで評価",
+    "fullTextEvaluatedCount": 12,
+    "authorPolicy": "著者の知名度、所属、受賞、引用、career stageを採点に使用せず、registry badgeも非採点",
+    "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、arXiv IDの昇順",
+    "generatedAtJst": "2026-07-14T23:30:00+09:00"
   }
 }

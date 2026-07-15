@@ -2,11 +2,24 @@
   "schemaVersion": "1.1",
   "requiredModelId": "gpt-5.6-sol",
   "requiredModelDisplayName": "GPT-5.6-Sol",
-  "requiredReasoningEffort": "ultra",
+  "requiredReasoningEffort": "high",
   "requireExplicitModelSelection": true,
   "qualificationStatus": "not_benchmarked",
   "qualificationRequiredForPublication": false,
-  "verificationScope": "The host runner fixes gpt-5.6-sol with ultra reasoning, isolates model and publisher worktrees, and mechanically verifies report structure plus the official arXiv announcement date and complete primary-New ID sets. Original titles and authors are read from official version-fixed pages under the evaluation contract but are not independently reproduced by the snapshot parser. The host cannot independently attest private service-side reasoning or make a benchmark-equivalence claim.",
-  "publicationRule": "Publish only schema-1.4 editions using Daily arXiv rubric 3.0 whose three reports exactly match a stable host-fetched arXiv snapshot, contain identical run metadata and explicitly verified model selection, complete every score, score reason, audit, and natural-Japanese field, and document full-text review of every final top-ten paper.",
+  "historicalRunExceptions": [
+    {
+      "runId": "run-20260714T074541Z-5510c1dfd1c6",
+      "reportDate": "2026-07-14",
+      "reasoningEffort": "ultra",
+      "maximumFullTextEvaluated": {
+        "quant-ph": 35,
+        "gr-qc": 21,
+        "hep-th": 20
+      },
+      "reason": "One completed pre-cap Sol/Ultra evaluation is retained with truthful full-text provenance; the exact run/date exception cannot apply to future runs."
+    }
+  ],
+  "verificationScope": "The host runner fixes gpt-5.6-sol with high reasoning, isolates model and publisher worktrees, and mechanically verifies report structure plus the official arXiv announcement date and complete primary-New ID sets. One exact completed 2026-07-14 Sol/Ultra run is grandfathered so its already-incurred full-text work is reported truthfully rather than discarded or mislabeled. Original titles and authors are read from official version-fixed pages under the evaluation contract but are not independently reproduced by the snapshot parser. The host cannot independently attest private service-side reasoning or make a benchmark-equivalence claim.",
+  "publicationRule": "Publish schema-1.4 editions using Daily arXiv rubric 3.0 whose three reports exactly match a stable host-fetched arXiv snapshot, contain identical run metadata and explicitly verified model selection, complete every score, score reason, audit, and natural-Japanese field, and document full-text review of every final top-ten paper. New daily runs use Sol/High and at most twelve full texts per category; only the exact historical run/date exception listed here may retain its larger already-completed Sol/Ultra review set.",
   "lastReviewed": "2026-07-14"
 }

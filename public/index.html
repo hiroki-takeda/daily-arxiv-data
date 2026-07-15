@@ -139,14 +139,14 @@
   </header>
   <main id="app"><div class="status" role="status">最新の評価データを読み込んでいます…</div></main>
   <script>
-    const cats=['hep-th','gr-qc','quant-ph'];
+    const cats=['quant-ph','gr-qc','hep-th'];
     const scoreFields=[['broadImpact','科学的重要性','重要性'],['categoryImpact','分野への貢献','分野貢献'],['originality','独創性','独創'],['technicalStrength','厳密性・信頼性','信頼性']];
     const DATA_CACHE_PREFIX='daily-arxiv:data:';
     const LAST_GOOD_CACHE='daily-arxiv:last-known-good';
     const INDEX_CACHE='daily-arxiv:index';
     const reportCache=new Map();
     const openPapers=new Set();
-    let data,active='hep-th',selectedFile='current.json',dataLoadNotice='',indexLoadNotice='';
+    let data,active='quant-ph',selectedFile='current.json',dataLoadNotice='',indexLoadNotice='';
     const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
     const multiline=s=>esc(s).replace(/\r\n?|\n/g,'<br>');
     const lines=a=>(a||[]).map(multiline).join('<br>');
@@ -196,7 +196,8 @@
     document.querySelector('#dates').addEventListener('change',event=>{selectedFile=event.target.value+'.json';load(selectedFile)});
     function render({restoreFocusId}={}){
       const run=data.evaluationRun||data.pipeline?.evaluationRun;
-      const model=run?`${run.modelDisplayName||run.modelId||'モデル未記録'} / ${run.reasoningEffort==='ultra'?'Ultra':run.reasoningEffort||'推論設定未記録'}`:'未記録（旧データ）';
+      const effortLabel={ultra:'Ultra',max:'Max',xhigh:'Extra High',high:'High',medium:'Medium',low:'Low'}[run?.reasoningEffort]||run?.reasoningEffort||'推論設定未記録';
+      const model=run?`${run.modelDisplayName||run.modelId||'モデル未記録'} / ${effortLabel}`:'未記録（旧データ）';
       const rubric=data.pipeline?.rubricVersion?`Daily arXiv rubric ${data.pipeline.rubricVersion}`:'未記録（旧データ）';
       document.title=`Daily arXiv — ${data.date}`;
       document.querySelector('#meta').innerHTML=`評価日 ${esc(data.date)}<br>最終更新 ${esc(data.generatedAtJst||'—')}<br>前回正常更新 ${esc(data.lastSuccessfulAtJst||'—')}<br>評価モデル ${esc(model)}<br>評価基準 ${esc(rubric)}`;
@@ -234,6 +235,21 @@
       const detail=state.status==='ready'?state.byId.get(summary.arxivId):null;
       return detail?{...detail,...summary,titleJa:detail.titleJa,scores:detail.scores,scoreReasons:detail.scoreReasons,abstractLines:detail.abstractLines,curiosity:detail.curiosity,concept:detail.concept,conclusion:detail.conclusion,assessment:detail.assessment,evaluationBasis:detail.evaluationBasis,fullTextEvaluated:detail.fullTextEvaluated,fullTextReviewStatus:detail.fullTextReviewStatus,sourceUrls:detail.sourceUrls}:summary;
     }
+    function displayOriginalTitle(value){
+      const greek={alpha:'α',beta:'β',gamma:'γ',delta:'δ',epsilon:'ε',varepsilon:'ϵ',zeta:'ζ',eta:'η',theta:'θ',vartheta:'ϑ',iota:'ι',kappa:'κ',lambda:'λ',mu:'μ',nu:'ν',xi:'ξ',pi:'π',varpi:'ϖ',rho:'ρ',varrho:'ϱ',sigma:'σ',varsigma:'ς',tau:'τ',upsilon:'υ',phi:'φ',varphi:'ϕ',chi:'χ',psi:'ψ',omega:'ω',Gamma:'Γ',Delta:'Δ',Theta:'Θ',Lambda:'Λ',Xi:'Ξ',Pi:'Π',Sigma:'Σ',Upsilon:'Υ',Phi:'Φ',Psi:'Ψ',Omega:'Ω'};
+      const symbols={times:'×',cdot:'·',pm:'±',mp:'∓',le:'≤',leq:'≤',ge:'≥',geq:'≥',ne:'≠',neq:'≠',approx:'≈',sim:'∼',simeq:'≃',propto:'∝',infty:'∞',to:'→',rightarrow:'→',leftarrow:'←',leftrightarrow:'↔',otimes:'⊗',oplus:'⊕',partial:'∂',nabla:'∇',ell:'ℓ',hbar:'ℏ',dagger:'†'};
+      const superscript={'0':'⁰','1':'¹','2':'²','3':'³','4':'⁴','5':'⁵','6':'⁶','7':'⁷','8':'⁸','9':'⁹','+':'⁺','-':'⁻','=':'⁼','(':'⁽',')':'⁾'};
+      const subscript={'0':'₀','1':'₁','2':'₂','3':'₃','4':'₄','5':'₅','6':'₆','7':'₇','8':'₈','9':'₉','+':'₊','-':'₋','=':'₌','(':'₍',')':'₎'};
+      const unicodeScript=(group,single,map)=>[...(group??single)].map(character=>map[character]??character).join('');
+      let text=String(value??'').replace(/---/g,'—').replace(/--/g,'–');
+      text=text.replace(/\\(?:left|right)\b/g,'').replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g,'$1/$2').replace(/\\sqrt\s*\{([^{}]*)\}/g,'√($1)');
+      for(let pass=0;pass<4;pass+=1)text=text.replace(/\\(?:mathcal|mathrm|textrm|mathbf|boldsymbol|mathbb|mathsf|mathtt|operatorname|text)\s*\{([^{}]*)\}/g,'$1');
+      text=text.replace(/\\(?:bar|overline)\s*\{([^{}]+)\}/g,(match,content)=>`${content}\u0305`).replace(/\\hat\s*\{([^{}]+)\}/g,(match,content)=>`${content}\u0302`).replace(/\\tilde\s*\{([^{}]+)\}/g,(match,content)=>`${content}\u0303`);
+      text=text.replace(/\\([A-Za-z]+)(?![A-Za-z])/g,(match,command)=>greek[command]??symbols[command]??'');
+      text=text.replace(/\^\s*\{([0-9+\-=()]+)\}|\^\s*([0-9+\-=()])/g,(match,group,single)=>unicodeScript(group,single,superscript));
+      text=text.replace(/_\s*\{([0-9+\-=()]+)\}|_\s*([0-9+\-=()])/g,(match,group,single)=>unicodeScript(group,single,subscript));
+      return text.replace(/\\([#$%&_{}])/g,'$1').replace(/\\[,;:! ]/g,' ').replace(/\\(.)/g,'$1').replace(/[$]/g,'').replace(/[{}]/g,'').replace(/~/g,' ').replace(/\s+/g,' ').trim();
+    }
     function paperRow(summary,source){
       const paper=source==='report'?mergedReportPaper(summary):summary;
       const key=paperKey(active,summary.arxivId);
@@ -249,7 +265,7 @@
         <summary data-focus-id="${esc(summary.arxivId)}">
           <span class="rank">#${summary.rank}</span>
           <span class="total"><b>${summary.totalScore}</b><small>/100</small></span>
-          <span class="paper-main"><strong class="paper-title">${esc(title)}</strong>${originalTitle?`<span class="paper-original-title" lang="en">${esc(originalTitle)}</span>`:''}<span class="paper-authors">${esc((summary.authors||[]).join(', '))}</span></span>
+          <span class="paper-main"><strong class="paper-title">${esc(title)}</strong>${originalTitle?`<span class="paper-original-title" lang="en">${esc(displayOriginalTitle(originalTitle))}</span>`:''}<span class="paper-authors">${esc((summary.authors||[]).join(', '))}</span></span>
           ${paper.scores?miniScores(paper.scores):''}
           <span class="row-badges"><span class="badge kind">${esc(summary.paperType||'未分類')}</span>${evaluationBadge}${stars.length?`<span class="badge star" title="${esc(stars.join(', '))}" aria-label="著名著者: ${esc(stars.join(', '))}">★</span>`:''}</span>
           <span class="chevron" aria-hidden="true">⌄</span>

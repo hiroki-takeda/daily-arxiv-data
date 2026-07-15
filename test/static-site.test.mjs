@@ -39,15 +39,16 @@ test("the dashboard script compiles and exposes expandable full-rank details", (
 });
 
 test("the dashboard renders and joins a lower-ranked report without browser-only dependencies", async () => {
+  const category = "quant-ph";
   const html = readFileSync(resolve("public/index.html"), "utf8");
   const script = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)][0][1];
   const index = JSON.parse(readFileSync(resolve("public/data/index.json"), "utf8"));
   const reportDate = index.availableDates.find((date) => {
-    const candidate = JSON.parse(readFileSync(resolve("data/reports", `${date}-hep-th.json`), "utf8"));
+    const candidate = JSON.parse(readFileSync(resolve("data/reports", `${date}-${category}.json`), "utf8"));
     return candidate.papers.length > 10;
   });
-  assert.ok(reportDate, "an archived hep-th edition must exercise lower-ranked details");
-  const report = JSON.parse(readFileSync(resolve("data/reports", `${reportDate}-hep-th.json`), "utf8"));
+  assert.ok(reportDate, `an archived ${category} edition must exercise lower-ranked details`);
+  const report = JSON.parse(readFileSync(resolve("data/reports", `${reportDate}-${category}.json`), "utf8"));
   const elements = Object.fromEntries(["#app", "#meta", "#tabs", "#dates"].map((selector) => [selector, {
     innerHTML: "",
     addEventListener() {},
@@ -83,32 +84,33 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
     await new Promise((resolvePromise) => setImmediate(resolvePromise));
   }
   await context.load(`${reportDate}.json`);
-  assert.match(elements["#app"].innerHTML, /hep-th 上位10件/);
+  assert.match(elements["#app"].innerHTML, /quant-ph 上位10件/);
   assert.match(elements["#app"].innerHTML, /11位以下/);
 
   const edition = JSON.parse(readFileSync(resolve("public/data", `${reportDate}.json`), "utf8"));
-  const lowerSummary = edition.categories["hep-th"].otherPapers[0];
+  const lowerSummary = edition.categories[category].otherPapers[0];
   const pendingRow = context.paperRow(lowerSummary, "report");
+  const displayedOriginalTitle = context.displayOriginalTitle(lowerSummary.title);
   assert.match(pendingRow, /<details class="paper-row pending-detail"/);
   assert.match(pendingRow, /<summary data-focus-id=/);
   assert.match(pendingRow, /class="chevron"/);
   assert.doesNotMatch(pendingRow, /選択して詳細を表示/);
   assert.doesNotMatch(pendingRow, />詳細表示</);
   if (lowerSummary.titleJa) {
-    assert.match(pendingRow, new RegExp(`class="paper-title"[^>]*>${escapeRegExp(escapeHtml(lowerSummary.titleJa))}</strong>[\\s\\S]*class="paper-original-title"[^>]*>${escapeRegExp(escapeHtml(lowerSummary.title))}</span>[\\s\\S]*class="paper-authors"`));
+    assert.match(pendingRow, new RegExp(`class="paper-title"[^>]*>${escapeRegExp(escapeHtml(lowerSummary.titleJa))}</strong>[\\s\\S]*class="paper-original-title"[^>]*>${escapeRegExp(escapeHtml(displayedOriginalTitle))}</span>[\\s\\S]*class="paper-authors"`));
   } else {
     assert.doesNotMatch(pendingRow, /class="paper-original-title"/);
   }
 
   const lower = report.papers[10];
-  await context.loadReport("hep-th", lower.arxivId);
+  await context.loadReport(category, lower.arxivId);
   assert.match(elements["#app"].innerHTML, new RegExp(lower.titleJa.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   const loadedRow = context.paperRow(lowerSummary, "report");
   assert.doesNotMatch(loadedRow, /pending-detail/);
   assert.match(loadedRow, /class="mini-scores"/);
   assert.match(loadedRow, />要旨評価<|>全文評価</);
   assert.doesNotMatch(loadedRow, /選択して詳細を表示|>詳細表示</);
-  assert.match(loadedRow, new RegExp(`class="paper-title"[^>]*>${escapeRegExp(escapeHtml(lower.titleJa))}</strong><span class="paper-original-title" lang="en">${escapeRegExp(escapeHtml(lower.title))}</span><span class="paper-authors">${escapeRegExp(escapeHtml(lower.authors.join(", ")))}</span>`));
+  assert.match(loadedRow, new RegExp(`class="paper-title"[^>]*>${escapeRegExp(escapeHtml(lower.titleJa))}</strong><span class="paper-original-title" lang="en">${escapeRegExp(escapeHtml(context.displayOriginalTitle(lower.title)))}</span><span class="paper-authors">${escapeRegExp(escapeHtml(lower.authors.join(", ")))}</span>`));
   assert.equal((loadedRow.match(/class="paper-title"/g) ?? []).length, 1);
   assert.equal((loadedRow.match(/class="paper-original-title"/g) ?? []).length, 1);
   assert.equal((loadedRow.match(/class="paper-authors"/g) ?? []).length, 1);
@@ -141,6 +143,19 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   assert.doesNotMatch(identicalTitleRow, /class="paper-original-title"/);
   assert.equal((identicalTitleRow.match(new RegExp(escapeRegExp(escapeHtml(lower.title)), "g")) ?? []).length, 1);
 
+  const texTitle = String.raw`Symmetry $\mathcal{PT}$ in $SU(2) \times U(1)$ with $\alpha_2^3$, phase-$\theta$ -- test`;
+  const texTitleSnapshot = texTitle;
+  assert.equal(context.displayOriginalTitle(texTitle), "Symmetry PT in SU(2) × U(1) with α₂³, phase-θ – test");
+  assert.equal(texTitle, texTitleSnapshot, "display formatting must not mutate paper.title");
+  const texPaper = { ...lower, title: texTitle, titleJa: "PT対称性と群構造の検証" };
+  const texRow = context.paperRow(texPaper, "top");
+  assert.match(texRow, /class="paper-original-title" lang="en">Symmetry PT in SU\(2\) × U\(1\) with α₂³, phase-θ – test<\/span>/);
+  assert.doesNotMatch(texRow, /[$\\{}]|\\[A-Za-z]+/);
+  assert.equal(texPaper.title, texTitle, "rendering must preserve the exact source title");
+  const residualTex = context.displayOriginalTitle(String.raw`$\unknown{X} \mathbb{Q}_4 \left(2,3\right)$`);
+  assert.equal(residualTex, "X Q₄ (2,3)");
+  assert.doesNotMatch(residualTex, /[$\\{}]|\\[A-Za-z]+/);
+
   const compactLegacy = context.displayAssessment("総合84/100（物理全体23、カテゴリ22、独創性19、方法・結果20）。地平面問題・初期条件・過去完全性を同時に扱う。");
   assert.equal(compactLegacy, "地平面問題・初期条件・過去完全性を同時に扱う。");
   const slashLegacy = context.displayAssessment("総合95/100。物理全体22/25：隣接分野へ波及する。hep-th内25/25：中心課題を前進させる。独創性25/25：新しい構成を与える。方法・結果23/25：導出と限界が明確である。");
@@ -170,7 +185,7 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
     technicalStrength: "本文の導出と限界を照合できる。",
   };
   const withReasons = { ...lower, scoreReasons };
-  assert.doesNotThrow(() => context.validateDetailedPaper(withReasons, "hep-th"));
+  assert.doesNotThrow(() => context.validateDetailedPaper(withReasons, category));
   const reasonDetail = context.paperDetail(withReasons, { ...withReasons, eminentAuthors: [] });
   assert.equal((reasonDetail.match(/class="score-reason"/g) ?? []).length, 4);
   for (const [key, label] of [
@@ -187,13 +202,13 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
 
   const missingReason = structuredClone(withReasons);
   delete missingReason.scoreReasons.originality;
-  assert.throws(() => context.validateDetailedPaper(missingReason, "hep-th"), /invalid score reasons/);
+  assert.throws(() => context.validateDetailedPaper(missingReason, category), /invalid score reasons/);
   const extraReason = structuredClone(withReasons);
   extraReason.scoreReasons.extra = "余分な理由";
-  assert.throws(() => context.validateDetailedPaper(extraReason, "hep-th"), /invalid score reasons/);
+  assert.throws(() => context.validateDetailedPaper(extraReason, category), /invalid score reasons/);
   const emptyReason = structuredClone(withReasons);
   emptyReason.scoreReasons.technicalStrength = "  ";
-  assert.throws(() => context.validateDetailedPaper(emptyReason, "hep-th"), /invalid score reasons/);
+  assert.throws(() => context.validateDetailedPaper(emptyReason, category), /invalid score reasons/);
 
   const versionedSources = {
     ...lower,

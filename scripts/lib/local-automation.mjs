@@ -28,12 +28,12 @@ import {
   selectBackfillSnapshot,
   validateReportsAgainstSnapshot,
 } from "./arxiv-source.mjs";
-import { parseJsonFile } from "./pipeline.mjs";
+import { parseJsonFile, validateProductionReportSet } from "./pipeline.mjs";
 
 export const MODEL_ID = "gpt-5.6-sol";
 export const MODEL_DISPLAY_NAME = "GPT-5.6-Sol";
-export const REASONING_EFFORT = "ultra";
-export const CATEGORIES = Object.freeze(["hep-th", "gr-qc", "quant-ph"]);
+export const REASONING_EFFORT = "high";
+export const CATEGORIES = Object.freeze(["quant-ph", "gr-qc", "hep-th"]);
 export const MANIFEST_SCHEMA = "1.0";
 export const EXPECTED_REMOTE = /^(?:git@github\.com:|https:\/\/github\.com\/|ssh:\/\/git@github\.com\/)(?:hiroki-takeda\/daily-arxiv-data)(?:\.git)?$/;
 
@@ -51,12 +51,15 @@ export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   "data/model-policy.json",
   "docs/SCHEDULED_TASK_PROMPT.md",
   "package.json",
+  "scripts/audit-staged-language.mjs",
+  "scripts/extract-arxiv-source.mjs",
   "scripts/lib/arxiv-source.mjs",
   "scripts/lib/local-automation.mjs",
   "scripts/lib/macos-schedule.mjs",
   "scripts/lib/pipeline.mjs",
   "scripts/publish-edition.mjs",
   "scripts/run-local-automation.mjs",
+  "scripts/validate-staged-reports.mjs",
 ]);
 
 function fail(message) {
@@ -385,7 +388,7 @@ export function buildCodexArgs({ worktree, runRoot }) {
     "--config", "allow_login_shell=false",
     "--config", "features.network_proxy.enabled=true",
     "--config", "features.prevent_idle_sleep=true",
-    "--config", 'tools.web_search={context_size="high",allowed_domains=["arxiv.org","export.arxiv.org"]}',
+    "--config", 'tools.web_search={context_size="medium",allowed_domains=["arxiv.org","export.arxiv.org"]}',
     "--config", `projects.${JSON.stringify(worktree)}.trust_level=\"trusted\"`,
     "--config", 'shell_environment_policy.inherit="core"',
     "--config", 'shell_environment_policy.exclude=["SSH_AUTH_SOCK","CODEX_HOME","GITHUB_*","GH_*","*KEY*","*TOKEN*","*SECRET*","*PASSWORD*"]',
@@ -408,7 +411,7 @@ export function buildCodexArgs({ worktree, runRoot }) {
   ];
 }
 
-export function buildAutomationPrompt({ runId, staging, manifest, snapshot }) {
+export function buildAutomationPrompt({ runId, staging, snapshot }) {
   validateRunId(runId);
   if (!snapshot || typeof snapshot !== "object") fail("An official arXiv snapshot is required for the model prompt.");
   const snapshotJson = JSON.stringify(snapshot, null, 2);
@@ -420,32 +423,23 @@ Host-enforced runtime contract:
 - reasoningEffort: ${REASONING_EFFORT}
 - runId: ${runId}
 - staging directory: ${staging}
-- final manifest: ${manifest}
 
 The host independently fetched and parsed the official arXiv /new and, when needed, /pastweek listings before this run. This snapshot is authoritative for the edition date, exact primary-new arXiv IDs, and cross-list counts. Do not substitute another date or paper set:
 ${snapshotJson}
 
-Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely, then follow their research, selection, rubric 3.0 scoring, natural-Japanese writing, paper-specific score-reason, full-text review, schema 1.4, and safety requirements. Use the native web-search capability and official arXiv pages/PDFs. Do not use an API key. Never write a PDF, credential, cache, report, or generated data inside the Git worktree. Do not modify tracked files. Do not run git add, git commit, git push, npm run publish, or scripts/publish-edition.mjs. The host process alone publishes after validation.
+Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely, then follow their research, selection, rubric 3.0 scoring, natural-Japanese writing, paper-specific score-reason, full-text review, schema 1.4, and safety requirements. Those two files are the complete contract: do not inspect historical reports, public data, pipeline implementation, or tests as examples, and do not reuse prior rankings or prose. Use the native web-search capability and official arXiv pages/PDFs. For reproducible full-text inspection, use the repository's dependency-free scripts/extract-arxiv-source.mjs helper exactly as specified; it retrieves version-fixed official e-print source and writes only bounded text under this run root. Do not use an API key. Never write a PDF, credential, cache, report, or generated data inside the Git worktree. Do not modify tracked files. Do not run git add, git commit, git push, npm run publish, or scripts/publish-edition.mjs. The host process alone publishes after validation.
 
 Use ${runId} unchanged in evaluationRun.runId for all three category reports. Use exactly ${MODEL_ID}, ${MODEL_DISPLAY_NAME}, ${REASONING_EFFORT}, and modelSelectionVerified=true in the three evaluationRun objects; these values come from the host CLI invocation and must not be altered or inferred from prose. Keep the rubric and runId identical across all three categories.
 
-Research and evaluate exactly the announcement date and paper IDs in the host snapshot. The host already confirmed that it is newer than the current public edition. Write exactly these three files directly under ${staging}:
-  <YYYY-MM-DD>-hep-th.json
-  <YYYY-MM-DD>-gr-qc.json
+Research and evaluate exactly the announcement date and paper IDs in the host snapshot. The host already confirmed that it is newer than the current public edition. Screen every abstract, but open full text only for the provisional top 12 papers in each category. Every final top-10 paper must be among those reviewed papers, and no category report may mark more than 12 papers as full-text evaluated. Keep each reader-facing field within the character budgets in docs/SCHEDULED_TASK_PROMPT.md. Write exactly these three files directly under ${staging}:
   <YYYY-MM-DD>-quant-ph.json
+  <YYYY-MM-DD>-gr-qc.json
+  <YYYY-MM-DD>-hep-th.json
 Do not write any other file in the staging directory.
 
-As the final filesystem action, write strict JSON to ${manifest}. It must contain exactly these seven keys in this order-independent contract:
-{
-  "schemaVersion": "${MANIFEST_SCHEMA}",
-  "runId": "${runId}",
-  "status": "ready",
-  "reportDate": "YYYY-MM-DD",
-  "stagingDirectory": "${staging}",
-  "reportFiles": ["<date>-hep-th.json", "<date>-gr-qc.json", "<date>-quant-ph.json"],
-  "message": "a concise result summary"
-}
-Do not claim ready unless all three reports exactly cover the snapshot and are complete. On any research, model, network, date-alignment, or validation uncertainty, do not invent data and do not write a ready manifest; exit with an error so the previous public edition remains unchanged.
+After all three reports are complete, run the fixed exhaustive language audit once and repair every listed field in one batch. Run the exhaustive audit only once more after that batch. Never use the final validator as a one-error-at-a-time repair loop. The exact commands and bounded failure rule are in docs/SCHEDULED_TASK_PROMPT.md. Run the fixed final validator exactly once after the second audit reports zero issues. If either audit or the final validator fails, do not keep iterating: exit with an error so the previous public edition remains unchanged.
+
+The final validator is the last command in a successful model run. After it prints STAGED_REPORTS_VALID, stop immediately without any further filesystem action. Never create or write a manifest, completion marker, status file, or outbox entry; the host requires the outbox directory to remain empty and derives the expected date and filenames from its own snapshot. Do not claim success unless all three reports exactly cover the snapshot and are complete. On any research, model, network, date-alignment, or validation uncertainty, do not invent data; exit with an error.
 `;
 }
 
@@ -1041,13 +1035,45 @@ function readStableRegularFile(path, maxBytes) {
   }
 }
 
+function expectedReportFiles(date) {
+  validateDate(date);
+  return CATEGORIES.map((category) => `${date}-${category}.json`);
+}
+
+export function validateModelOutputLayout({ stagingDirectory, outboxDirectory, date }) {
+  assertPlainDirectory(stagingDirectory, "Model staging directory");
+  assertPlainDirectory(outboxDirectory, "Model outbox directory");
+  const outboxFiles = readdirSync(outboxDirectory).sort();
+  if (outboxFiles.length !== 0) {
+    fail("Model outbox directory must remain empty.");
+  }
+  const expectedFiles = expectedReportFiles(date);
+  const actualFiles = readdirSync(stagingDirectory).sort();
+  const sortedExpected = [...expectedFiles].sort();
+  if (actualFiles.join("\0") !== sortedExpected.join("\0")) {
+    fail(`Model staging directory must contain exactly: ${sortedExpected.join(", ")}.`);
+  }
+  for (const file of expectedFiles) {
+    const path = join(stagingDirectory, file);
+    assertPlainFile(path, `Model report ${file}`);
+    if (statSync(path).size > MAX_REPORT_BYTES) fail(`Model report ${file} exceeds the 10 MiB safety limit.`);
+  }
+  return Object.freeze({ date, files: Object.freeze(expectedFiles) });
+}
+
 export function copyReportsToHostStaging({ sourceDirectory, hostDirectory, date }) {
   assertPlainDirectory(sourceDirectory, "Model staging directory");
   assertPlainDirectory(hostDirectory, "Host staging directory");
   if (readdirSync(hostDirectory).length !== 0) fail("Host staging directory must start empty.");
+  const expectedFiles = expectedReportFiles(date);
+  const actualFiles = readdirSync(sourceDirectory).sort();
+  const sortedExpected = [...expectedFiles].sort();
+  if (actualFiles.join("\0") !== sortedExpected.join("\0")) {
+    fail(`Model staging directory must contain exactly: ${sortedExpected.join(", ")}.`);
+  }
   const copied = {};
-  for (const category of CATEGORIES) {
-    const file = `${date}-${category}.json`;
+  for (const [index, category] of CATEGORIES.entries()) {
+    const file = expectedFiles[index];
     const source = join(sourceDirectory, file);
     assertPlainFile(source, `Model report ${file}`);
     const content = readStableRegularFile(source, MAX_REPORT_BYTES);
@@ -1124,7 +1150,6 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
     const prompt = buildAutomationPrompt({
       runId,
       staging: paths.staging,
-      manifest: paths.manifest,
       snapshot,
     });
     invokeCodex({ codexBin, worktree: agent.worktree, paths, prompt });
@@ -1132,16 +1157,23 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
     if (!postCodexWorktree.exists || postCodexWorktree.head !== originMain) {
       fail("Agent worktree identity, cleanliness, or HEAD changed during Codex generation; no publication was attempted.");
     }
-    const result = validateManifest(paths.manifest, { runId, stagingPath: paths.staging });
-    if (result.date !== snapshot.announcementDate) {
-      fail(`Model report date ${result.date} does not match official snapshot ${snapshot.announcementDate}.`);
-    }
-    const reports = copyReportsToHostStaging({
-      sourceDirectory: result.stagingPath,
-      hostDirectory: paths.hostStaging,
-      date: result.date,
+    validateModelOutputLayout({
+      stagingDirectory: paths.staging,
+      outboxDirectory: paths.outbox,
+      date: snapshot.announcementDate,
     });
-    validateReportsAgainstSnapshot(reports, snapshot, { date: result.date });
+    const reports = copyReportsToHostStaging({
+      sourceDirectory: paths.staging,
+      hostDirectory: paths.hostStaging,
+      date: snapshot.announcementDate,
+    });
+    const policy = parseJsonFile(join(root, "data", "model-policy.json"));
+    validateProductionReportSet(reports, {
+      date: snapshot.announcementDate,
+      policy,
+      expectedRunId: runId,
+    });
+    validateReportsAgainstSnapshot(reports, snapshot, { date: snapshot.announcementDate });
 
     const freshPastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
     revalidatePastweekSnapshot(snapshot, freshPastweekWindow);
@@ -1149,15 +1181,15 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
       fail("Publisher worktree HEAD changed during generation; no publication was attempted.");
     }
     assertCleanWorktree(root);
-    invokePublisher({ worktree: root, date: result.date, stagingPath: paths.hostStaging });
-    console.log(`AUTOMATION_PUBLISHED: ${result.date} (runId ${runId}).`);
+    invokePublisher({ worktree: root, date: snapshot.announcementDate, stagingPath: paths.hostStaging });
+    console.log(`AUTOMATION_PUBLISHED: ${snapshot.announcementDate} (runId ${runId}).`);
     notifyMac("published");
     try {
       removeSuccessfulRunArtifacts(paths);
     } catch (cleanupError) {
       console.error(`ARTIFACT_CLEANUP_WARNING: ${cleanupError.message}`);
     }
-    return Object.freeze({ status: "published", runId, date: result.date });
+    return Object.freeze({ status: "published", runId, date: snapshot.announcementDate });
   } catch (error) {
     runError = error;
     throw error;

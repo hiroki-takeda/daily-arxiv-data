@@ -71,15 +71,20 @@ test("a production public edition must match its three immutable source reports"
   assert.throws(() => validateRepository(root), /does not match its source report/);
 });
 
-test("secret material, PDFs, and nested .git directories are found", () => {
+test("secret material, PDF content, and every nested .git entry are found", () => {
   const root = mkdtempSync(resolve(tmpdir(), "daily-arxiv-forbidden-"));
   mkdirSync(resolve(root, "nested/.git"), { recursive: true });
+  mkdirSync(resolve(root, "nested-file"));
+  writeFileSync(resolve(root, "nested-file/.git"), "gitdir: /tmp/example\n");
   writeFileSync(resolve(root, "paper.PDF"), "%PDF fixture");
+  writeFileSync(resolve(root, "disguised.bin"), "%PDF-1.7\n");
   const token = ["sk", "abcdefghijklmnopqrstuvwxyz123456"].join("-");
   writeFileSync(resolve(root, "notes.txt"), `token=${token}\n`);
   const problems = findForbiddenRepositoryArtifacts(root).join("\n");
   assert.match(problems, /nested \.git/);
+  assert.match(problems, /nested-file\/\.git: nested \.git entry is forbidden/);
   assert.match(problems, /PDF files are forbidden/);
+  assert.match(problems, /disguised\.bin: PDF content is forbidden regardless of filename/);
   assert.match(problems, /probable secret/);
 });
 

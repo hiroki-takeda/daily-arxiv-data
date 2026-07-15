@@ -24,6 +24,7 @@ import {
   runPaths,
   sanitizedChildEnv,
   validateManifest,
+  validateModelOutputLayout,
 } from "../scripts/lib/local-automation.mjs";
 
 const RUN_ID = "run-20990105T123456Z-abcdef123456";
@@ -31,9 +32,9 @@ const DATE = "2099-01-05";
 const SNAPSHOT = Object.freeze({
   announcementDate: DATE,
   categories: {
-    "hep-th": { slug: "hep-th", sourceUrl: "https://arxiv.org/list/hep-th/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00001"] },
-    "gr-qc": { slug: "gr-qc", sourceUrl: "https://arxiv.org/list/gr-qc/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00002"] },
     "quant-ph": { slug: "quant-ph", sourceUrl: "https://arxiv.org/list/quant-ph/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00003"] },
+    "gr-qc": { slug: "gr-qc", sourceUrl: "https://arxiv.org/list/gr-qc/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00002"] },
+    "hep-th": { slug: "hep-th", sourceUrl: "https://arxiv.org/list/hep-th/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00001"] },
   },
 });
 
@@ -70,7 +71,9 @@ test("runtime update barrier covers every scheduled runtime dependency", () => {
   for (const path of [
     "AGENTS.md",
     "docs/SCHEDULED_TASK_PROMPT.md",
+    "scripts/extract-arxiv-source.mjs",
     "scripts/run-local-automation.mjs",
+    "scripts/validate-staged-reports.mjs",
     "scripts/lib/local-automation.mjs",
     "scripts/lib/macos-schedule.mjs",
     "scripts/lib/arxiv-source.mjs",
@@ -82,11 +85,11 @@ test("runId generation is stable-format and injectable for tests", () => {
   assert.equal(makeRunId(new Date("2099-01-05T12:34:56.789Z"), "abcdef123456"), RUN_ID);
 });
 
-test("Codex invocation fixes model, Ultra reasoning, beta permissions, network, approvals, and web search", () => {
+test("Codex invocation fixes Sol, High reasoning, beta permissions, network, approvals, and web search", () => {
   const args = buildCodexArgs({ worktree: "/repo-automation", runRoot: "/tmp/run" });
   assert.deepEqual(args.slice(0, 2), ["--strict-config", "--search"]);
   assert.ok(args.includes(MODEL_ID));
-  assert.ok(args.includes('model_reasoning_effort="ultra"'));
+  assert.ok(args.includes('model_reasoning_effort="high"'));
   assert.ok(args.includes('default_permissions="daily_arxiv_model"'));
   assert.ok(!args.some((value) => value.startsWith("permissions.daily_arxiv_model.extends=")));
   assert.ok(args.some((value) => value.includes('":root"="deny"') && value.includes('":slash_tmp"="deny"') && value.includes('"~/.codex"="deny"')));
@@ -95,7 +98,7 @@ test("Codex invocation fixes model, Ultra reasoning, beta permissions, network, 
   assert.ok(args.includes("allow_login_shell=false"));
   assert.ok(args.includes("features.network_proxy.enabled=true"));
   assert.ok(args.some((value) => value.startsWith("permissions.daily_arxiv_model.network=") && value.includes('"arxiv.org"="allow"')));
-  assert.ok(args.includes('tools.web_search={context_size="high",allowed_domains=["arxiv.org","export.arxiv.org"]}'));
+  assert.ok(args.includes('tools.web_search={context_size="medium",allowed_domains=["arxiv.org","export.arxiv.org"]}'));
   assert.ok(args.includes('projects."/repo-automation".trust_level="trusted"'));
   assert.ok(args.includes('shell_environment_policy.set.HOME="/tmp/run/home"'));
   assert.ok(args.includes('shell_environment_policy.set.TMPDIR="/tmp/run"'));
@@ -141,21 +144,29 @@ test("login preflight accepts ChatGPT login and rejects API-key login", async ()
   assert.throws(() => assertChatGptLogin(apiKey), /not authenticated with ChatGPT/);
 });
 
-test("automation prompt binds host runId and outbox while forbidding model-side publication", () => {
+test("automation prompt binds host runId and requires validator-last output without a manifest", () => {
   const prompt = buildAutomationPrompt({
     runId: RUN_ID,
     staging: "/tmp/run/staging",
-    manifest: "/tmp/run/outbox/manifest.json",
     snapshot: SNAPSHOT,
   });
   assert.match(prompt, new RegExp(RUN_ID));
   assert.match(prompt, /modelId: gpt-5\.6-sol/);
-  assert.match(prompt, /reasoningEffort: ultra/);
+  assert.match(prompt, /reasoningEffort: high/);
+  assert.match(prompt, /provisional top 12 papers in each category/);
+  assert.match(prompt, /extract-arxiv-source\.mjs helper/);
+  assert.match(prompt, /do not inspect historical reports, public data, pipeline implementation, or tests/);
+  assert.match(prompt, /no category report may mark more than 12 papers/);
   assert.match(prompt, /rubric 3\.0 scoring/);
   assert.match(prompt, /natural-Japanese writing/);
   assert.match(prompt, /schema 1\.4/);
   assert.match(prompt, /Do not run git add, git commit, git push/);
   assert.match(prompt, /host process alone publishes/);
+  assert.match(prompt, /STAGED_REPORTS_VALID/);
+  assert.match(prompt, /outbox directory to remain empty/);
+  assert.match(prompt, /Never create or write a manifest/);
+  assert.doesNotMatch(prompt, /final manifest:/);
+  assert.doesNotMatch(prompt, /manifest\.json/);
   assert.match(prompt, /2099\.00001/);
 });
 
@@ -169,6 +180,13 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   }
   assert.match(specification, /Daily arXiv rubric 3\.0/);
   assert.match(specification, /technicalStrength`の18点以上は全文確認/);
+  assert.match(specification, /node scripts\/extract-arxiv-source\.mjs/);
+  assert.match(specification, /node scripts\/validate-staged-reports\.mjs YYYY-MM-DD/);
+  assert.match(specification, /manifest、completion marker、status fileを作らず/);
+  assert.match(specification, /outboxは空のまま/);
+  assert.match(specification, /`STAGED_REPORTS_VALID`になった場合は、それを最後のコマンドとして直ちに終了/);
+  assert.match(specification, /`data\/reports\/`、`public\/data\/`、`scripts\/lib\/pipeline\.mjs`、testsを例として読みません/);
+  assert.match(specification, /取得成功、ファイルサイズ、節名の検索だけを全文確認の代用にしてはいけません/);
   assert.match(specification, /`titleJa`:[^\n]*日本語として自然に読める表示題名/);
   assert.match(specification, /固有名・数式・標準略語だけを英字で残し/);
   assert.match(specification, /`title`にはarXivの原題を一字一句そのまま保存/);
@@ -328,6 +346,57 @@ test("reports are copied into an initially empty host-only staging directory", a
   );
 });
 
+test("host output layout requires exact regular reports and an empty outbox", async () => {
+  const valid = await fixture();
+  for (const category of CATEGORIES) writeFileSync(join(valid.staging, `${DATE}-${category}.json`), "{}\n");
+  assert.deepEqual(
+    validateModelOutputLayout({
+      stagingDirectory: valid.staging,
+      outboxDirectory: join(valid.root, "outbox"),
+      date: DATE,
+    }),
+    { date: DATE, files: CATEGORIES.map((category) => `${DATE}-${category}.json`) },
+  );
+
+  const nonemptyOutbox = await fixture();
+  for (const category of CATEGORIES) writeFileSync(join(nonemptyOutbox.staging, `${DATE}-${category}.json`), "{}\n");
+  writeFileSync(nonemptyOutbox.manifest, "");
+  assert.throws(
+    () => validateModelOutputLayout({
+      stagingDirectory: nonemptyOutbox.staging,
+      outboxDirectory: join(nonemptyOutbox.root, "outbox"),
+      date: DATE,
+    }),
+    /outbox directory must remain empty/,
+  );
+
+  const extra = await fixture();
+  for (const category of CATEGORIES) writeFileSync(join(extra.staging, `${DATE}-${category}.json`), "{}\n");
+  writeFileSync(join(extra.staging, "extra.json"), "{}\n");
+  assert.throws(
+    () => validateModelOutputLayout({
+      stagingDirectory: extra.staging,
+      outboxDirectory: join(extra.root, "outbox"),
+      date: DATE,
+    }),
+    /staging directory must contain exactly/,
+  );
+
+  const linked = await fixture();
+  for (const category of CATEGORIES.slice(1)) writeFileSync(join(linked.staging, `${DATE}-${category}.json`), "{}\n");
+  const target = join(linked.root, "target.json");
+  writeFileSync(target, "{}\n");
+  symlinkSync(target, join(linked.staging, `${DATE}-${CATEGORIES[0]}.json`));
+  assert.throws(
+    () => validateModelOutputLayout({
+      stagingDirectory: linked.staging,
+      outboxDirectory: join(linked.root, "outbox"),
+      date: DATE,
+    }),
+    /symlink/,
+  );
+});
+
 test("a successful run removes only its own temporary directories and Codex log", async () => {
   const root = await mkdtemp(join(tmpdir(), "daily-arxiv-success-cleanup-test-"));
   const base = join(root, "temp");
@@ -415,7 +484,7 @@ test("manifest rejects runId substitution, extra staging files, and symlink repo
   for (const category of CATEGORIES.slice(1)) writeFileSync(join(linked.staging, `${DATE}-${category}.json`), "{}\n");
   const target = join(linked.root, "target.json");
   writeFileSync(target, "{}\n");
-  symlinkSync(target, join(linked.staging, `${DATE}-hep-th.json`));
+  symlinkSync(target, join(linked.staging, `${DATE}-${CATEGORIES[0]}.json`));
   writeFileSync(linked.manifest, `${JSON.stringify(manifestObject(linked.staging))}\n`);
   assert.throws(() => validateManifest(linked.manifest, { runId: RUN_ID, stagingPath: linked.staging }), /symlink/);
 });

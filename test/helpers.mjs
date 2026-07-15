@@ -13,10 +13,11 @@ export function validPolicy() {
     schemaVersion: "1.1",
     requiredModelId: "gpt-5.6-sol",
     requiredModelDisplayName: "GPT-5.6-Sol",
-    requiredReasoningEffort: "ultra",
+    requiredReasoningEffort: "high",
     requireExplicitModelSelection: true,
     qualificationStatus: "not_benchmarked",
     qualificationRequiredForPublication: false,
+    historicalRunExceptions: [],
     verificationScope: "Metadata is checked; scheduler model selection cannot be independently attested.",
     publicationRule: "Only complete schema-1.4 editions with exact runtime metadata may publish.",
     lastReviewed: "2099-01-05",
@@ -27,7 +28,7 @@ export function validRun() {
   return {
     modelId: "gpt-5.6-sol",
     modelDisplayName: "GPT-5.6-Sol",
-    reasoningEffort: "ultra",
+    reasoningEffort: "high",
     modelSelectionVerified: true,
     runId: "run-2099-01-05-fixture",
   };

@@ -318,13 +318,17 @@ test("snapshot requires exactly the three hardcoded categories on one announceme
     /repeats gr-qc/,
   ));
   await t.test("date mismatch", () => assert.throws(
-    () => buildOfficialListingSnapshot([listings[0], listings[1], parsedListing("quant-ph", { date: "2026-07-09" })]),
+    () => buildOfficialListingSnapshot([
+      listings[0],
+      listings[1],
+      parsedListing(ARXIV_CATEGORIES[2], { date: "2026-07-09" }),
+    ]),
     /same announcement date/,
   ));
   await t.test("category overlap", () => assert.throws(
     () => buildOfficialListingSnapshot([
       listings[0],
-      parsedListing("gr-qc", { ids: [IDS["hep-th"][0]] }),
+      parsedListing(ARXIV_CATEGORIES[1], { ids: [IDS[ARXIV_CATEGORIES[0]][0]] }),
       listings[2],
     ]),
     /more than one primary category/,

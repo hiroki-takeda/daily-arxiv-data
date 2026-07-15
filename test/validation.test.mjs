@@ -37,6 +37,23 @@ test("model policy is enforceable without claiming benchmark qualification", () 
   assert.throws(() => validateModelPolicy(policy), /not_benchmarked/);
 });
 
+test("one exact historical run exception cannot authorize another date or run", () => {
+  const reports = validReportSet();
+  for (const report of Object.values(reports)) report.evaluationRun.reasoningEffort = "ultra";
+  const policy = validPolicy();
+  policy.historicalRunExceptions = [{
+    runId: "run-2099-01-05-fixture",
+    reportDate: DATE,
+    reasoningEffort: "ultra",
+    maximumFullTextEvaluated: { "quant-ph": 12, "gr-qc": 12, "hep-th": 12 },
+    reason: "A completed pre-cap fixture is preserved without changing its provenance.",
+  }];
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy }));
+
+  policy.historicalRunExceptions[0].reportDate = "2099-01-06";
+  assert.throws(() => validateProductionReportSet(reports, { date: DATE, policy }), /reasoningEffort.*must be high/);
+});
+
 test("invalid schema is rejected", () => {
   rejectsMutation((reports) => { reports["hep-th"].schemaVersion = "1.2"; }, /schemaVersion/);
 });
@@ -75,6 +92,41 @@ test("schema 1.4 requires exact Japanese score reasons and the stable rubric mar
   rejectsMutation((reports) => { reports["hep-th"].audit.scoreRubric = "四つの軸を採点する。"; }, /Daily arXiv rubric 3\.0/);
 });
 
+test("schema 1.4 score reasons describe paper evidence rather than evaluator provenance", () => {
+  for (const phrase of [
+    "公式v1本文で定理と数値検証を確認した。",
+    "公式抄録で数値比較を確認したが、本文未確認である。",
+    "数値比較はあるが、頑健性は要旨から確認できない。",
+    "主定理と数値結果を確認したが、別模型での頑健性は未検証である。",
+    "形式証明のインターフェース層を本文で追跡したが、全依存は未検証である。",
+    "誤差解析は含むが、要旨上は新しい証明を主張しない。",
+    "主定理は示されるが、独立再導出していない。",
+  ]) {
+    rejectsMutation((reports) => {
+      reports["quant-ph"].papers[0].scoreReasons.technicalStrength = phrase;
+    }, /evaluator review provenance/);
+  }
+
+  const accepted = validReportSet();
+  accepted["quant-ph"].papers[0].fullTextReviewStatus = "公式v1本文で主定理と数値検証を確認し、独立再導出は行っていない。";
+  assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
+});
+
+test("schema 1.4 reader prose keeps review provenance in the dedicated status field", () => {
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].conclusion = "主要結果は有望だが、頑健性は要旨から確認できない。";
+  }, /paper content rather than evaluator review provenance/);
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].assessment = "中心成果は有用である。ただし公式概要だけの評価であり、適用域は未確認である。";
+  }, /paper content rather than evaluator review provenance/);
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].abstractLines[2] = "主要結果を報告するが、誤差評価は本文未確認である。";
+  }, /paper content rather than evaluator review provenance/);
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].conclusion = "二つの指標は異なる応答を示すが、要旨の記述には解釈上の不整合が残る。";
+  }, /paper content rather than evaluator review provenance/);
+});
+
 test("schema 1.4 rejects repeated reasons within a paper or across a category", () => {
   rejectsMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
@@ -107,7 +159,7 @@ test("schema 1.4 diversity limit is strictly greater than 25 percent", () => {
 });
 
 test("schema 1.4 requires Japanese prose in every reader-facing evaluation field", () => {
-  for (const field of ["titleJa", "curiosity", "concept", "conclusion", "assessment"]) {
+  for (const field of ["titleJa", "paperType", "curiosity", "concept", "conclusion", "assessment"]) {
     rejectsMutation((reports) => { reports["hep-th"].papers[0][field] = "English only"; }, /natural Japanese/);
   }
   rejectsMutation((reports) => { reports["hep-th"].papers[0].abstractLines[1] = "English only"; }, /natural Japanese/);
@@ -117,6 +169,18 @@ test("schema 1.4 requires Japanese prose in every reader-facing evaluation field
   rejectsMutation((reports) => { reports["hep-th"].papers[0].scoreReasons.originality = "根拠です。"; }, /at least 12/);
   rejectsMutation((reports) => { reports["hep-th"].papers[0].assessment = "評価です。"; }, /at least 12/);
   rejectsMutation((reports) => { reports["hep-th"].papers[0].fullTextReviewStatus = "English only"; }, /natural Japanese/);
+});
+
+test("schema 1.4 caps reader-facing prose to control recurring output usage", () => {
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].assessment = "中心成果の価値と主要な制約を具体的に記述する。".repeat(20);
+  }, /at most 160 characters/);
+  rejectsMutation((reports) => {
+    reports["gr-qc"].papers[0].abstractLines[0] = "対象となる物理問題と前提条件を説明する。".repeat(20);
+  }, /at most 120 characters/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].scoreReasons.originality = "最も近い既存研究との差分と継承部分を具体的に説明する。".repeat(20);
+  }, /at most 180 characters/);
 });
 
 test("schema 1.4 rejects untranslated lowercase English in Japanese evaluation prose", () => {
@@ -133,6 +197,59 @@ test("schema 1.4 rejects untranslated lowercase English in Japanese evaluation p
   const accepted = validReportSet();
   accepted["hep-th"].papers[0].fullTextReviewStatus = "公式v1全文でbilby_glitchの実装とcoth(1)極限を確認した。";
   assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
+});
+
+test("schema 1.4 translates general English terms while preserving proper names and standard abbreviations", () => {
+  for (const phrase of [
+    "depolarizing雑音",
+    "truncated Wigner近似",
+    "software実装",
+    "quantum discordを用いた相関",
+    "Rydberg blockadeを用いた制御",
+    "qubitization手法",
+    "rank-1射影",
+    "polar CSS符号",
+  ]) {
+    rejectsMutation((reports) => {
+      reports["quant-ph"].papers[0].concept = `${phrase}を中心手法として量子状態を解析する。`;
+    }, /general English prose term/);
+  }
+
+  const accepted = validReportSet();
+  accepted["quant-ph"].papers[0].paperType = "理論・CSS符号解析";
+  accepted["quant-ph"].papers[0].concept = "Wigner関数とCSS符号をKerr時空のQNM解析に用いる。";
+  assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
+});
+
+test("schema 1.4 rejects ASCII spaces at Japanese word boundaries", () => {
+  rejectsMutation((reports) => {
+    reports["gr-qc"].papers[0].concept = "全 相対論的 離心 波形を用いて環境効果を識別する。";
+  }, /ASCII spaces at Japanese word boundaries/);
+  rejectsMutation((reports) => {
+    reports["hep-th"].papers[0].assessment = "de Sitter 時空での解析は有用だが、適用範囲が限られる。";
+  }, /ASCII spaces at Japanese word boundaries/);
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].scoreReasons.technicalStrength = "128 無秩序 シミュレーションと実験比較で中心主張を検証した。";
+  }, /ASCII spaces at Japanese word boundaries/);
+
+  const accepted = validReportSet();
+  accepted["hep-th"].papers[0].concept = "de Sitter時空とStudent-t Monte Carlo誤差を同じ枠組みで解析する。";
+  assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
+});
+
+test("schema 1.4 rejects known literal or nonstandard Japanese phrases", () => {
+  for (const phrase of [
+    "一ループ",
+    "模型切断",
+    "技術的強度",
+    "ブートストラップを回転させる",
+    "無質量フェルミオンSchwinger対の電流",
+    "ローレンツ時空スレッド",
+  ]) {
+    rejectsMutation((reports) => {
+      reports["hep-th"].papers[0].assessment = `中心成果は${phrase}を含むが、適用範囲には制約が残る。`;
+    }, /known unnatural Japanese phrase/);
+  }
 });
 
 test("schema 1.4 requires a Japanese display title rather than a mixed or repeated original", () => {
@@ -188,6 +305,77 @@ test("schema 1.4 assessment is narrative and never repeats numeric score summari
   rejectsMutation((reports) => {
     reports["hep-th"].papers[0].assessment = "中心成果は有用である。技術的信頼性は23点で、適用範囲は限定される。";
   }, /without repeating total or axis scores/);
+});
+
+test("schema 1.4 assessment cannot repeat the title or use generic filler", () => {
+  rejectsMutation((reports) => {
+    const paper = reports["quant-ph"].papers[0];
+    paper.assessment = `${paper.titleJa}に関する結果を報告する。点に価値があるが、本文を未確認のため、主張の頑健性は判断していない。`;
+  }, /complete Japanese display title|generic rationale phrase/);
+});
+
+test("schema 1.4 rejects discovered batch templates in questions and assessments", () => {
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].curiosity = "既存手法では届かなかった何を、どの仕組みで実現できるか。";
+  }, /generic rationale phrase/);
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].assessment = "要旨は対象に焦点を絞り、比較可能な問いへ具体化している。一方、誤差評価、条件依存性、既存法との差の全体は本文確認を要する。";
+  }, /generic rationale phrase|paper content rather than evaluator review provenance/);
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].assessment = "問題設定から中心手法、定量的または厳密な主結果までを結んだ点が強みである。一方、適用範囲は限定される。";
+  }, /generic rationale phrase/);
+});
+
+test("schema 1.4 rejects a repeated question skeleton with paper-specific insertions", () => {
+  const reports = validReportSet({ count: 20 });
+  reports["quant-ph"].papers.forEach((paper, index) => {
+    paper.curiosity = `論文${index + 1}の固有問題では到達しない量は何か、提案機構によって観測可能域をどこまで拡張できるか。`;
+  });
+  assert.throws(
+    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+    /papers\.curiosity.*sentence skeleton/,
+  );
+});
+
+test("schema 1.4 rejects repeated score-reason scaffolding around distinct claims", () => {
+  const reports = validReportSet({ count: 20 });
+  reports["quant-ph"].papers.forEach((paper, index) => {
+    paper.scoreReasons.broadImpact = `論文${index + 1}の成果は固有領域との接点を持つが、異分野への効果は間接的である。一方、個別条件${index + 1}に依存する。この条件が主な制約である。`;
+  });
+  assert.throws(
+    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+    /scoreReasons\.broadImpact.*sentence skeleton/,
+  );
+});
+
+test("schema 1.4 structural diversity permits shared terminology and exactly 25 percent reuse", () => {
+  const reports = validReportSet({ count: 20 });
+  for (const report of Object.values(reports)) {
+    report.papers.forEach((paper, index) => {
+      const number = index + 1;
+      paper.abstractLines = [
+        `量子エンタングルメントの背景を第${number}条件で整理した。`,
+        `量子エンタングルメントの手法を第${number}設定で検証した。`,
+        `量子エンタングルメントの結論を第${number}事例で示した。`,
+      ];
+      paper.curiosity = index < 5
+        ? `第${number}の固有問題では到達しない量は何か、提案機構によって観測可能域をどこまで拡張できるか。`
+        : `量子エンタングルメントの第${number}の問いを扱う。`;
+      paper.concept = `量子エンタングルメントの第${number}の方法を構成する。`;
+      paper.conclusion = `量子エンタングルメントの第${number}の帰結を得た。`;
+      paper.scoreReasons = {
+        broadImpact: `量子エンタングルメントの広い応用を第${number}条件で検証した。`,
+        categoryImpact: `量子エンタングルメントの分野内効果を第${number}設定で示した。`,
+        originality: `量子エンタングルメントの新規構成を第${number}事例で導入した。`,
+        technicalStrength: `量子エンタングルメントの導出を第${number}検査で確認した。`,
+      };
+      paper.assessment = `量子エンタングルメントの証拠と限界を第${number}評価で比較した。`;
+      if (paper.fullTextEvaluated) {
+        paper.fullTextReviewStatus = `量子エンタングルメントの主要節を第${number}確認で精査した。`;
+      }
+    });
+  }
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }));
 });
 
 test("schema 1.4 rejects duplicated summary sections, copied conclusions, and generic assessments", () => {
@@ -253,10 +441,45 @@ test("rubric 3.0 caps scores that lack full-text evidence", () => {
   }, /at most 17 without full-text review/);
 });
 
-test("model identity and reasoning effort are exact", () => {
+test("Sol model identity and High reasoning effort are exact", () => {
   rejectsMutation((reports) => { reports["hep-th"].evaluationRun.modelId = "gpt-5.6-other"; }, /modelId/);
-  rejectsMutation((reports) => { reports["hep-th"].evaluationRun.reasoningEffort = "high"; }, /reasoningEffort/);
+  rejectsMutation((reports) => { reports["hep-th"].evaluationRun.reasoningEffort = "ultra"; }, /reasoningEffort/);
   rejectsMutation((reports) => { reports["hep-th"].evaluationRun.modelSelectionVerified = false; }, /modelSelectionVerified/);
+});
+
+test("full-text reviews stay within the per-category resource budget", () => {
+  rejectsMutation((reports) => {
+    const report = reports["quant-ph"];
+    report.papers = Array.from({ length: 13 }, (_, index) => {
+      const source = structuredClone(report.papers[Math.min(index, report.papers.length - 1)]);
+      source.arxivId = `9902.${String(index + 1).padStart(5, "0")}`;
+      source.url = `https://arxiv.org/abs/${source.arxivId}`;
+      source.rank = index + 1;
+      source.scores = { broadImpact: 25 - index, categoryImpact: 20, originality: 20, technicalStrength: 20 };
+      source.scoreReasons = {
+        broadImpact: `候補${index + 1}の成果は、異なる物理領域へ届く具体的経路を持つ。`,
+        categoryImpact: `候補${index + 1}は、量子物理の中心課題に対して固有の前進を示す。`,
+        originality: `候補${index + 1}は、最も近い既存法から非自明な構成差を導入する。`,
+        technicalStrength: `候補${index + 1}は、中心導出と独立検証に加えて適用限界を明記する。`,
+      };
+      source.totalScore = Object.values(source.scores).reduce((sum, value) => sum + value, 0);
+      source.assessment = `候補${index + 1}の中心成果には明確な利点があるが、適用範囲には制約が残る。`;
+      source.fullTextEvaluated = true;
+      source.evaluationBasis = "full_text_major_sections";
+      source.fullTextReviewStatus = `候補${index + 1}の主要節、検証、限界を確認した。`;
+      source.sourceUrls = [
+        `https://arxiv.org/abs/${source.arxivId}v1`,
+        `https://arxiv.org/pdf/${source.arxivId}v1`,
+      ];
+      return source;
+    });
+    report.totalNew = 13;
+    report.evaluatedCount = 13;
+    report.fullTextEvaluatedCount = 13;
+    report.audit.sourceCounts.newPrimary = 13;
+    report.audit.sourceCounts.titleAuthorAbstractEvaluated = 13;
+    report.audit.fullTextEvaluatedCount = 13;
+  }, /resource-budget limit 12/);
 });
 
 test("all categories share one exact run and a run cannot be reused", () => {
@@ -266,6 +489,11 @@ test("all categories share one exact run and a run cannot be reused", () => {
     policy: validPolicy(),
     existingRunIds: new Set(["run-2099-01-05-fixture"]),
   }), /already used/);
+  assert.throws(() => validateProductionReportSet(validReportSet(), {
+    date: DATE,
+    policy: validPolicy(),
+    expectedRunId: "run-2099-01-05-different",
+  }), /must equal the host runId/);
 });
 
 test("equivalent run metadata is independent of JSON property order", () => {

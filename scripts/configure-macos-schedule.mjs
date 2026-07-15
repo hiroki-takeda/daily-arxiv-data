@@ -205,7 +205,7 @@ function checkPrerequisites() {
       "READY: launchd-equivalent prerequisites passed.",
       `origin/main: ${remoteHead}`,
       `Codex: ${codexBin} (${reviewedCodex.version}; SHA-256 ${reviewedCodex.sha256})`,
-      "Codex auth/model: ChatGPT login; gpt-5.6-sol / ultra fixed by runner",
+      "Codex auth/model: ChatGPT login; gpt-5.6-sol / high fixed by runner",
       `Publisher: ${publisher.state}`,
       "Codex permission probe: repo read-only; runRoot write allowed; auth reads denied; arXiv network allowed; external network denied",
       "macOS system-temp scratch is treated as model-writable and contains no host-trusted automation state",

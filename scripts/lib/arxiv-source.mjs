@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-export const ARXIV_CATEGORIES = Object.freeze(["hep-th", "gr-qc", "quant-ph"]);
+export const ARXIV_CATEGORIES = Object.freeze(["quant-ph", "gr-qc", "hep-th"]);
 export const ARXIV_LISTING_URLS = Object.freeze({
   "hep-th": "https://arxiv.org/list/hep-th/new",
   "gr-qc": "https://arxiv.org/list/gr-qc/new",
