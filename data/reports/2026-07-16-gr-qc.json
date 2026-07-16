@@ -1,0 +1,436 @@
+{
+  "schemaVersion": "1.4",
+  "reportDate": "2026-07-16",
+  "evaluationRun": {
+    "modelId": "gpt-5.6-sol",
+    "modelDisplayName": "GPT-5.6-Sol",
+    "reasoningEffort": "high",
+    "modelSelectionVerified": true,
+    "runId": "run-20260716T091321Z-651017484da3"
+  },
+  "slug": "gr-qc",
+  "label": "一般相対論・量子宇宙論",
+  "totalNew": 9,
+  "crosslistsExcluded": 12,
+  "evaluatedCount": 9,
+  "fullTextEvaluatedCount": 9,
+  "papers": [
+    {
+      "rank": 1,
+      "arxivId": "2607.13168",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.13168",
+      "title": "Modeling non-stationary noise: applications in gravitational wave astronomy",
+      "titleJa": "非定常雑音のモデル化と重力波天文学への応用",
+      "authors": [
+        "Cornish, Neil J."
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "手法",
+      "scores": {
+        "broadImpact": 20,
+        "categoryImpact": 20,
+        "originality": 19,
+        "technicalStrength": 21
+      },
+      "scoreReasons": {
+        "broadImpact": "時間依存共分散を正値な尤度へ落とす方法は、LISAの長時間信号と地上検出器の過渡雑音解析の双方に使える。入力スペクトルの推定法は枠組みの外にある。",
+        "categoryImpact": "定常Whittle尤度が非定常雑音で生む信号対雑音比の偏りを明示し、Fourier法とWDM白色化を同じ共分散から比較できる基準を与えた。",
+        "originality": "時間周波数スペクトルとWhittle近似を土台にしながら、Gram構成で正半定値性を保証し、Wigner–Ville関係を介して複数基底の尤度を導いた点が非自明である。",
+        "technicalStrength": "解析的共分散、Fourier・WDM表式、数値模擬、白色化後の誤差比較が相互に整合する。既知のS(f,t)を与えた試験であり、実データ推定の頑健性は未評価である。"
+      },
+      "totalScore": 80,
+      "abstractLines": [
+        "重力波データの雑音は時刻と周波数で変化し、定常ガウス近似が信号対雑音比を偏らせる。",
+        "動的スペクトルS(f,t)から正半定値共分散をGram因子で構成し、Fourier基底とWDM基底の尤度を導く。",
+        "LISA模擬で対角Fourier法の信号対雑音比が最大2倍ずれ、事前白色化WDMでは誤差0.002%となった。"
+      ],
+      "curiosity": "時間変化する雑音を正値性を壊さず尤度へ組み込めるか。",
+      "concept": "動的スペクトルを単なる時刻別対角雑音へ置かず、Gram因子から正半定値の時間領域共分散を作り、Fourier基底とWDM基底の尤度へ写す。",
+      "conclusion": "非定常性を無視する対角Fourier近似はLISA模擬の信号対雑音比を最大2倍ずらし、WDMでの事前白色化は既知スペクトル下で誤差を0.002%まで抑えた。",
+      "assessment": "正値性を保証する共分散と二つの基底で尤度を統一した点が強い。実観測で未知の動的スペクトルを頑健に推定する工程は検証されていない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "Gram共分散、Whittle近似、Wigner–Ville関係、Fourier・WDM表式、LISA例、白色化比較を確認。実観測データ適用は行っていない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.13168v1",
+        "https://arxiv.org/pdf/2607.13168v1"
+      ]
+    },
+    {
+      "rank": 2,
+      "arxivId": "2607.13275",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.13275",
+      "title": "Precision Ringdown Measurements of Binary Black Hole Remnants",
+      "titleJa": "連星ブラックホール残骸の高精度リングダウン測定",
+      "authors": [
+        "Kumar, Achal",
+        "Roy, Poulami Dutta",
+        "Szczepańczyk, Marek J.",
+        "Klimenko, Sergey"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "観測解析",
+      "scores": {
+        "broadImpact": 19,
+        "categoryImpact": 21,
+        "originality": 18,
+        "technicalStrength": 21
+      },
+      "scoreReasons": {
+        "broadImpact": "波形模型への依存を抑えたQNM測定は、強重力下の一般相対論検証と連星残骸の質量・スピン推定へ接続する。ただし現状は高信号16事象の主要モードに限られる。",
+        "categoryImpact": "リングダウン解析を左右する開始時刻と模型偏りを注入校正で定量化し、GWTC-3の結合制約まで進めた。複数QNMによる分光は未到達である。",
+        "originality": "減衰正弦波によるQNM推定を継承しつつ、開始時刻を非模型的なcWB再構成から決め、SEOBNR注入で偏りを補正する組合せに新規性がある。",
+        "technicalStrength": "O4実雑音への注入、推定偏りの補正、被覆率検査を経て16事象を結合した。補正波形の選択と事象選別に対する残余依存性が適用範囲を狭める。"
+      },
+      "totalScore": 79,
+      "abstractLines": [
+        "短いブラックホールリングダウンからQNM周波数と減衰時間を波形模型への依存を抑えて測る。",
+        "cWBで再構成した累積エネルギーから開始時刻を選び、注入試験でバイアス補正と系統誤差を校正する。",
+        "GWTC-3の16事象を結合し、周波数偏差0.003±0.028、減衰偏差約0.050を得て一般相対論と整合した。"
+      ],
+      "curiosity": "模型に強く縛られないリングダウン再構成で、残骸のQNMをどこまで精密検証できるか。",
+      "concept": "波形模型を先に固定せず、cWBが再構成した累積エネルギーから各事象の開始時刻を定め、注入試験で残る推定偏りを校正する。",
+      "conclusion": "16事象の結合解析はQNM周波数と減衰時間が一般相対論と整合することを示したが、高次モードを用いるブラックホール分光にはまだ感度が足りない。",
+      "assessment": "開始時刻と推定偏りを実雑音注入で制御した結合QNM測定が強みである。SEOBNRv4HMによる補正と高信号の主要モードへ結果が依存する。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "16事象選定、開始時刻、O4実雑音注入、バイアス補正、被覆率、個別・結合QNM制約を確認。高次モード分光は限定的である。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.13275v1",
+        "https://arxiv.org/pdf/2607.13275v1"
+      ]
+    },
+    {
+      "rank": 3,
+      "arxivId": "2607.13992",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.13992",
+      "title": "DARK-HIDE: Dark matter versus hidden dimensions in black hole images",
+      "titleJa": "DARK-HIDE：ブラックホール画像における暗黒物質と隠れた次元の識別",
+      "authors": [
+        "Fathi, Mohsen"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "数値・現象論",
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 18
+      },
+      "scoreReasons": {
+        "broadImpact": "ブラックホール画像を暗黒物質分布と余剰次元重力の識別へ結ぶが、成果は簡略化した放射模型と局所測地線指標に依存し、他の観測手段への展開はまだ限定的である。",
+        "categoryImpact": "影半径だけでは解けない修正時空の縮退に対し、光子リングと脱出円錐を比較する追加診断を示した。EHT画像へ直接適用する放射輸送・装置応答は残る。",
+        "originality": "既存の測地線追跡と影計算を基礎に、暗黒物質時空と余剰次元時空を同じパイプラインへ置き、局所脱出円錐を判別量として比較した点が新しい。",
+        "technicalStrength": "測地線積分の収束、EHT事前分布、影とリングの比較を確認し、不安定な焦線指標は結論から外している。完全な一般相対論的放射輸送を欠くため信頼性は上限付きである。"
+      },
+      "totalScore": 70,
+      "abstractLines": [
+        "暗黒物質と余剰次元補正は、ブラックホール影の同じ観測量を似た形で変える。",
+        "二種の回転時空で測地線の厳密な光線追跡を行い、影・光子リング・脱出円錐の識別力を比較する。",
+        "EHTの影サイズだけでは暗黒物質量が事前分布に支配される一方、局所脱出円錐に異なる形状を見いだした。"
+      ],
+      "curiosity": "Kerrからずれた画像が、周辺物質と時空次元のどちらに由来するか判別できるか。",
+      "concept": "大域的な影サイズだけでなく、同じ測地線力学から得られる局所脱出円錐を併用し、暗黒物質と余剰次元が作る縮退を別の角度から解く。",
+      "conclusion": "現行EHTの影サイズは二つの時空補正を十分に識別しないが、局所脱出円錐には異なる形状が現れる。現実的な放射輸送を含む観測量への変換が次の課題である。",
+      "assessment": "影・リング・脱出円錐を同一計算で比べた縮退診断は有用である。一方、放射輸送は代理模型で、焦線指標も数値的に不安定なため観測識別力は確立していない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "時空模型、測地線積分、収束試験、影・リング・脱出円錐、EHT事前分布、焦線安定性監査を確認。完全な一般相対論的放射輸送は行っていない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.13992v1",
+        "https://arxiv.org/pdf/2607.13992v1"
+      ]
+    },
+    {
+      "rank": 4,
+      "arxivId": "2607.14056",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.14056",
+      "title": "Acoustic Firewalls: Analogue Gravity Perspective on the AMPS Paradox",
+      "titleJa": "音響ファイアウォール：AMPS逆説のアナログ重力的考察",
+      "authors": [
+        "Akintsov, Nikolay S.",
+        "Nevecheria, Artyom P.",
+        "Andreev, Stepan N.",
+        "Qin, Qing-Hua"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論・提案",
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 17,
+        "originality": 19,
+        "technicalStrength": 15
+      },
+      "scoreReasons": {
+        "broadImpact": "ブラックホール情報問題のエンタングルメント条件を、量子流体の熱量測定へ翻訳して重力理論とアナログ実験を橋渡しする。適用はAMPS型仮定を実現するBECに限られる。",
+        "categoryImpact": "ファイアウォール議論へ反証可能なエネルギー指標を与えたが、実ブラックホールの情報回収機構を解くものではなく、音響模型による概念検査に留まる。",
+        "originality": "AMPSの純粋性条件を継承しつつ、内部相方の消失をHawkingフォノンの局所応力と差分熱量へ結び付けた点は通常のアナログ放射研究から離れている。",
+        "technicalStrength": "1+1次元の純粋性恒等式と応力を導き、有限帯域と3+1次元見積りまで示した。後者はStefan–Boltzmann外挿で、実験値と散逸模型を欠く。"
+      },
+      "totalScore": 69,
+      "abstractLines": [
+        "Page時刻後のユニタリ性と地平線近傍真空の両立不能を、音響地平線で検証可能な形に移せるかが問われる。",
+        "1+1次元で純粋性恒等式と応力係数を導き、BECのHawkingフォノン対へ適用する。",
+        "内部相方とのエンタングルメント消失が逆二乗型エネルギー増大を生むと予測し、差分熱量測定を提案した。"
+      ],
+      "curiosity": "ブラックホールファイアウォールの論理を、実験室のフォノン熱流として反証できるか。",
+      "concept": "AMPSのモノガミー矛盾を音響地平線のフォノン対へ写し、相方モードとの純粋性喪失を局所エネルギー密度の発散として測定可能にする。",
+      "conclusion": "フォノン対の相関をPage時刻後に切る仮定は地平線近傍の逆二乗型熱量増大を導く。BEC差分測定は検証案になるが、実在する系がこの仮定を満たす保証はない。",
+      "assessment": "情報逆説をBECの熱量観測へ結ぶ発想は明快である。3+1次元係数は外挿で、Page時刻後ユニタリ性を音響系へ課す仮定と微視的散逸が未検証である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "AMPS写像、純粋性恒等式、1+1応力、3+1見積り、有限帯域、BEC差分熱量案を確認。実験値と微視的散逸は未算出である。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.14056v1",
+        "https://arxiv.org/pdf/2607.14056v1"
+      ]
+    },
+    {
+      "rank": 5,
+      "arxivId": "2607.13483",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.13483",
+      "title": "Testing the Transverse Scalar Mode of Gravitational Quantum Field Theory with Taiji and LISA",
+      "titleJa": "TaijiとLISAによる重力場量子論の横スカラー偏極検証",
+      "authors": [
+        "Xu, Cong",
+        "Tang, Yong",
+        "Wu, Yue-Liang"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論・検出器",
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 17
+      },
+      "scoreReasons": {
+        "broadImpact": "横スカラー偏極の応答表は量子重力模型の検証とLISA・Taiji観測設計に利用できるが、対象は特定偏極と単色信号で、他の重力波源への広がりは中程度である。",
+        "categoryImpact": "静的星座近似が低周波ブリージング感度を過小評価することを示し、時間遅延干渉の実運動応答へ更新した。検出統計やパラメータ縮退は未解析である。",
+        "originality": "既存の偏極応答と時間遅延干渉を継承しながら、星座運動による低周波増強を量子重力由来の横スカラー波へ系統的に適用した拡張である。",
+        "technicalStrength": "静的・動的星座、複数の時間遅延干渉組合せ、雑音相殺、高低周波応答を比較した。信号集団と推定誤差を含まないため観測実現性の検証は限定的である。"
+      },
+      "totalScore": 66,
+      "abstractLines": [
+        "重力場量子論が予言するブリージング偏極を、宇宙重力波干渉計で分離する応答が必要である。",
+        "静止・運動するLISA/Taiji星座の時間遅延干渉計応答と雑音相殺組合せを計算する。",
+        "動的星座の低周波ブリージング応答が静的近似より最大4桁増し、高周波感度も保つと示した。"
+      ],
+      "curiosity": "星座運動を利用すれば、一般相対論にない横スカラー波を増幅して探せるか。",
+      "concept": "星座運動を補正すべき摂動ではなく偏極選別の変調源として取り込み、時間遅延干渉の組合せごとに横スカラー応答と雑音相殺を同時評価する。",
+      "conclusion": "運動するLISA・Taiji星座は低周波のブリージング偏極応答を静的近似より大幅に高める。単色応答から実際の検出率へ進むには信号集団と推定解析が必要である。",
+      "assessment": "動的星座と時間遅延干渉を統合した偏極応答計算は設計上有用である。特定理論の単色信号に限られ、天体集団・雑音非定常性・実データ解析を含まない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "GQFT偏極、静的・動的星座、時間遅延干渉、雑音相殺、周波数応答を確認。信号集団とパラメータ推定は扱っていない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.13483v1",
+        "https://arxiv.org/pdf/2607.13483v1"
+      ]
+    },
+    {
+      "rank": 6,
+      "arxivId": "2607.13741",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.13741",
+      "title": "Solid-state gravitational-wave detectors at GHz frequencies: the search for the primordial stochastic GW background and light primordial black hole binaries",
+      "titleJa": "GHz帯固体重力波検出器：原始確率背景と軽い原始ブラックホール連星の探索",
+      "authors": [
+        "Garcia-Bellido, Juan"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "検出器提案",
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 16,
+        "originality": 18,
+        "technicalStrength": 13
+      },
+      "scoreReasons": {
+        "broadImpact": "再加熱・軽い原始ブラックホールの宇宙論信号を固体フォノン検出へ結び、初期宇宙研究と量子材料計測の二領域に具体的な接点を作る。必要装置規模は大きい。",
+        "categoryImpact": "磁気変換法が届きにくいGHz帯に別原理の検出器を提示し、材料別増強と事象率を算出した。感度曲線と実背景を備えた観測設計には至っていない。",
+        "originality": "重力波による単一フォノン生成の考えを実結晶のバンド構造へ拡張し、Van Hove特異点を信号増強へ使う点が非自明で、従来の電磁変換と機構が異なる。",
+        "technicalStrength": "遷移率、バンド構造、宇宙流束、材料・セル数を一貫して見積もる一方、結果は理想化した結晶と背景仮定に基づく。試作機、校正、偽事象評価はない。"
+      },
+      "totalScore": 65,
+      "abstractLines": [
+        "再加熱由来のGHz重力波背景は歪みが約10^-30で、既存磁気変換法の帯域外にある。",
+        "結晶中の重力波によるフォノン生成断面積をバンド構造込みで計算し、Van Hove特異点を利用する。",
+        "サファイア等で数十倍の増強を見積もり、多セル構成による事象率向上を提案した。"
+      ],
+      "curiosity": "結晶の状態密度ピークを使えば、GHz重力波を単一フォノンとして検出できるか。",
+      "concept": "重力波が結晶へ与える遷移率を実バンド構造で評価し、状態密度が集中するVan Hove特異点を単一フォノン生成の共鳴増強として利用する。",
+      "conclusion": "サファイアなどの状態密度ピークはGHz重力波のフォノン生成を数十倍増やし得るが、想定流束でも事象間隔は長く、千セル級の低背景読出しが必要になる。",
+      "assessment": "宇宙高周波重力波を固体量子遷移へ結ぶ検出原理は独創的である。材料応答と事象率は理論見積りに留まり、背景除去を含む装置実証がない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "量子遷移率、結晶バンド構造、Van Hove増強、宇宙背景・原始ブラックホール流束、材料・セル数見積りを確認。背景実験は未実施である。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.13741v1",
+        "https://arxiv.org/pdf/2607.13741v1"
+      ]
+    },
+    {
+      "rank": 7,
+      "arxivId": "2607.13146",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.13146",
+      "title": "Weyl gauge symmetry at LIGO-Virgo-KAGRA",
+      "titleJa": "LIGO–Virgo–KAGRAで探るWeylゲージ対称性",
+      "authors": [
+        "Ghilencea, D. M.",
+        "Mandric, V. -M."
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "追加ベクトル偏極は修正重力の理論分類とLVK偏極探索の双方に関係するが、Planck質量級モードが観測帯へ現れる条件が狭く、直接的波及は限定される。",
+        "categoryImpact": "Weylゲージ対称な二次重力で伝播自由度をゲージ不変に整理し、スカラー偏極が消える条件を示した。実天体の生成振幅と検出可能性は残る。",
+        "originality": "既知のスカラー・ベクトル・テンソル分解をWeylゲージ理論へ適用し、拘束を解いてLVKの偏極仮説と対応付けた点に明確な新規性がある。",
+        "technicalStrength": "作用から背景方程式、拘束、各偏極の波動方程式まで整合的に導いている。非線形強重力波形、源との結合、観測尤度による独立検証は含まれない。"
+      },
+      "totalScore": 64,
+      "abstractLines": [
+        "Weyl二次重力が一般相対論と異なる重力波偏極を持つかを整理する必要がある。",
+        "de Sitter背景上でゲージ不変なスカラー・ベクトル・テンソル分解を行い、線形波動方程式を導く。",
+        "二つのテンソル偏極に加えて二つの横ベクトル偏極が伝播し、スカラー偏極は消えると示した。"
+      ],
+      "curiosity": "時空のWeylゲージ対称性は、LVKが識別できる新しい偏極を残すか。",
+      "concept": "Weyl二次重力の摂動をde Sitter背景上でゲージ不変なスカラー・ベクトル・テンソルへ分け、拘束式から実際に伝播する偏極だけを抽出する。",
+      "conclusion": "線形理論では二つのテンソル偏極に加えて横ベクトル二偏極が伝わり、スカラー偏極は消える。LVKで検証するには強重力源の波形と質量尺度の具体化が要る。",
+      "assessment": "ゲージ不変分解により偏極自由度を明確に数えた点は堅実である。線形de Sitter背景の解析であり、連星波形やLVK尤度へ結ぶ予測は未構築である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "作用、背景、ゲージ不変分解、各偏極の拘束・波動方程式、LVK偏極仮説との比較を確認。強重力波形は計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.13146v1",
+        "https://arxiv.org/pdf/2607.13146v1"
+      ]
+    },
+    {
+      "rank": 8,
+      "arxivId": "2607.14079",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.14079",
+      "title": "Entropy release from Minkowski breaking in regular Schwarzschild black holes",
+      "titleJa": "正則SchwarzschildブラックホールのMinkowski破れからのエントロピー放出",
+      "authors": [
+        "Lobo, Francisco S. N.",
+        "Rodrigues, Manuel E."
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論・仮説",
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 13,
+        "originality": 16,
+        "technicalStrength": 10
+      },
+      "scoreReasons": {
+        "broadImpact": "正則ブラックホール、量子準位、一般化第二法則を結ぶが、現段階は特定模型の概念提案であり、観測量や他の量子重力構成への接続は示されていない。",
+        "categoryImpact": "点質量極限の原点不連続へエントロピー放出という解釈を与えた一方、ブラックホール蒸発や特異点解消の標準問題を定量的に前進させる段階ではない。",
+        "originality": "内外地平線のエントロピー差と既知のexp(ΔS)型トンネル像を組み、Minkowski破れへ離散準位を割り当てた構成は新しいが、中心要素は既存概念の組合せである。",
+        "technicalStrength": "第一・第二法則と準位条件の内部整合性を検討しているが、バウンス作用、遷移振幅、放出スペクトルを計算せず、固定質量での熱力学整合性も未解決である。"
+      },
+      "totalScore": 51,
+      "abstractLines": [
+        "正則配置からSchwarzschild点質量への遷移で生じる原点不連続を、熱力学過程として解釈する。",
+        "内外地平線のエントロピー差、一般化第二法則、トンネル率exp(ΔS)を組み合わせる。",
+        "Minkowski破れで離散的なエントロピー放出が起こるという模型と準位像を提案した。"
+      ],
+      "curiosity": "幾何の原点不連続は、量子遷移として測れるエントロピー放出を伴うのか。",
+      "concept": "正則ブラックホールから点質量極限へ移る際の原点不連続を、内外地平線のエントロピー差に対応する量子遷移として読み替える。",
+      "conclusion": "Minkowski破れに離散的エントロピー放出と準位構造を対応させる模型を提示したが、遷移率を支えるユークリッド作用と放出スペクトルは導かれていない。",
+      "assessment": "幾何的不連続を熱力学的遷移として捉える着想は興味深い。固定質量条件、整数準位、トンネル率が仮定に依存し、定量予測の裏付けが弱い。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "正則模型、内外地平線、第一・第二法則、準位条件、トンネル仮説、固定質量条件を確認。バウンス作用と放出スペクトルは計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.14079v1",
+        "https://arxiv.org/pdf/2607.14079v1"
+      ]
+    },
+    {
+      "rank": 9,
+      "arxivId": "2607.13109",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.13109",
+      "title": "Reconstruction of f(G) Gravity from an Interacting Viscous Generalized QCD Ghost Dark Energy Model: Cosmology and Thermodynamics: Cosmology and Thermodynamics",
+      "titleJa": "相互作用する粘性一般化QCDゴースト暗黒エネルギーからのf(G)重力再構成：宇宙論と熱力学",
+      "authors": [
+        "Umurzakhova, Zhanar",
+        "Altaibayeva, Aziza",
+        "Ualikhanova, Ulbossyn",
+        "Chattopadhyay, Surajit"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "現象論",
+      "scores": {
+        "broadImpact": 10,
+        "categoryImpact": 11,
+        "originality": 9,
+        "technicalStrength": 12
+      },
+      "scoreReasons": {
+        "broadImpact": "暗黒エネルギー相互作用、粘性、f(G)重力を一つの背景模型で扱うが、結果は選択した膨張則とパラメータに局在し、他領域へ移せる予測は少ない。",
+        "categoryImpact": "宇宙時計31点と熱力学条件を用いた再構成例は比較資料になるものの、背景膨張を入力する手順なので修正重力と暗黒成分の縮退を解いていない。",
+        "originality": "ハイブリッド膨張則からGauss–Bonnet関数を逆算する既知の再構成法へ粘性一般化QCDゴースト成分を加えた適用で、中心手法からの距離は小さい。",
+        "technicalStrength": "模型方程式、数値再構成、宇宙時計適合、音速、Barrowエントロピーを計算したが、パラメータ感度、摂動成長、他データ集合、模型選択を検証していない。"
+      },
+      "totalScore": 42,
+      "abstractLines": [
+        "暗黒成分の相互作用とバルク粘性を含む膨張史をf(G)重力で再現する。",
+        "ハイブリッド膨張則を仮定してGauss–Bonnet関数を数値再構成し、宇宙時計31点と熱力学条件を調べる。",
+        "選んだパラメータで膨張データと整合する再構成例とエントロピー条件を報告した。"
+      ],
+      "curiosity": "粘性暗黒エネルギーの有効膨張を、修正重力の作用へ一貫して戻せるか。",
+      "concept": "所望のハイブリッド膨張史を先に固定し、相互作用・粘性を含む有効暗黒エネルギー密度から対応するf(G)関数を逆算する。",
+      "conclusion": "選択したパラメータでは31点の宇宙時計と熱力学条件に整合する再構成例が得られるが、膨張史を事前指定するため修正重力模型としての予測力は弱い。",
+      "assessment": "背景膨張・音速・エントロピー条件を一つの再構成で調べた点は有用である。膨張則と冪則近似を先に置き、他データや摂動成長による識別を欠く。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "模型方程式、再構成、数値パラメータ、31点の宇宙時計適合、音速、Barrowエントロピーを確認。摂動成長と他データは解析していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.13109v1",
+        "https://arxiv.org/pdf/2607.13109v1"
+      ]
+    }
+  ],
+  "audit": {
+    "listingUrl": "https://arxiv.org/list/gr-qc/pastweek",
+    "announcementDate": "2026-07-16",
+    "selectionRule": "公式arXiv一覧の当日primary-category New submission v1のみを評価し、cross-listを除外した。",
+    "sourceCounts": {
+      "newPrimary": 9,
+      "crosslistsExcluded": 12,
+      "titleAuthorAbstractEvaluated": 9
+    },
+    "evaluationPolicy": "全件の題名・全著者・要旨を確認し、暫定上位のみ公式v1本文の主要節を精査した。著者の知名度は採点に用いていない。",
+    "scoreRubric": "Daily arXiv rubric 3.0：広い波及、分野内の重要性、独創性、技術的強度を各0～25点の整数で評価し、高得点には論文固有の成果、比較、検証、成立条件を要求した。",
+    "fullTextPolicy": "暫定上位は公式v1 PDFと公式v1 e-printから抽出した主要節で確認し、最終上位10件を全文確認済み集合に限定した。",
+    "fullTextEvaluatedCount": 9,
+    "authorPolicy": "著者の所属、知名度、評判は点数と順位に反映していない。",
+    "rankingTieBreak": "合計点、広い波及、独創性、技術的強度、分野内の重要性の降順、最後にarXiv IDの昇順。",
+    "generatedAtJst": "2026-07-16T18:33:18.601+09:00"
+  }
+}
