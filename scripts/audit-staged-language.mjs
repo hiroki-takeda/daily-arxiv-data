@@ -9,6 +9,7 @@ import {
   assertExactStagingReports,
   findCategoryProseDiversityIndices,
   findCategoryStructuralDiversityIndices,
+  findProductionScoreDistributionIssues,
   parseJsonFile,
   validateDate,
   validateProductionPaperProse,
@@ -208,6 +209,18 @@ try {
       }
     }
     if (!categoryCompleted) fail(`Language audit exceeded its bounded category iteration limit for ${slug}.`);
+
+    for (const scoreIssue of findProductionScoreDistributionIssues(original)) {
+      recordCategoryIssue({
+        issues,
+        categoryIssues,
+        slug,
+        original,
+        path: scoreIssue.path,
+        message: `probe.papers.${scoreIssue.path}: ${scoreIssue.message}`,
+        paperIndices: scoreIssue.paperIndices,
+      });
+    }
   }
 
   writeFileSync(output, `${JSON.stringify({ date, count: issues.length, issues }, null, 2)}\n`, {

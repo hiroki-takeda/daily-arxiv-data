@@ -20,6 +20,7 @@ export const LEGACY_SCHEMA = "1.2";
 export const RUBRIC_3_MARKER = "Daily arXiv rubric 3.0";
 export const CATEGORIES = Object.freeze(["quant-ph", "gr-qc", "hep-th"]);
 export const MAX_FULL_TEXT_EVALUATED_PER_CATEGORY = 12;
+export const CURRENT_QUALITY_GATE_EFFECTIVE_DATE = "2026-07-16";
 export const SCORE_KEYS = Object.freeze([
   "broadImpact",
   "categoryImpact",
@@ -65,6 +66,11 @@ const KNOWN_GENERIC_RATIONALE_PHRASES = Object.freeze([
   "に焦点を絞り、比較可能な問いへ具体化している",
   "誤差評価、条件依存性、既存法との差の全体は本文確認を要する",
   "問題設定から中心手法、定量的または厳密な主結果までを結んだ点が強み",
+]);
+const CURRENT_QUALITY_GENERIC_RATIONALE_PHRASES = Object.freeze([
+  "従来の到達点と異なる具体的な差分は",
+  "波及先はこの成果が直接扱う対象と隣接する理論・実装課題である",
+  "本文の主要節で成立条件を確認した",
 ]);
 const KNOWN_UNNATURAL_JAPANESE_PHRASES = Object.freeze([
   "一ループ",
@@ -219,9 +225,19 @@ function normalizedProse(value) {
   return String(value).normalize("NFKC").toLocaleLowerCase("ja-JP").trim().replace(/\s+/gu, " ");
 }
 
-function assertNoKnownGenericRationale(value, path) {
+function assertNoSubstantialVerbatimReuse(value, source, path, sourcePath) {
+  const normalizedSource = normalizedProse(source);
+  if (normalizedProse(value).includes(normalizedSource)) {
+    fail(path, `must not copy ${sourcePath} verbatim`);
+  }
+}
+
+function assertNoKnownGenericRationale(value, path, { enforceCurrentQualityGates = false } = {}) {
   const normalized = normalizedProse(value);
-  const phrase = KNOWN_GENERIC_RATIONALE_PHRASES.find((candidate) => normalized.includes(candidate));
+  const phrases = enforceCurrentQualityGates
+    ? [...KNOWN_GENERIC_RATIONALE_PHRASES, ...CURRENT_QUALITY_GENERIC_RATIONALE_PHRASES]
+    : KNOWN_GENERIC_RATIONALE_PHRASES;
+  const phrase = phrases.find((candidate) => normalized.includes(candidate));
   if (phrase) fail(path, `must not use the generic rationale phrase ${JSON.stringify(phrase)}`);
 }
 
@@ -465,12 +481,16 @@ function validateScores(paper, path) {
   if (paper.totalScore !== total) fail(`${path}.totalScore`, `must equal the four-score sum (${total})`);
 }
 
-function validateScoreReasons(paper, path) {
+function validateScoreReasons(paper, path, { enforceCurrentQualityGates = false } = {}) {
   assertExactKeys(paper.scoreReasons, SCORE_KEYS, `${path}.scoreReasons`);
   for (const key of SCORE_KEYS) {
     assertNaturalJapanese(paper.scoreReasons[key], `${path}.scoreReasons.${key}`, 12);
     assertMaxCharacters(paper.scoreReasons[key], PROSE_MAX_CHARACTERS.scoreReason, `${path}.scoreReasons.${key}`);
-    assertNoKnownGenericRationale(paper.scoreReasons[key], `${path}.scoreReasons.${key}`);
+    assertNoKnownGenericRationale(
+      paper.scoreReasons[key],
+      `${path}.scoreReasons.${key}`,
+      { enforceCurrentQualityGates },
+    );
     if (SCORE_REASON_REVIEW_PROVENANCE_PATTERN.test(paper.scoreReasons[key])) {
       fail(`${path}.scoreReasons.${key}`, "must justify the score from paper evidence without describing evaluator review provenance");
     }
@@ -576,13 +596,13 @@ function validateAuthors(authors, path) {
   }
 }
 
-function validateDetailedProductionPaperProse(paper, path) {
+function validateDetailedProductionPaperProse(paper, path, { enforceCurrentQualityGates = false } = {}) {
   assertJapaneseDisplayTitle(paper.titleJa, paper.title, `${path}.titleJa`);
   assertMaxCharacters(paper.titleJa, PROSE_MAX_CHARACTERS.titleJa, `${path}.titleJa`);
   for (const field of ["curiosity", "concept", "conclusion"]) {
     assertNaturalJapanese(paper[field], `${path}.${field}`, 6);
     assertMaxCharacters(paper[field], PROSE_MAX_CHARACTERS[field], `${path}.${field}`);
-    assertNoKnownGenericRationale(paper[field], `${path}.${field}`);
+    assertNoKnownGenericRationale(paper[field], `${path}.${field}`, { enforceCurrentQualityGates });
     assertNoReaderReviewProvenance(paper[field], `${path}.${field}`);
   }
   assertNaturalJapanese(paper.assessment, `${path}.assessment`, 12);
@@ -593,7 +613,38 @@ function validateDetailedProductionPaperProse(paper, path) {
     assertMaxCharacters(line, PROSE_MAX_CHARACTERS.abstractLine, `${path}.abstractLines[${index}]`);
     assertNoReaderReviewProvenance(line, `${path}.abstractLines[${index}]`);
   });
-  validateScoreReasons(paper, path);
+  validateScoreReasons(paper, path, { enforceCurrentQualityGates });
+  if (enforceCurrentQualityGates) {
+    assertNoSubstantialVerbatimReuse(paper.curiosity, paper.abstractLines[0], `${path}.curiosity`, "abstractLines[0]");
+    assertNoSubstantialVerbatimReuse(paper.concept, paper.abstractLines[1], `${path}.concept`, "abstractLines[1]");
+    assertNoSubstantialVerbatimReuse(paper.conclusion, paper.abstractLines[2], `${path}.conclusion`, "abstractLines[2]");
+    for (const [key, reason] of Object.entries(paper.scoreReasons)) {
+      paper.abstractLines.forEach((line, lineIndex) => {
+        assertNoSubstantialVerbatimReuse(
+          reason,
+          line,
+          `${path}.scoreReasons.${key}`,
+          `abstractLines[${lineIndex}]`,
+        );
+      });
+    }
+    paper.abstractLines.forEach((line, lineIndex) => {
+      assertNoSubstantialVerbatimReuse(
+        paper.assessment,
+        line,
+        `${path}.assessment`,
+        `abstractLines[${lineIndex}]`,
+      );
+    });
+    for (const [key, reason] of Object.entries(paper.scoreReasons)) {
+      assertNoSubstantialVerbatimReuse(
+        paper.assessment,
+        reason,
+        `${path}.assessment`,
+        `scoreReasons.${key}`,
+      );
+    }
+  }
   const namedSections = ["curiosity", "concept", "conclusion"];
   paper.abstractLines.forEach((line, lineIndex) => {
     const duplicate = namedSections.find((field) => normalizedProse(line) === normalizedProse(paper[field]));
@@ -603,7 +654,7 @@ function validateDetailedProductionPaperProse(paper, path) {
     fail(`${path}.assessment`, "must not copy the conclusion");
   }
   assertNarrativeAssessment(paper.assessment, paper.titleJa, `${path}.assessment`);
-  assertNoKnownGenericRationale(paper.assessment, `${path}.assessment`);
+  assertNoKnownGenericRationale(paper.assessment, `${path}.assessment`, { enforceCurrentQualityGates });
   if (paper.fullTextEvaluated === true) {
     assertNaturalJapanese(paper.fullTextReviewStatus, `${path}.fullTextReviewStatus`, 6);
     assertMaxCharacters(
@@ -616,7 +667,7 @@ function validateDetailedProductionPaperProse(paper, path) {
 
 export function validateProductionPaperProse(paper, path = "paper") {
   assertNaturalJapanese(paper.paperType, `${path}.paperType`);
-  validateDetailedProductionPaperProse(paper, path);
+  validateDetailedProductionPaperProse(paper, path, { enforceCurrentQualityGates: true });
   return paper;
 }
 
@@ -624,6 +675,7 @@ function validatePaper(paper, slug, path, {
   requireDetailed = true,
   structuredSchema,
   allowEminentAuthors = false,
+  enforceCurrentQualityGates = false,
 } = {}) {
   assertObject(paper, path);
   validateArxivIdentity(paper, path);
@@ -679,7 +731,7 @@ function validatePaper(paper, slug, path, {
   }
   paper.abstractLines.forEach((line, index) => assertNonEmptyString(line, `${path}.abstractLines[${index}]`));
   if (structuredSchema === PRODUCTION_SCHEMA) {
-    validateDetailedProductionPaperProse(paper, path);
+    validateDetailedProductionPaperProse(paper, path, { enforceCurrentQualityGates });
   }
   const requiredAbstractUrl = structuredSchema !== undefined ? arxivVersionedAbsUrl(paper.arxivId) : arxivAbsUrl(paper.arxivId);
   if (!Array.isArray(paper.sourceUrls) || !paper.sourceUrls.includes(requiredAbstractUrl)) {
@@ -736,6 +788,51 @@ export function comparePapers(a, b) {
     b.scores.technicalStrength - a.scores.technicalStrength ||
     b.scores.categoryImpact - a.scores.categoryImpact ||
     a.arxivId.localeCompare(b.arxivId);
+}
+
+function repeatedIndexGroups(values) {
+  const indicesByValue = new Map();
+  for (const [index, value] of values.entries()) {
+    const indices = indicesByValue.get(value) ?? [];
+    indices.push(index);
+    indicesByValue.set(value, indices);
+  }
+  return [...indicesByValue.values()].sort((left, right) => (
+    right.length - left.length || left[0] - right[0]
+  ));
+}
+
+export function findProductionScoreDistributionIssues(report) {
+  const paperCount = report.papers.length;
+  if (paperCount < 16) return [];
+  const issues = findTotalScoreDistributionIssues(report.papers);
+  const repeatedVectorGroups = repeatedIndexGroups(report.papers.map((paper) => (
+    SCORE_KEYS.map((key) => paper.scores[key]).join("/")
+  ))).filter((indices) => indices.length >= 8 && indices.length / paperCount > 0.20);
+  for (const repeatedVectors of repeatedVectorGroups) {
+    issues.push({
+      path: "scores",
+      message: `must not reuse one four-axis score vector for ${repeatedVectors.length} of ${paperCount} papers (maximum 20%)`,
+      paperIndices: repeatedVectors,
+    });
+  }
+  return issues;
+}
+
+export function findTotalScoreDistributionIssues(papers) {
+  const paperCount = papers.length;
+  if (paperCount < 16) return [];
+  const issues = [];
+  const repeatedTotalGroups = repeatedIndexGroups(papers.map((paper) => String(paper.totalScore)))
+    .filter((indices) => indices.length >= 8 && indices.length / paperCount > 0.35);
+  for (const repeatedTotals of repeatedTotalGroups) {
+    issues.push({
+      path: "totalScore",
+      message: `must not assign one total score to ${repeatedTotals.length} of ${paperCount} papers (maximum 35%)`,
+      paperIndices: repeatedTotals,
+    });
+  }
+  return issues;
 }
 
 function validateAudit(audit, report, date, slug, path) {
@@ -875,10 +972,20 @@ export function validateProductionReport(report, {
     fail(`${path}.papers`, "must contain one detailed record for every new paper");
   }
   const ids = new Set();
+  const enforceCurrentQualityGates = date >= CURRENT_QUALITY_GATE_EFFECTIVE_DATE;
   for (const [index, paper] of report.papers.entries()) {
-    validatePaper(paper, slug, `${path}.papers[${index}]`, { structuredSchema: report.schemaVersion });
+    validatePaper(paper, slug, `${path}.papers[${index}]`, {
+      structuredSchema: report.schemaVersion,
+      enforceCurrentQualityGates,
+    });
     if (ids.has(paper.arxivId)) fail(`${path}.papers[${index}].arxivId`, "is duplicated in this report");
     ids.add(paper.arxivId);
+  }
+  if (report.schemaVersion === PRODUCTION_SCHEMA && enforceCurrentQualityGates) {
+    const [scoreDistributionIssue] = findProductionScoreDistributionIssues(report);
+    if (scoreDistributionIssue !== undefined) {
+      fail(`${path}.papers.${scoreDistributionIssue.path}`, scoreDistributionIssue.message);
+    }
   }
   if (report.schemaVersion === PRODUCTION_SCHEMA) {
     validateProductionReportProseDiversity(report, path);
@@ -969,7 +1076,7 @@ function validateBadgeList(value, authors, path) {
   }
 }
 
-function validatePublicCategory(category, slug, schema, path) {
+function validatePublicCategory(category, slug, schema, path, { enforceCurrentQualityGates = false } = {}) {
   assertObject(category, path);
   if (isStructuredSchema(schema) && category.schemaVersion !== schema) {
     fail(`${path}.schemaVersion`, `must be ${schema}`);
@@ -994,6 +1101,7 @@ function validatePublicCategory(category, slug, schema, path) {
       requireDetailed: index < expectedTop,
       structuredSchema: isStructuredSchema(schema) ? schema : undefined,
       allowEminentAuthors: isStructuredSchema(schema) && index < expectedTop,
+      enforceCurrentQualityGates,
     });
     if (schema === PRODUCTION_SCHEMA && index >= expectedTop) {
       assertExactKeys(paper, [
@@ -1006,6 +1114,12 @@ function validatePublicCategory(category, slug, schema, path) {
     ids.add(paper.arxivId);
     if (isStructuredSchema(schema)) validateBadgeList(paper.eminentAuthors, paper.authors, `${path}.papers[${index}].eminentAuthors`);
   });
+  if (schema === PRODUCTION_SCHEMA && enforceCurrentQualityGates) {
+    const [scoreDistributionIssue] = findTotalScoreDistributionIssues(all);
+    if (scoreDistributionIssue !== undefined) {
+      fail(`${path}.papers.${scoreDistributionIssue.path}`, scoreDistributionIssue.message);
+    }
+  }
   if (category.topPapers.some((paper) => !paper.fullTextEvaluated)) {
     fail(`${path}.topPapers`, "every top paper must have a full-text review");
   }
@@ -1045,7 +1159,13 @@ export function validatePublicEdition(edition, { expectedDate, policy, path = "e
   assertExactKeys(edition.categories, CATEGORIES, `${path}.categories`);
   const allIds = new Set();
   for (const slug of CATEGORIES) {
-    const ids = validatePublicCategory(edition.categories[slug], slug, edition.schemaVersion, `${path}.categories.${slug}`);
+    const ids = validatePublicCategory(
+      edition.categories[slug],
+      slug,
+      edition.schemaVersion,
+      `${path}.categories.${slug}`,
+      { enforceCurrentQualityGates: edition.date >= CURRENT_QUALITY_GATE_EFFECTIVE_DATE },
+    );
     for (const id of ids) {
       if (allIds.has(id)) fail(`${path}.categories`, `duplicate arXiv ID across categories: ${id}`);
       allIds.add(id);

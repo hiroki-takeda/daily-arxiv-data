@@ -227,6 +227,9 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /英字で残すのは固有名・数式・標準略語に限り/);
   assert.match(specification, /別論文へそのまま移せる定型文を禁止/);
   assert.match(specification, /abstractLines\[0\].*言い換えにはしません/);
+  assert.match(specification, /`concept`へ`abstractLines\[1\]`.*一文そのままコピーしてはいけません/);
+  assert.match(specification, /全体の35%超へ同じ総合点/);
+  assert.match(specification, /`path`が`totalScore`または`scores`/);
   assert.match(specification, /assessment.*点数や`scoreReasons`の反復/);
 });
 

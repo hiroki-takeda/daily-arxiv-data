@@ -150,6 +150,48 @@ test("language audit reports leaf and category prose issues without being blocke
   }
 });
 
+test("language audit reports severe total-score and four-axis plateaus for batch rescoring", async () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const papers = reports["quant-ph"].papers;
+  for (let index = 0; index < 8; index += 1) {
+    papers[index].scores = {
+      broadImpact: 22,
+      categoryImpact: 13,
+      originality: 12,
+      technicalStrength: 11,
+    };
+    papers[index].totalScore = 58;
+  }
+  for (let index = 8; index < 16; index += 1) {
+    papers[index].scores = {
+      broadImpact: 21,
+      categoryImpact: 14,
+      originality: 13,
+      technicalStrength: 12,
+    };
+    papers[index].totalScore = 60;
+  }
+
+  const { root, staging } = await fixture(reports);
+  const output = join(root, "language-issues-before.json");
+  const result = runAudit({ root, staging, output });
+
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(readFileSync(output, "utf8"));
+  const scoreIssues = audit.issues.filter((issue) => (
+    issue.scope === "category" && ["totalScore", "scores"].includes(issue.path)
+  ));
+  assert.equal(scoreIssues.length, 2);
+  assert.deepEqual(new Set(scoreIssues.map(({ path }) => path)), new Set(["totalScore", "scores"]));
+  for (const issue of scoreIssues) {
+    assert.equal(issue.slug, "quant-ph");
+    assert.deepEqual(
+      issue.affectedPapers.map(({ index }) => index),
+      [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    );
+  }
+});
+
 test("language audit sentinels do not create false structural-diversity failures", async () => {
   const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
   for (let index = 0; index < 16; index += 1) {

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   CATEGORIES,
+  comparePapers,
+  findTotalScoreDistributionIssues,
   validateDate,
   validateJstTimestamp,
   validateModelPolicy,
@@ -97,6 +99,15 @@ test("schema 1.4 requires exact Japanese score reasons and the stable rubric mar
   rejectsMutation((reports) => {
     reports["hep-th"].papers[0].scoreReasons.broadImpact = "主題の分野横断的な射程を評価。";
   }, /generic rationale phrase/);
+  for (const phrase of [
+    "従来の到達点と異なる具体的な差分は、固有の方法を導入した。",
+    "固有の成果を得た。波及先はこの成果が直接扱う対象と隣接する理論・実装課題である。",
+    "固有の方法を構成した。本文の主要節で成立条件を確認した。",
+  ]) {
+    rejectsMutation((reports) => {
+      reports["hep-th"].papers[0].scoreReasons.originality = phrase;
+    }, /generic rationale phrase/);
+  }
   rejectsMutation((reports) => { reports["hep-th"].audit.scoreRubric = "四つの軸を採点する。"; }, /Daily arXiv rubric 3\.0/);
 });
 
@@ -390,7 +401,7 @@ test("schema 1.4 rejects duplicated summary sections, copied conclusions, and ge
   rejectsMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
     paper.abstractLines[0] = paper.curiosity;
-  }, /must not exactly duplicate/);
+  }, /must not (?:exactly duplicate|copy abstractLines\[0\] verbatim)/);
   rejectsMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
     paper.assessment = `証拠を総合した。${paper.conclusion}`;
@@ -398,6 +409,71 @@ test("schema 1.4 rejects duplicated summary sections, copied conclusions, and ge
   rejectsMutation((reports) => {
     reports["hep-th"].papers[0].assessment = "物理的内容を確認し、分野内での重要度を評価した。";
   }, /generic rationale phrase/);
+});
+
+test("schema 1.4 rejects substantial verbatim reuse of abstract lines in evaluation fields", () => {
+  const line0 = "有限温度量子系における長距離相関の成立条件と観測可能性を具体的に調べる。";
+  const line1 = "対称性分解と数値対角化を組み合わせ、有限サイズ依存性と既知極限を比較する。";
+  const line2 = "臨界近傍で新しい尺度則を得たが、非一様雑音を含む条件への適用は確立していない。";
+  for (const [field, lineIndex] of [
+    ["curiosity", 0],
+    ["concept", 1],
+    ["conclusion", 2],
+    ["assessment", 2],
+  ]) {
+    rejectsMutation((reports) => {
+      const paper = reports["hep-th"].papers[0];
+      paper.abstractLines = [line0, line1, line2];
+      paper[field] = `論文固有の説明として、${paper.abstractLines[lineIndex]}`;
+    }, new RegExp(`must not copy abstractLines\\[${lineIndex}\\] verbatim`));
+  }
+  rejectsMutation((reports) => {
+    const paper = reports["hep-th"].papers[0];
+    paper.abstractLines = [line0, line1, line2];
+    paper.scoreReasons.technicalStrength = `技術的根拠として、${line1}`;
+  }, /scoreReasons\.technicalStrength.*must not copy abstractLines\[1\] verbatim/);
+  rejectsMutation((reports) => {
+    const paper = reports["hep-th"].papers[0];
+    paper.abstractLines[1] = "対称性を用いて有限系の応答を解析した。";
+    paper.concept = `方法の核として、${paper.abstractLines[1]}`;
+  }, /concept.*must not copy abstractLines\[1\] verbatim/);
+  rejectsMutation((reports) => {
+    const paper = reports["hep-th"].papers[0];
+    paper.scoreReasons.broadImpact = "有限温度で新しい尺度則を確認した。";
+    paper.assessment = `総合すると、${paper.scoreReasons.broadImpact}一方で、非一様雑音への適用条件が主要な限界である。`;
+  }, /assessment.*must not copy scoreReasons\.broadImpact verbatim/);
+});
+
+test("schema 1.4 rejects severe score plateaus instead of using arXiv IDs as the effective ranking", () => {
+  const reports = validReportSet({ count: 20 });
+  const papers = reports["quant-ph"].papers;
+  for (let index = 0; index < 8; index += 1) {
+    papers[index].scores = {
+      broadImpact: 22,
+      categoryImpact: 13,
+      originality: 12,
+      technicalStrength: 11,
+    };
+    papers[index].totalScore = 58;
+  }
+  papers.sort(comparePapers);
+  papers.forEach((paper, index) => {
+    paper.rank = index + 1;
+  });
+  assert.throws(
+    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+    /must not assign one total score to 8 of 20 papers/,
+  );
+});
+
+test("public-edition total-score guard can detect plateaus without four-axis details", () => {
+  const papers = Array.from({ length: 20 }, (_, index) => ({ totalScore: 100 - index }));
+  for (let index = 0; index < 8; index += 1) papers[index].totalScore = 58;
+  assert.deepEqual(findTotalScoreDistributionIssues(papers), [{
+    path: "totalScore",
+    message: "must not assign one total score to 8 of 20 papers (maximum 35%)",
+    paperIndices: [0, 1, 2, 3, 4, 5, 6, 7],
+  }]);
 });
 
 test("historical schema 1.3 remains valid but cannot bypass new-publication checks", () => {
