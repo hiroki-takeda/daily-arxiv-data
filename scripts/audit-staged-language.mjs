@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { lstatSync, writeFileSync } from "node:fs";
+import { lstatSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -61,12 +61,15 @@ try {
   const runRoot = resolve(process.env.TMPDIR ?? "");
   const staging = resolve(process.argv[3]);
   const output = resolve(process.argv[4]);
-  if (staging !== resolve(runRoot, "staging")) fail(`Staging directory must be ${resolve(runRoot, "staging")}.`);
-  if (dirname(output) !== runRoot || !OUTPUT_NAMES.has(basename(output))) {
-    fail(`Output must be language-issues-before.json or language-issues-after.json directly under ${runRoot}.`);
-  }
   const stagingEntry = lstatSync(staging);
   if (stagingEntry.isSymbolicLink() || !stagingEntry.isDirectory()) fail("Staging must be a real directory.");
+  const canonicalRunRoot = realpathSync(runRoot);
+  if (realpathSync(staging) !== resolve(canonicalRunRoot, "staging")) {
+    fail(`Staging directory must be ${resolve(runRoot, "staging")}.`);
+  }
+  if (realpathSync(dirname(output)) !== canonicalRunRoot || !OUTPUT_NAMES.has(basename(output))) {
+    fail(`Output must be language-issues-before.json or language-issues-after.json directly under ${runRoot}.`);
+  }
   const paths = assertExactStagingReports(staging, date);
   const policy = parseJsonFile(resolve(fileURLToPath(new URL("..", import.meta.url)), "data/model-policy.json"));
   const issues = [];

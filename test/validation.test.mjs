@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   CATEGORIES,
   validateDate,
+  validateJstTimestamp,
   validateModelPolicy,
   validateProductionReportSet,
 } from "../scripts/lib/pipeline.mjs";
@@ -62,6 +63,13 @@ test("invalid and mismatched dates are rejected", () => {
   assert.throws(() => validateDate("2099-02-30"), /real calendar date/);
   rejectsMutation((reports) => { reports["gr-qc"].reportDate = "2099-01-06"; }, /reportDate/);
   rejectsMutation((reports) => { reports["quant-ph"].audit.announcementDate = "2099-01-06"; }, /announcementDate/);
+});
+
+test("JST timestamps accept seconds or three-digit milliseconds and reject other offsets", () => {
+  assert.equal(validateJstTimestamp("2099-01-05T12:34:56+09:00", "timestamp"), "2099-01-05T12:34:56+09:00");
+  assert.equal(validateJstTimestamp("2099-01-05T12:34:56.789+09:00", "timestamp"), "2099-01-05T12:34:56.789+09:00");
+  assert.throws(() => validateJstTimestamp("2099-01-05T03:34:56Z", "timestamp"), /optional milliseconds/);
+  assert.throws(() => validateJstTimestamp("2099-01-05T12:34:56.78+09:00", "timestamp"), /optional milliseconds/);
 });
 
 test("incomplete audit is rejected", () => {

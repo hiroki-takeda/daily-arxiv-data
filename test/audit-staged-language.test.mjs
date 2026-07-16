@@ -104,6 +104,17 @@ test("language audit writes an empty private result without modifying staged rep
   assert.equal(readFileSync(reportPath, "utf8"), before);
 });
 
+test("language audit treats equivalent real and symlinked run-root spellings as the same directory", async () => {
+  const { root, staging } = await fixture();
+  const aliasRoot = `${root}-alias`;
+  symlinkSync(root, aliasRoot, "dir");
+  const output = join(root, "language-issues-before.json");
+  const result = runAudit({ root: aliasRoot, staging, output });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, new RegExp(`STAGED_LANGUAGE_AUDIT: ${DATE}; issues=0;`));
+});
+
 test("language audit rejects non-fixed output paths and never overwrites an existing result", async () => {
   const { root, staging } = await fixture();
   const invalidOutput = join(root, "unexpected-language-issues.json");

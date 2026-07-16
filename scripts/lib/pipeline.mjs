@@ -28,7 +28,7 @@ export const SCORE_KEYS = Object.freeze([
 ]);
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const JST_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+09:00$/;
+const JST_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?\+09:00$/;
 const ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}$/;
 const RUN_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/;
 const MAX_JSON_BYTES = 10 * 1024 * 1024;
@@ -265,7 +265,7 @@ export function validateDate(value, path = "date") {
 
 export function validateJstTimestamp(value, path) {
   if (typeof value !== "string" || !JST_TIMESTAMP_PATTERN.test(value) || Number.isNaN(Date.parse(value))) {
-    fail(path, "must be an ISO timestamp with seconds and the +09:00 offset");
+    fail(path, "must be an ISO timestamp with seconds, optional milliseconds, and the +09:00 offset");
   }
   return value;
 }

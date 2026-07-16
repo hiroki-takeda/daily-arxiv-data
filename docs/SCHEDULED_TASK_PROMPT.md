@@ -244,6 +244,8 @@ generatedAtJst
 
 `sourceCounts`は`newPrimary`、`crosslistsExcluded`、`titleAuthorAbstractEvaluated`の3整数だけです。
 
+`generatedAtJst`はJSTのISO時刻とし、`YYYY-MM-DDTHH:mm:ss+09:00`または3桁のミリ秒を含む`YYYY-MM-DDTHH:mm:ss.sss+09:00`だけを使います。
+
 ホストプロンプトで指定されたstaging directoryへ、3ファイルだけを書きます。パスを推測したりrepo内へ変更したりしません。
 
 ```text
