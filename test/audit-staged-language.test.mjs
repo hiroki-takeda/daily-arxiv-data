@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 
+import { CATEGORIES } from "../scripts/lib/pipeline.mjs";
 import { DATE, validReportSet, writeReports } from "./helpers.mjs";
 
 const REPOSITORY_ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -25,6 +26,33 @@ function runAudit({ root, staging, output }) {
     encoding: "utf8",
     env: { ...process.env, TMPDIR: root },
   });
+}
+
+function makeCategoryProseDiverse(reports) {
+  for (const report of Object.values(reports)) {
+    report.papers.forEach((paper, index) => {
+      const n = index + 1;
+      paper.abstractLines = [
+        `固有の背景を示す論文第${n}要約一`,
+        `固有の方法を示す論文第${n}要約二`,
+        `固有の結果を示す論文第${n}要約三`,
+      ];
+      paper.curiosity = `固有の未解決課題を問う論文第${n}記述`;
+      paper.concept = `固有の方法上の要点を示す論文第${n}項目`;
+      paper.conclusion = `固有の主要結論と成立限界を示す論文第${n}記述`;
+      paper.assessment = `固有の長所と主要な限界を比較する論文第${n}評価`;
+      paper.scoreReasons = {
+        broadImpact: `複数領域への波及経路を示す論文第${n}根拠`,
+        categoryImpact: `主分野における前進を示す論文第${n}根拠`,
+        originality: `既存手法との差分を示す論文第${n}根拠`,
+        technicalStrength: `中心手法を支える検証を示す論文第${n}根拠`,
+      };
+      if (paper.fullTextEvaluated) {
+        paper.fullTextReviewStatus = `固有の導出検証限界を確認した論文第${n}記録`;
+      }
+    });
+  }
+  return reports;
 }
 
 test("language audit exhaustively collects every supported invalid prose field", async () => {
@@ -84,6 +112,84 @@ test("language audit exhaustively collects every supported invalid prose field",
     assert.equal(issue.rank, reports[issue.slug].papers[issue.index].rank);
     assert.equal(issue.arxivId, reports[issue.slug].papers[issue.index].arxivId);
   }
+});
+
+test("language audit reports leaf and category prose issues without being blocked by score validation", async () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const quantPapers = reports["quant-ph"].papers;
+  quantPapers[12].scores.technicalStrength = 18;
+  quantPapers[12].totalScore = Object.values(quantPapers[12].scores).reduce((sum, value) => sum + value, 0);
+  quantPapers[11].conclusion = "都市網で安全鍵率2.64 kbpsを報告した。";
+  for (let index = 0; index < 6; index += 1) {
+    quantPapers[index].concept = `論文${index + 1}の固有問題では到達しない量は何か、提案機構によって観測可能域をどこまで拡張できるか。`;
+  }
+
+  const { root, staging } = await fixture(reports);
+  const before = new Map(
+    CATEGORIES.map((slug) => [slug, readFileSync(join(staging, `${DATE}-${slug}.json`), "utf8")]),
+  );
+  const output = join(root, "language-issues-before.json");
+  const result = runAudit({ root, staging, output });
+
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(readFileSync(output, "utf8"));
+  assert.equal(audit.count, 2);
+  const leaf = audit.issues.find((issue) => issue.scope === undefined);
+  assert.deepEqual(
+    { slug: leaf.slug, index: leaf.index, path: leaf.path, value: leaf.value },
+    { slug: "quant-ph", index: 11, path: "conclusion", value: quantPapers[11].conclusion },
+  );
+  assert.match(leaf.message, /lowercase English token "kbps"/);
+  const category = audit.issues.find((issue) => issue.scope === "category");
+  assert.equal(category.slug, "quant-ph");
+  assert.equal(category.path, "concept");
+  assert.match(category.message, /sentence skeleton for 6 of 20 papers/);
+  assert.deepEqual(category.affectedPapers.map(({ index }) => index), [0, 1, 2, 3, 4, 5]);
+  for (const slug of CATEGORIES) {
+    assert.equal(readFileSync(join(staging, `${DATE}-${slug}.json`), "utf8"), before.get(slug));
+  }
+});
+
+test("language audit sentinels do not create false structural-diversity failures", async () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  for (let index = 0; index < 16; index += 1) {
+    reports["quant-ph"].papers[index].concept = "English only";
+  }
+  const { root, staging } = await fixture(reports);
+  const output = join(root, "language-issues-before.json");
+  const result = runAudit({ root, staging, output });
+
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(readFileSync(output, "utf8"));
+  assert.equal(audit.count, 16);
+  assert.equal(audit.issues.every((issue) => issue.scope === undefined && issue.path === "concept"), true);
+});
+
+test("leaf prose failures do not hide an overlapping category diversity failure", async () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const papers = reports["quant-ph"].papers;
+  for (let index = 0; index < 6; index += 1) {
+    papers[index].concept = `論文${index + 1}の固有問題では到達しない量は何か、提案機構によって観測可能域をどこまで拡張できるか。`;
+  }
+  papers[0].concept += "安全率2.64 kbpsを指標とする。";
+
+  const { root, staging } = await fixture(reports);
+  const output = join(root, "language-issues-before.json");
+  const result = runAudit({ root, staging, output });
+
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(readFileSync(output, "utf8"));
+  assert.equal(audit.count, 2);
+  const leaf = audit.issues.find((issue) => issue.scope === undefined);
+  assert.deepEqual({ slug: leaf.slug, index: leaf.index, path: leaf.path }, {
+    slug: "quant-ph",
+    index: 0,
+    path: "concept",
+  });
+  assert.match(leaf.message, /lowercase English token "kbps"/);
+  const category = audit.issues.find((issue) => issue.scope === "category");
+  assert.equal(category.path, "concept");
+  assert.deepEqual(category.affectedPapers.map(({ index }) => index), [0, 1, 2, 3, 4, 5]);
 });
 
 test("language audit writes an empty private result without modifying staged reports", async () => {

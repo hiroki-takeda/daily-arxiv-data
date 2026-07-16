@@ -254,7 +254,11 @@ generatedAtJst
 <host staging>/YYYY-MM-DD-hep-th.json
 ```
 
+固定言語監査の前に、機械的な整合性を1回だけ自己点検します。少なくとも、`totalScore`が4軸の和であること、順位がtie-breakどおりであること、全文未確認論文の各軸が24点未満かつ`technicalStrength`が17点以下であること、最終上位10件が全文確認済みであること、全文確認数と監査件数が一致することを全件で確認します。違反があれば、この段階でまとめて直してから言語監査へ進みます。最終validatorをこの自己点検の代用として先に実行しません。
+
 3ファイルを書いた後、まず不自然な日本語を一括列挙する固定監査を1回だけ実行します。監査のsourceを読まず、出力JSONに列挙された全フィールドを、一つずつではなく1回のbatchで修正します。
+
+出力中の通常項目は指定された1論文の`path`だけを修正します。`scope: "category"`の項目は、`affectedPapers`に列挙された論文の同じ`path`が、同一文や句読点を軸にした同一の文骨格を過剰に再利用していることを示します。論文固有の事実を保ったまま、列挙された対象をまとめて異なる自然な日本語構文へ書き直します。対象外の良好な論文まで一律に書き換えません。
 
 ```bash
 node scripts/audit-staged-language.mjs YYYY-MM-DD <host staging> "$TMPDIR/language-issues-before.json"
@@ -274,7 +278,7 @@ node scripts/audit-staged-language.mjs YYYY-MM-DD <host staging> "$TMPDIR/langua
 node scripts/validate-staged-reports.mjs YYYY-MM-DD <host staging>
 ```
 
-`STAGED_REPORTS_VALID`にならなければ、そのrunではvalidatorを再実行せず異常終了します。監査またはvalidatorを迂回、弱体化、変更しません。`STAGED_REPORTS_VALID`になった場合は、それを最後のコマンドとして直ちに終了し、以後はfilesystemへ何も書きません。
+`STAGED_REPORTS_VALID`にならなければ、そのrunではvalidatorを再実行せず異常終了します。監査またはvalidatorを迂回、弱体化、変更しません。`STAGED_REPORTS_VALID`になった場合は、それを最後のコマンドとして直ちに終了し、以後はfilesystemへ何も書かず、最終応答を正確に`STAGED_REPORTS_VALID`の1行だけとします。
 
 ## 5. ホスト側検証と公開
 

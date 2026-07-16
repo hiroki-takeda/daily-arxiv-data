@@ -457,7 +457,7 @@ Do not write any other file in the staging directory.
 
 After all three reports are complete, run the fixed exhaustive language audit once and repair every listed field in one batch. Run the exhaustive audit only once more after that batch. Never use the final validator as a one-error-at-a-time repair loop. The exact commands and bounded failure rule are in docs/SCHEDULED_TASK_PROMPT.md. Run the fixed final validator exactly once after the second audit reports zero issues. If either audit or the final validator fails, do not keep iterating: exit with an error so the previous public edition remains unchanged.
 
-The final validator is the last command in a successful model run. After it prints STAGED_REPORTS_VALID, stop immediately without any further filesystem action. Never create or write a manifest, completion marker, status file, or outbox entry; the host requires the outbox directory to remain empty and derives the expected date and filenames from its own snapshot. Do not claim success unless all three reports exactly cover the snapshot and are complete. On any research, model, network, date-alignment, or validation uncertainty, do not invent data; exit with an error.
+The final validator is the last command in a successful model run. After it prints STAGED_REPORTS_VALID, stop immediately without any further filesystem action and make your final response exactly STAGED_REPORTS_VALID. Never create or write a manifest, completion marker, status file, or outbox entry; the host requires the outbox directory to remain empty and derives the expected date and filenames from its own snapshot. Do not claim success unless all three reports exactly cover the snapshot and are complete. On any research, model, network, date-alignment, or validation uncertainty, do not invent data; exit with an error.
 `;
 }
 
@@ -1014,6 +1014,13 @@ export function assertCodexPermissionEnforcement({
   return Object.freeze(report);
 }
 
+export function validateCodexCompletionResponse(stdout) {
+  if (typeof stdout !== "string" || stdout.trim() !== "STAGED_REPORTS_VALID") {
+    fail("Codex did not return the exact validated-completion response; no publication was attempted.");
+  }
+  return "STAGED_REPORTS_VALID";
+}
+
 export function invokeCodex({ codexBin, worktree, paths, prompt }) {
   const result = runCommand(codexBin, buildCodexArgs({ worktree, runRoot: paths.runRoot }), {
     cwd: worktree,
@@ -1027,6 +1034,7 @@ export function invokeCodex({ codexBin, worktree, paths, prompt }) {
   if (result.status !== 0) {
     fail(`Codex generation failed (${result.status}); no publication was attempted. Inspect ${paths.codexLog}.`);
   }
+  validateCodexCompletionResponse(result.stdout);
 }
 
 function readStableRegularFile(path, maxBytes) {

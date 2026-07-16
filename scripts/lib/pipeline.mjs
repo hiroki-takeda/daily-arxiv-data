@@ -481,16 +481,24 @@ function validateScoreReasons(paper, path) {
   }
 }
 
-function validateCategoryProseDiversity(values, path, paperCount = values.length) {
+export function findCategoryProseDiversityIndices(values, paperCount = values.length) {
   if (values.length === 0) return;
-  const counts = new Map();
-  for (const value of values) {
+  const indicesByValue = new Map();
+  for (const [index, value] of values.entries()) {
     const normalized = normalizedProse(value);
-    counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+    const indices = indicesByValue.get(normalized) ?? [];
+    indices.push(index);
+    indicesByValue.set(normalized, indices);
   }
-  const repeated = [...counts.values()].find((count) => count >= 3 && count / paperCount > 0.25);
+  return [...indicesByValue.values()].find((indices) => (
+    indices.length >= 3 && indices.length / paperCount > 0.25
+  ));
+}
+
+function validateCategoryProseDiversity(values, path, paperCount = values.length) {
+  const repeated = findCategoryProseDiversityIndices(values, paperCount);
   if (repeated !== undefined) {
-    fail(path, `must not reuse identical text for ${repeated} of ${paperCount} papers (maximum 25%, with at least three matches)`);
+    fail(path, `must not reuse identical text for ${repeated.length} of ${paperCount} papers (maximum 25%, with at least three matches)`);
   }
 }
 
@@ -534,19 +542,25 @@ function structuralProseSignatures(value) {
   return signatures;
 }
 
-function validateCategoryStructuralDiversity(values, path, paperCount = values.length) {
+export function findCategoryStructuralDiversityIndices(values, paperCount = values.length) {
   if (values.length < STRUCTURAL_DIVERSITY.minimumSampleSize) return;
-  const counts = new Map();
-  for (const value of values) {
+  const indicesBySignature = new Map();
+  for (const [index, value] of values.entries()) {
     for (const signature of structuralProseSignatures(value)) {
-      counts.set(signature, (counts.get(signature) ?? 0) + 1);
+      const indices = indicesBySignature.get(signature) ?? [];
+      indices.push(index);
+      indicesBySignature.set(signature, indices);
     }
   }
-  const repeated = [...counts.values()].find((count) => count / paperCount > 0.25);
+  return [...indicesBySignature.values()].find((indices) => indices.length / paperCount > 0.25);
+}
+
+function validateCategoryStructuralDiversity(values, path, paperCount = values.length) {
+  const repeated = findCategoryStructuralDiversityIndices(values, paperCount);
   if (repeated !== undefined) {
     fail(
       path,
-      `must not reuse a punctuation-anchored sentence skeleton for ${repeated} of ${paperCount} papers (maximum 25%)`,
+      `must not reuse a punctuation-anchored sentence skeleton for ${repeated.length} of ${paperCount} papers (maximum 25%)`,
     );
   }
 }
@@ -560,6 +574,50 @@ function validateAuthors(authors, path) {
     if (seen.has(key)) fail(path, `contains duplicate author ${author}`);
     seen.add(key);
   }
+}
+
+function validateDetailedProductionPaperProse(paper, path) {
+  assertJapaneseDisplayTitle(paper.titleJa, paper.title, `${path}.titleJa`);
+  assertMaxCharacters(paper.titleJa, PROSE_MAX_CHARACTERS.titleJa, `${path}.titleJa`);
+  for (const field of ["curiosity", "concept", "conclusion"]) {
+    assertNaturalJapanese(paper[field], `${path}.${field}`, 6);
+    assertMaxCharacters(paper[field], PROSE_MAX_CHARACTERS[field], `${path}.${field}`);
+    assertNoKnownGenericRationale(paper[field], `${path}.${field}`);
+    assertNoReaderReviewProvenance(paper[field], `${path}.${field}`);
+  }
+  assertNaturalJapanese(paper.assessment, `${path}.assessment`, 12);
+  assertMaxCharacters(paper.assessment, PROSE_MAX_CHARACTERS.assessment, `${path}.assessment`);
+  assertNoReaderReviewProvenance(paper.assessment, `${path}.assessment`);
+  paper.abstractLines.forEach((line, index) => {
+    assertNaturalJapanese(line, `${path}.abstractLines[${index}]`, 6);
+    assertMaxCharacters(line, PROSE_MAX_CHARACTERS.abstractLine, `${path}.abstractLines[${index}]`);
+    assertNoReaderReviewProvenance(line, `${path}.abstractLines[${index}]`);
+  });
+  validateScoreReasons(paper, path);
+  const namedSections = ["curiosity", "concept", "conclusion"];
+  paper.abstractLines.forEach((line, lineIndex) => {
+    const duplicate = namedSections.find((field) => normalizedProse(line) === normalizedProse(paper[field]));
+    if (duplicate) fail(`${path}.abstractLines[${lineIndex}]`, `must not exactly duplicate ${path}.${duplicate}`);
+  });
+  if (normalizedProse(paper.assessment).includes(normalizedProse(paper.conclusion))) {
+    fail(`${path}.assessment`, "must not copy the conclusion");
+  }
+  assertNarrativeAssessment(paper.assessment, paper.titleJa, `${path}.assessment`);
+  assertNoKnownGenericRationale(paper.assessment, `${path}.assessment`);
+  if (paper.fullTextEvaluated === true) {
+    assertNaturalJapanese(paper.fullTextReviewStatus, `${path}.fullTextReviewStatus`, 6);
+    assertMaxCharacters(
+      paper.fullTextReviewStatus,
+      PROSE_MAX_CHARACTERS.fullTextReviewStatus,
+      `${path}.fullTextReviewStatus`,
+    );
+  }
+}
+
+export function validateProductionPaperProse(paper, path = "paper") {
+  assertNaturalJapanese(paper.paperType, `${path}.paperType`);
+  validateDetailedProductionPaperProse(paper, path);
+  return paper;
 }
 
 function validatePaper(paper, slug, path, {
@@ -621,33 +679,7 @@ function validatePaper(paper, slug, path, {
   }
   paper.abstractLines.forEach((line, index) => assertNonEmptyString(line, `${path}.abstractLines[${index}]`));
   if (structuredSchema === PRODUCTION_SCHEMA) {
-    assertJapaneseDisplayTitle(paper.titleJa, paper.title, `${path}.titleJa`);
-    assertMaxCharacters(paper.titleJa, PROSE_MAX_CHARACTERS.titleJa, `${path}.titleJa`);
-    for (const field of ["curiosity", "concept", "conclusion"]) {
-      assertNaturalJapanese(paper[field], `${path}.${field}`, 6);
-      assertMaxCharacters(paper[field], PROSE_MAX_CHARACTERS[field], `${path}.${field}`);
-      assertNoKnownGenericRationale(paper[field], `${path}.${field}`);
-      assertNoReaderReviewProvenance(paper[field], `${path}.${field}`);
-    }
-    assertNaturalJapanese(paper.assessment, `${path}.assessment`, 12);
-    assertMaxCharacters(paper.assessment, PROSE_MAX_CHARACTERS.assessment, `${path}.assessment`);
-    assertNoReaderReviewProvenance(paper.assessment, `${path}.assessment`);
-    paper.abstractLines.forEach((line, index) => {
-      assertNaturalJapanese(line, `${path}.abstractLines[${index}]`, 6);
-      assertMaxCharacters(line, PROSE_MAX_CHARACTERS.abstractLine, `${path}.abstractLines[${index}]`);
-      assertNoReaderReviewProvenance(line, `${path}.abstractLines[${index}]`);
-    });
-    validateScoreReasons(paper, path);
-    const namedSections = ["curiosity", "concept", "conclusion"];
-    paper.abstractLines.forEach((line, lineIndex) => {
-      const duplicate = namedSections.find((field) => normalizedProse(line) === normalizedProse(paper[field]));
-      if (duplicate) fail(`${path}.abstractLines[${lineIndex}]`, `must not exactly duplicate ${path}.${duplicate}`);
-    });
-    if (normalizedProse(paper.assessment).includes(normalizedProse(paper.conclusion))) {
-      fail(`${path}.assessment`, "must not copy the conclusion");
-    }
-    assertNarrativeAssessment(paper.assessment, paper.titleJa, `${path}.assessment`);
-    assertNoKnownGenericRationale(paper.assessment, `${path}.assessment`);
+    validateDetailedProductionPaperProse(paper, path);
   }
   const requiredAbstractUrl = structuredSchema !== undefined ? arxivVersionedAbsUrl(paper.arxivId) : arxivAbsUrl(paper.arxivId);
   if (!Array.isArray(paper.sourceUrls) || !paper.sourceUrls.includes(requiredAbstractUrl)) {
@@ -662,14 +694,6 @@ function validatePaper(paper, slug, path, {
       fail(`${path}.evaluationBasis`, "must be full_text_major_sections after full-text review");
     }
     assertNonEmptyString(paper.fullTextReviewStatus, `${path}.fullTextReviewStatus`);
-    if (structuredSchema === PRODUCTION_SCHEMA) {
-      assertNaturalJapanese(paper.fullTextReviewStatus, `${path}.fullTextReviewStatus`, 6);
-      assertMaxCharacters(
-        paper.fullTextReviewStatus,
-        PROSE_MAX_CHARACTERS.fullTextReviewStatus,
-        `${path}.fullTextReviewStatus`,
-      );
-    }
     const requiredPdfUrl = structuredSchema !== undefined ? arxivVersionedPdfUrl(paper.arxivId) : arxivPdfUrl(paper.arxivId);
     if (!paper.sourceUrls.includes(requiredPdfUrl)) {
       fail(`${path}.sourceUrls`, `must include ${requiredPdfUrl} after full-text review`);
@@ -771,6 +795,42 @@ function validateAudit(audit, report, date, slug, path) {
   }
 }
 
+export function validateProductionReportProseDiversity(report, path = "report") {
+  for (const field of ["curiosity", "concept", "conclusion"]) {
+    validateCategoryStructuralDiversity(
+      report.papers.map((paper) => paper[field]),
+      `${path}.papers.${field}`,
+    );
+  }
+  for (let lineIndex = 0; lineIndex < 3; lineIndex += 1) {
+    validateCategoryStructuralDiversity(
+      report.papers.map((paper) => paper.abstractLines[lineIndex]),
+      `${path}.papers.abstractLines[${lineIndex}]`,
+    );
+  }
+  for (const key of SCORE_KEYS) {
+    validateCategoryProseDiversity(
+      report.papers.map((paper) => paper.scoreReasons[key]),
+      `${path}.papers.scoreReasons.${key}`,
+    );
+    validateCategoryStructuralDiversity(
+      report.papers.map((paper) => paper.scoreReasons[key]),
+      `${path}.papers.scoreReasons.${key}`,
+    );
+  }
+  validateCategoryProseDiversity(report.papers.map((paper) => paper.assessment), `${path}.papers.assessment`);
+  validateCategoryStructuralDiversity(
+    report.papers.map((paper) => paper.assessment),
+    `${path}.papers.assessment`,
+  );
+  const fullTextReviewStatuses = report.papers
+    .filter((paper) => paper.fullTextEvaluated)
+    .map((paper) => paper.fullTextReviewStatus);
+  validateCategoryProseDiversity(fullTextReviewStatuses, `${path}.papers.fullTextReviewStatus`);
+  validateCategoryStructuralDiversity(fullTextReviewStatuses, `${path}.papers.fullTextReviewStatus`);
+  return report;
+}
+
 export function validateProductionReport(report, {
   date,
   slug,
@@ -821,38 +881,7 @@ export function validateProductionReport(report, {
     ids.add(paper.arxivId);
   }
   if (report.schemaVersion === PRODUCTION_SCHEMA) {
-    for (const field of ["curiosity", "concept", "conclusion"]) {
-      validateCategoryStructuralDiversity(
-        report.papers.map((paper) => paper[field]),
-        `${path}.papers.${field}`,
-      );
-    }
-    for (let lineIndex = 0; lineIndex < 3; lineIndex += 1) {
-      validateCategoryStructuralDiversity(
-        report.papers.map((paper) => paper.abstractLines[lineIndex]),
-        `${path}.papers.abstractLines[${lineIndex}]`,
-      );
-    }
-    for (const key of SCORE_KEYS) {
-      validateCategoryProseDiversity(
-        report.papers.map((paper) => paper.scoreReasons[key]),
-        `${path}.papers.scoreReasons.${key}`,
-      );
-      validateCategoryStructuralDiversity(
-        report.papers.map((paper) => paper.scoreReasons[key]),
-        `${path}.papers.scoreReasons.${key}`,
-      );
-    }
-    validateCategoryProseDiversity(report.papers.map((paper) => paper.assessment), `${path}.papers.assessment`);
-    validateCategoryStructuralDiversity(
-      report.papers.map((paper) => paper.assessment),
-      `${path}.papers.assessment`,
-    );
-    const fullTextReviewStatuses = report.papers
-      .filter((paper) => paper.fullTextEvaluated)
-      .map((paper) => paper.fullTextReviewStatus);
-    validateCategoryProseDiversity(fullTextReviewStatuses, `${path}.papers.fullTextReviewStatus`);
-    validateCategoryStructuralDiversity(fullTextReviewStatuses, `${path}.papers.fullTextReviewStatus`);
+    validateProductionReportProseDiversity(report, path);
   }
   const ranked = [...report.papers].sort(comparePapers);
   ranked.forEach((paper, index) => {

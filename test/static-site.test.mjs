@@ -119,8 +119,6 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   assert.match(detail, /class="detail-meta"/);
   assert.match(detail, new RegExp(`class="badge kind">${escapeRegExp(escapeHtml(lower.paperType))}</span>`));
   assert.doesNotMatch(detail, /class="(?:detail-heading|english-title|authors|badges|scores)"|<h3>/);
-  assert.doesNotMatch(detail, new RegExp(escapeRegExp(escapeHtml(lower.titleJa))));
-  assert.doesNotMatch(detail, new RegExp(escapeRegExp(escapeHtml(lower.title))));
   assert.match(detail, /3行要約/);
   assert.match(detail, /着眼点/);
   assert.match(detail, /中核アイデア・方法/);

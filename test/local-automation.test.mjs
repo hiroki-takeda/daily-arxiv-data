@@ -24,6 +24,7 @@ import {
   runCommand,
   runPaths,
   sanitizedChildEnv,
+  validateCodexCompletionResponse,
   validateManifest,
   validateModelOutputLayout,
 } from "../scripts/lib/local-automation.mjs";
@@ -173,11 +174,24 @@ test("automation prompt binds host runId and requires validator-last output with
   assert.match(prompt, /Do not run git add, git commit, git push/);
   assert.match(prompt, /host process alone publishes/);
   assert.match(prompt, /STAGED_REPORTS_VALID/);
+  assert.match(prompt, /final response exactly STAGED_REPORTS_VALID/);
   assert.match(prompt, /outbox directory to remain empty/);
   assert.match(prompt, /Never create or write a manifest/);
   assert.doesNotMatch(prompt, /final manifest:/);
   assert.doesNotMatch(prompt, /manifest\.json/);
   assert.match(prompt, /2099\.00001/);
+});
+
+test("Codex completion gate accepts only the exact validated response", () => {
+  assert.equal(validateCodexCompletionResponse("STAGED_REPORTS_VALID\n"), "STAGED_REPORTS_VALID");
+  assert.throws(
+    () => validateCodexCompletionResponse("ACTION_REQUIRED: STAGED_LANGUAGE_AUDIT_FAILED"),
+    /exact validated-completion response/,
+  );
+  assert.throws(
+    () => validateCodexCompletionResponse("ready\nSTAGED_REPORTS_VALID"),
+    /exact validated-completion response/,
+  );
 });
 
 test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality requirements", () => {
@@ -195,6 +209,9 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /manifest、completion marker、status fileを作らず/);
   assert.match(specification, /outboxは空のまま/);
   assert.match(specification, /`STAGED_REPORTS_VALID`になった場合は、それを最後のコマンドとして直ちに終了/);
+  assert.match(specification, /最終応答を正確に`STAGED_REPORTS_VALID`の1行だけ/);
+  assert.match(specification, /全文未確認論文の各軸が24点未満かつ`technicalStrength`が17点以下/);
+  assert.match(specification, /`scope: "category"`/);
   assert.match(specification, /`data\/reports\/`、`public\/data\/`、`scripts\/lib\/pipeline\.mjs`、testsを例として読みません/);
   assert.match(specification, /取得成功、ファイルサイズ、節名の検索だけを全文確認の代用にしてはいけません/);
   assert.match(specification, /暫定候補全件へ一括`HEAD`/);
