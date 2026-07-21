@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { lstatSync, realpathSync, writeFileSync } from "node:fs";
+import { lstatSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 
 import {
@@ -24,6 +24,18 @@ const FIELD_PATTERN = /^probe\.papers\[(\d+)\]\.(titleJa|paperType|curiosity|con
 const SCORE_REASON_GROUP_PATTERN = /^probe\.papers\[(\d+)\]\.scoreReasons:/u;
 const CATEGORY_FIELD_PATTERN = /^probe\.papers\.(curiosity|concept|conclusion|assessment|fullTextReviewStatus|abstractLines\[(\d+)\]|scoreReasons\.(broadImpact|categoryImpact|originality|technicalStrength)):/u;
 const OUTPUT_NAMES = new Set(["language-issues-before.json", "language-issues-after.json"]);
+
+function exactCategoryReport(staging, date, slug) {
+  const expectedName = `${date}-${slug}.json`;
+  const names = readdirSync(staging).sort();
+  if (names.length !== 1 || names[0] !== expectedName) {
+    fail(`Category staging must contain exactly ${expectedName}.`);
+  }
+  const path = resolve(staging, expectedName);
+  const entry = lstatSync(path);
+  if (entry.isSymbolicLink() || !entry.isFile()) fail("Category report must be a regular file.");
+  return path;
+}
 
 function parseFieldPath(path) {
   const line = /^abstractLines\[(\d+)\]$/u.exec(path);
@@ -119,27 +131,42 @@ function recordCategoryIssue({ issues, categoryIssues, slug, original, path, mes
 }
 
 try {
-  if (process.argv.length !== 5) {
-    fail("Usage: node scripts/audit-staged-language.mjs <YYYY-MM-DD> <fixed-staging-directory> <fixed-output-file>");
+  if (![5, 6].includes(process.argv.length)) {
+    fail("Usage: node scripts/audit-staged-language.mjs <YYYY-MM-DD> <fixed-staging-directory> <fixed-output-file> [category]");
   }
   const date = validateDate(process.argv[2]);
   const runRoot = resolve(process.env.TMPDIR ?? "");
   const staging = resolve(process.argv[3]);
   const output = resolve(process.argv[4]);
+  const requestedCategory = process.argv[5];
+  if (requestedCategory !== undefined && !CATEGORIES.includes(requestedCategory)) {
+    fail(`Unsupported category ${requestedCategory}.`);
+  }
   const stagingEntry = lstatSync(staging);
   if (stagingEntry.isSymbolicLink() || !stagingEntry.isDirectory()) fail("Staging must be a real directory.");
   const canonicalRunRoot = realpathSync(runRoot);
-  if (realpathSync(staging) !== resolve(canonicalRunRoot, "staging")) {
-    fail(`Staging directory must be ${resolve(runRoot, "staging")}.`);
+  const expectedStaging = requestedCategory === undefined
+    ? resolve(canonicalRunRoot, "staging")
+    : resolve(canonicalRunRoot, "staging", requestedCategory);
+  if (realpathSync(staging) !== expectedStaging) {
+    fail(`Staging directory must be ${expectedStaging}.`);
   }
-  if (realpathSync(dirname(output)) !== canonicalRunRoot || !OUTPUT_NAMES.has(basename(output))) {
-    fail(`Output must be language-issues-before.json or language-issues-after.json directly under ${runRoot}.`);
+  const allowedOutputNames = requestedCategory === undefined
+    ? OUTPUT_NAMES
+    : new Set([`${requestedCategory}-language-issues-before.json`, `${requestedCategory}-language-issues-after.json`]);
+  if (realpathSync(dirname(output)) !== canonicalRunRoot || !allowedOutputNames.has(basename(output))) {
+    if (requestedCategory === undefined) {
+      fail(`Output must be language-issues-before.json or language-issues-after.json directly under ${runRoot}.`);
+    }
+    fail(`Output must be ${requestedCategory}-language-issues-before.json or ${requestedCategory}-language-issues-after.json directly under ${runRoot}.`);
   }
-  const paths = assertExactStagingReports(staging, date);
+  const paths = requestedCategory === undefined
+    ? assertExactStagingReports(staging, date)
+    : { [requestedCategory]: exactCategoryReport(staging, date, requestedCategory) };
   const issues = [];
   const categoryIssues = new Map();
 
-  for (const slug of CATEGORIES) {
+  for (const slug of requestedCategory === undefined ? CATEGORIES : [requestedCategory]) {
     const original = parseJsonFile(paths[slug]);
     const paperProbe = structuredClone(original);
     const categoryProbe = structuredClone(original);

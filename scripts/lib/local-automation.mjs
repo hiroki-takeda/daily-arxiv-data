@@ -1,7 +1,8 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   accessSync,
+  chmodSync,
   closeSync,
   constants,
   existsSync,
@@ -24,12 +25,24 @@ import {
   classifySnapshotDate,
   fetchOfficialListingSnapshot,
   fetchOfficialPastweekWindow,
+  fingerprintSnapshot,
   probeOfficialFullTextReadiness,
   revalidatePastweekSnapshot,
   selectBackfillSnapshot,
+  validateReportAgainstSnapshot,
   validateReportsAgainstSnapshot,
 } from "./arxiv-source.mjs";
-import { parseJsonFile, validateProductionReportSet } from "./pipeline.mjs";
+import {
+  appendCheckpointAttempt,
+  appendPublicationStatus,
+  checkpointJobPath,
+  importCheckpointCategoryReport,
+  loadCheckpointJob,
+  materializeCheckpointReports,
+  openCheckpointJob,
+  recoverIncompleteCheckpointReports,
+} from "./checkpoint.mjs";
+import { parseJsonFile, validateProductionReport, validateProductionReportSet } from "./pipeline.mjs";
 
 export const MODEL_ID = "gpt-5.6-sol";
 export const MODEL_DISPLAY_NAME = "GPT-5.6-Sol";
@@ -45,6 +58,7 @@ const MAX_REPORT_BYTES = 10 * 1024 * 1024;
 const MAX_LOCK_BYTES = 64 * 1024;
 const MAX_CODEX_LOG_BYTES = 20 * 1024 * 1024;
 const STALE_LOCK_MS = 5 * 60 * 60 * 1000;
+const GIT_NETWORK_RETRY_DELAYS_MS = Object.freeze([2_000, 10_000]);
 export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   ".codex/rules/daily-arxiv.rules",
   "AGENTS.md",
@@ -55,11 +69,13 @@ export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   "scripts/audit-staged-language.mjs",
   "scripts/extract-arxiv-source.mjs",
   "scripts/lib/arxiv-source.mjs",
+  "scripts/lib/checkpoint.mjs",
   "scripts/lib/local-automation.mjs",
   "scripts/lib/macos-schedule.mjs",
   "scripts/lib/pipeline.mjs",
   "scripts/publish-edition.mjs",
   "scripts/run-local-automation.mjs",
+  "scripts/validate-staged-category.mjs",
   "scripts/validate-staged-reports.mjs",
 ]);
 
@@ -270,21 +286,42 @@ export function runPaths(runId, {
   validateRunId(runId);
   const base = automationTempRoot(uid);
   const runRoot = join(base, runId);
+  const staging = join(runRoot, "staging");
+  const logDirectory = join(controlRoot, "logs");
   return Object.freeze({
     base,
     controlRoot,
     lock: join(controlRoot, "active-run.lock"),
     lockHistory: join(controlRoot, "lock-history"),
     staleLocks: join(controlRoot, "stale-locks"),
-    logDirectory: join(controlRoot, "logs"),
-    codexLog: join(controlRoot, "logs", `${runId}.codex.log`),
+    logDirectory,
+    codexLog: join(logDirectory, `${runId}.codex.log`),
+    codexLogs: Object.freeze(Object.fromEntries(
+      CATEGORIES.map((slug) => [slug, join(logDirectory, `${runId}.${slug}.codex.log`)]),
+    )),
     runRoot,
-    staging: join(runRoot, "staging"),
+    staging,
+    categoryStaging: Object.freeze(Object.fromEntries(
+      CATEGORIES.map((slug) => [slug, join(staging, slug)]),
+    )),
     outbox: join(runRoot, "outbox"),
     manifest: join(runRoot, "outbox", "manifest.json"),
     agentHome: join(runRoot, "home"),
     hostStaging: join(controlRoot, "host-staging", runId),
   });
+}
+
+export function fingerprintAutomationRuntime(root) {
+  const hash = createHash("sha256");
+  for (const relativePath of [...AUTOMATION_RUNTIME_PATHS].sort()) {
+    const absolutePath = resolve(root, relativePath);
+    if (!absolutePath.startsWith(`${resolve(root)}/`)) fail(`Automation runtime path escaped the repository: ${relativePath}`);
+    assertPlainFile(absolutePath, `Automation runtime file ${relativePath}`);
+    const content = readStableRegularFile(absolutePath, MAX_REPORT_BYTES);
+    hash.update(`${relativePath}\0${content.length}\0`, "utf8");
+    hash.update(content);
+  }
+  return hash.digest("hex");
 }
 
 function exactKeys(object, expected, label) {
@@ -461,6 +498,50 @@ The final validator is the last command in a successful model run. After it prin
 `;
 }
 
+export function buildCategoryAutomationPrompt({ evaluationRunId, staging, snapshot, slug }) {
+  validateRunId(evaluationRunId);
+  if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
+  if (!snapshot || typeof snapshot !== "object" || snapshot.categories?.[slug] === undefined) {
+    fail("An official arXiv snapshot containing the requested category is required.");
+  }
+  const date = validateDate(snapshot.announcementDate);
+  const categorySnapshot = {
+    announcementDate: date,
+    category: structuredClone(snapshot.categories[slug]),
+  };
+  const reportPath = join(staging, `${date}-${slug}.json`);
+  const auditBefore = `$TMPDIR/${slug}-language-issues-before.json`;
+  const auditAfter = `$TMPDIR/${slug}-language-issues-after.json`;
+  return `You are one resumable category stage of the Daily arXiv production automation.
+
+Host-enforced runtime contract:
+- modelId: ${MODEL_ID}
+- modelDisplayName: ${MODEL_DISPLAY_NAME}
+- reasoningEffort: ${REASONING_EFFORT}
+- evaluationRunId shared by all three category checkpoints: ${evaluationRunId}
+- assigned category: ${slug}
+- exact output file: ${reportPath}
+
+The host independently fetched and parsed the official arXiv listing. This category snapshot is authoritative. Evaluate exactly these primary-new v1 IDs and no others:
+${JSON.stringify(categorySnapshot, null, 2)}
+
+Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely and follow rubric 3.0, full-text, natural-Japanese, field-budget, safety, and schema 1.4 requirements. This host prompt intentionally narrows the daily transaction to one resumable category: any wording in the document that says to create or audit all three reports is replaced for this process by the one-category commands below. Do not inspect historical reports, public data, pipeline implementation, or tests as examples, and do not reuse prior rankings or prose.
+
+Screen every assigned abstract. After provisional scoring, inspect official v1 full text for exactly the provisional top min(12, totalNew) papers, then finalize the ranking so every final top min(10, totalNew) paper is fully reviewed. Derive every score and sentence from the assigned paper's title, abstract, and where required full text. Never derive or spread scores from an arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula. If evidence is unavailable, fail instead of fabricating data.
+
+Use exactly ${MODEL_ID}, ${MODEL_DISPLAY_NAME}, ${REASONING_EFFORT}, modelSelectionVerified=true, and runId=${evaluationRunId} in evaluationRun. Write only ${reportPath} inside the category staging directory. Do not write another report there. Official source extraction may write only bounded temporary text under $TMPDIR as specified by the helper. Do not modify the Git worktree, use an API key, run npm test, run git, invoke the publisher, or write credentials or PDFs to the repository.
+
+After creating the report, self-check totals, deterministic ranking, full-text flags, evidence-specific scoreReasons, and score distribution once. Then run the fixed language audit exactly once:
+node scripts/audit-staged-language.mjs ${date} ${staging} "${auditBefore}" ${slug}
+Repair every listed issue in one batch. Run the audit exactly once more:
+node scripts/audit-staged-language.mjs ${date} ${staging} "${auditAfter}" ${slug}
+If the second audit is not issues=0, stop with an error without another repair loop. Only after issues=0, run this read-only validator exactly once as the last command:
+node scripts/validate-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId}
+
+After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. The host ignores success prose and independently validates the sole regular JSON file before importing it into a protected checkpoint. On any uncertainty or failure, exit nonzero and leave the previous public edition unchanged.
+`;
+}
+
 export function sanitizedChildEnv(env = process.env) {
   const clean = {};
   for (const key of [
@@ -596,6 +677,25 @@ export function git(root, args, options = {}) {
   return runCommand(gitBin, ["-C", root, ...args], options).stdout?.trim() ?? "";
 }
 
+export function isRetryableGitNetworkFailure(output) {
+  return /(?:ssh: connect to host .* port \d+:|Could not resolve (?:host|hostname)|Could not read from remote repository|Connection (?:timed out|reset|refused|closed)|Operation timed out|Network is unreachable|remote end hung up|RPC failed|fatal: unable to access|HTTP 408|HTTP 425|HTTP 429|HTTP 5\d\d)/iu.test(String(output ?? ""));
+}
+
+function gitNetwork(root, args, { timeout = 120_000 } = {}) {
+  const gitBin = existsSync("/usr/bin/git") ? "/usr/bin/git" : "git";
+  let result;
+  for (let attempt = 0; attempt <= GIT_NETWORK_RETRY_DELAYS_MS.length; attempt += 1) {
+    result = runCommand(gitBin, ["-C", root, ...args], { timeout, allowFailure: true });
+    if (result.status === 0) return result.stdout?.trim() ?? "";
+    const output = `${result.stderr ?? ""}\n${result.stdout ?? ""}`;
+    if (attempt >= GIT_NETWORK_RETRY_DELAYS_MS.length || !isRetryableGitNetworkFailure(output)) {
+      fail(`git ${args[0] ?? ""} failed (${result.status}): ${output.trim()}`);
+    }
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, GIT_NETWORK_RETRY_DELAYS_MS[attempt]);
+  }
+  fail(`git ${args[0] ?? ""} failed after bounded network retries.`);
+}
+
 function assertExpectedRemote(root) {
   const fetchRemote = git(root, ["remote", "get-url", "origin"]);
   const pushRemote = git(root, ["remote", "get-url", "--push", "origin"]);
@@ -695,11 +795,13 @@ export function prepareRunDirectories(paths) {
   if (existsSync(paths.hostStaging)) fail(`Host staging directory already exists; refusing to reuse it: ${paths.hostStaging}`);
   mkdirSync(paths.runRoot, { mode: 0o700 });
   mkdirSync(paths.staging, { mode: 0o700 });
+  for (const slug of CATEGORIES) mkdirSync(paths.categoryStaging[slug], { mode: 0o700 });
   mkdirSync(paths.outbox, { mode: 0o700 });
   mkdirSync(paths.agentHome, { mode: 0o700 });
   mkdirSync(paths.hostStaging, { mode: 0o700 });
   assertPlainDirectory(paths.runRoot, "Run directory");
   assertPlainDirectory(paths.staging, "Staging directory");
+  for (const slug of CATEGORIES) assertPlainDirectory(paths.categoryStaging[slug], `${slug} staging directory`);
   assertPlainDirectory(paths.outbox, "Outbox directory");
   assertPlainDirectory(paths.agentHome, "Agent home directory");
   assertPlainDirectory(paths.hostStaging, "Host staging directory");
@@ -711,19 +813,29 @@ export function removeSuccessfulRunArtifacts(paths, {
 } = {}) {
   const runId = basename(paths.runRoot);
   validateRunId(runId);
+  const logPaths = paths.codexLogs === undefined
+    ? [paths.codexLog]
+    : Object.entries(paths.codexLogs).map(([slug, path]) => {
+      if (!CATEGORIES.includes(slug) || resolve(path) !== resolve(join(paths.logDirectory, `${runId}.${slug}.codex.log`))) {
+        fail("Refusing to clean a Codex log outside the exact successful run paths.");
+      }
+      return path;
+    });
   if (
     resolve(paths.runRoot) !== resolve(join(paths.base, runId))
     || resolve(paths.hostStaging) !== resolve(join(paths.controlRoot, "host-staging", runId))
-    || resolve(paths.codexLog) !== resolve(join(paths.logDirectory, `${runId}.codex.log`))
+    || (paths.codexLogs === undefined && resolve(paths.codexLog) !== resolve(join(paths.logDirectory, `${runId}.codex.log`)))
   ) {
     fail("Refusing to clean automation artifacts outside the exact successful run paths.");
   }
   assertPlainDirectory(paths.runRoot, "Successful run directory");
   assertPlainDirectory(paths.hostStaging, "Successful host staging directory");
-  assertPlainFile(paths.codexLog, "Successful Codex log");
+  for (const logPath of logPaths.filter((path) => existsSync(path))) {
+    assertPlainFile(logPath, "Successful Codex log");
+  }
   removeDirectory(paths.runRoot);
   removeDirectory(paths.hostStaging);
-  removeFile(paths.codexLog);
+  for (const logPath of logPaths.filter((path) => existsSync(path))) removeFile(logPath);
 }
 
 function lockOwnerIsAlive(pid) {
@@ -848,7 +960,7 @@ export function preparePublisherRuntime(root) {
     fail("Unattended publication must run from the installed publisher worktree, not the main checkout.");
   }
   assertCleanWorktree(root);
-  git(root, ["fetch", "--quiet", "origin", "main"], { timeout: 120_000 });
+  gitNetwork(root, ["fetch", "--quiet", "origin", "main"], { timeout: 120_000 });
   const originMain = git(root, ["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"]);
   const head = git(root, ["rev-parse", "HEAD"]);
   if (head !== originMain) {
@@ -1037,6 +1149,22 @@ export function invokeCodex({ codexBin, worktree, paths, prompt }) {
   validateCodexCompletionResponse(result.stdout);
 }
 
+export function invokeCodexCategory({ codexBin, worktree, runRoot, logPath, prompt }) {
+  const result = runCommand(codexBin, buildCodexArgs({ worktree, runRoot }), {
+    cwd: worktree,
+    env: sanitizedChildEnv(),
+    input: prompt,
+    outputPath: logPath,
+    timeout: 4 * 60 * 60 * 1000,
+    allowFailure: true,
+    isolatedProcessGroup: true,
+  });
+  if (result.status !== 0) {
+    fail(`Codex category generation failed (${result.status}); no publication was attempted. Inspect ${logPath}.`);
+  }
+  return result.stdout?.trim() ?? "";
+}
+
 function readStableRegularFile(path, maxBytes) {
   const noFollow = constants.O_NOFOLLOW ?? 0;
   const descriptor = openSync(path, constants.O_RDONLY | noFollow);
@@ -1087,6 +1215,23 @@ export function validateModelOutputLayout({ stagingDirectory, outboxDirectory, d
   return Object.freeze({ date, files: Object.freeze(expectedFiles) });
 }
 
+export function validateCategoryModelOutputLayout({ stagingDirectory, outboxDirectory, date, slug }) {
+  validateDate(date);
+  if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
+  assertPlainDirectory(stagingDirectory, "Model category staging directory");
+  assertPlainDirectory(outboxDirectory, "Model outbox directory");
+  if (readdirSync(outboxDirectory).length !== 0) fail("Model outbox directory must remain empty.");
+  const expectedName = `${date}-${slug}.json`;
+  const actualFiles = readdirSync(stagingDirectory).sort();
+  if (actualFiles.length !== 1 || actualFiles[0] !== expectedName) {
+    fail(`Model category staging directory must contain exactly ${expectedName}.`);
+  }
+  const path = join(stagingDirectory, expectedName);
+  assertPlainFile(path, `Model report ${expectedName}`);
+  if (statSync(path).size > MAX_REPORT_BYTES) fail(`Model report ${expectedName} exceeds the 10 MiB safety limit.`);
+  return Object.freeze({ date, slug, path });
+}
+
 export function copyReportsToHostStaging({ sourceDirectory, hostDirectory, date }) {
   assertPlainDirectory(sourceDirectory, "Model staging directory");
   assertPlainDirectory(hostDirectory, "Host staging directory");
@@ -1122,6 +1267,130 @@ export function invokePublisher({ worktree, date, stagingPath }) {
     cwd: worktree,
     inherit: true,
     timeout: 10 * 60 * 1000,
+  });
+}
+
+function checkpointEventMessage(value) {
+  return String(value ?? "")
+    .replace(/[\u0000-\u001f\u007f-\u009f]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .slice(0, 2_000);
+}
+
+function validateCategoryCheckpointReport({ report, date, slug, policy, evaluationRunId, snapshot, path }) {
+  validateProductionReport(report, { date, slug, policy, path });
+  if (report.evaluationRun.runId !== evaluationRunId) {
+    fail(`Checkpoint category ${slug} does not use the host evaluation runId ${evaluationRunId}.`);
+  }
+  validateReportAgainstSnapshot(report, snapshot, slug);
+  return true;
+}
+
+export function openRecoverableCheckpointJob({
+  controlRoot,
+  snapshot,
+  runtimeFingerprint,
+  attemptId,
+  policy,
+  now = new Date(),
+}) {
+  validateRunId(attemptId);
+  const snapshotFingerprint = fingerprintSnapshot(snapshot);
+  const checkpointPath = checkpointJobPath({
+    controlRoot,
+    reportDate: snapshot.announcementDate,
+    snapshotFingerprint,
+    runtimeFingerprint,
+  });
+  const checkpointExisted = existsSync(checkpointPath);
+  const recoveryOutcomeAt = new Date(now.getTime() + 1);
+  let job = openCheckpointJob({
+    controlRoot,
+    snapshot,
+    snapshotFingerprint,
+    runtimeFingerprint,
+    evaluationRunId: attemptId,
+    now,
+  });
+  const recoveryCategories = [...job.incompleteReports];
+  for (const slug of recoveryCategories) {
+    appendCheckpointAttempt({
+      job,
+      attemptId,
+      stage: "category_recovery",
+      status: "resumed",
+      category: slug,
+      message: `Revalidating interrupted immutable ${slug} report before any model start.`,
+      at: now,
+    });
+  }
+  try {
+    job = recoverIncompleteCheckpointReports({
+      job,
+      attemptId,
+      now,
+      validateReport: (candidate, context) => validateCategoryCheckpointReport({
+        report: candidate,
+        date: context.reportDate,
+        slug: context.category,
+        policy,
+        evaluationRunId: context.evaluationRunId,
+        snapshot: context.snapshot,
+        path: `checkpoint.${context.category}`,
+      }),
+    });
+  } catch (error) {
+    try {
+      const current = loadCheckpointJob({
+        controlRoot,
+        reportDate: snapshot.announcementDate,
+        snapshotFingerprint,
+        runtimeFingerprint,
+        evaluationRunId: job.evaluationRunId,
+      });
+      for (const slug of recoveryCategories) {
+        appendCheckpointAttempt({
+          job: current,
+          attemptId,
+          stage: "category_recovery",
+          status: current.completeCategories.includes(slug) ? "completed" : "failed",
+          category: slug,
+          message: current.completeCategories.includes(slug)
+            ? `Recovered and revalidated interrupted ${slug} report.`
+            : checkpointEventMessage(error.message),
+          at: recoveryOutcomeAt,
+        });
+      }
+    } catch (auditError) {
+      error.message += `; could not append checkpoint recovery audit event (${auditError.message})`;
+    }
+    throw error;
+  }
+  for (const slug of recoveryCategories) {
+    appendCheckpointAttempt({
+      job,
+      attemptId,
+      stage: "category_recovery",
+      status: "completed",
+      category: slug,
+      message: `Recovered and revalidated interrupted ${slug} report.`,
+      at: recoveryOutcomeAt,
+    });
+  }
+  job = loadCheckpointJob({
+    controlRoot,
+    reportDate: snapshot.announcementDate,
+    snapshotFingerprint,
+    runtimeFingerprint,
+    evaluationRunId: job.evaluationRunId,
+  });
+  return Object.freeze({
+    job,
+    checkpointPath,
+    checkpointExisted,
+    snapshotFingerprint,
+    recoveredCategories: Object.freeze(recoveryCategories),
   });
 }
 
@@ -1168,65 +1437,186 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
       fail("Backfill selector returned an empty publication snapshot.");
     }
 
-    const readiness = await probeOfficialFullTextReadiness(snapshot, { fetchImpl });
-    const readinessDisposition = classifyFullTextReadiness(readiness, {
-      isLatestAnnouncement: snapshot.announcementDate === currentSnapshot.announcementDate,
+    const policy = parseJsonFile(join(root, "data", "model-policy.json"));
+    const runtimeFingerprint = fingerprintAutomationRuntime(root);
+    const checkpoint = openRecoverableCheckpointJob({
+      controlRoot,
+      snapshot,
+      runtimeFingerprint,
+      attemptId: runId,
+      policy,
+      now,
     });
-    if (readinessDisposition !== "ready") {
-      const unavailable = readiness.unavailable;
-      const status = unavailable.status === null ? "network error" : `HTTP ${unavailable.status}`;
-      if (readinessDisposition === "defer") {
-        console.log(
-          `AUTOMATION_DEFERRED: official ${unavailable.kind} for ${readiness.arxivId}v1 is not ready (${status}); `
-          + `Codex was not started (runId ${runId}).`,
-        );
-        return Object.freeze({
-          status: "deferred",
-          runId,
-          date: snapshot.announcementDate,
-          reason: "full_text_not_ready",
-          arxivId: readiness.arxivId,
-        });
-      }
-      fail(
-        `Official ${unavailable.kind} for ${readiness.arxivId}v1 is unavailable (${status}) `
-        + `after its announcement propagation window.`,
-      );
+    const { checkpointExisted, snapshotFingerprint } = checkpoint;
+    let { job } = checkpoint;
+    for (const slug of checkpoint.recoveredCategories) {
+      console.log(`CATEGORY_CHECKPOINT_RECOVERED: ${snapshot.announcementDate} ${slug}; model will not regenerate it.`);
     }
-    console.log(`FULL_TEXT_READY: official v1 PDF and e-print canary ${readiness.arxivId} passed before Codex start (runId ${runId}).`);
+
+    if (!job?.isComplete) {
+      const readiness = await probeOfficialFullTextReadiness(snapshot, { fetchImpl });
+      const readinessDisposition = classifyFullTextReadiness(readiness, {
+        isLatestAnnouncement: snapshot.announcementDate === currentSnapshot.announcementDate,
+      });
+      if (readinessDisposition !== "ready") {
+        const unavailable = readiness.unavailable;
+        const status = unavailable.status === null ? "network error" : `HTTP ${unavailable.status}`;
+        if (readinessDisposition === "defer") {
+          console.log(
+            `AUTOMATION_DEFERRED: official ${unavailable.kind} for ${readiness.arxivId}v1 is not ready (${status}); `
+            + `Codex was not started (runId ${runId}).`,
+          );
+          return Object.freeze({
+            status: "deferred",
+            runId,
+            date: snapshot.announcementDate,
+            reason: "full_text_not_ready",
+            arxivId: readiness.arxivId,
+          });
+        }
+        fail(
+          `Official ${unavailable.kind} for ${readiness.arxivId}v1 is unavailable (${status}) `
+          + `after its announcement propagation window.`,
+        );
+      }
+      console.log(`FULL_TEXT_READY: official v1 PDF and e-print canary ${readiness.arxivId} passed before Codex start (runId ${runId}).`);
+    } else {
+      console.log(`PUBLISH_RETRY: ${snapshot.announcementDate}; complete checkpoints bypass full-text readiness and model generation.`);
+    }
+
+    console.log(
+      `${checkpointExisted ? "CHECKPOINT_RESUMED" : "CHECKPOINT_CREATED"}: `
+      + `${snapshot.announcementDate}; complete=${job.completeCategories.join(",") || "none"}; `
+      + `evaluationRunId=${job.evaluationRunId}.`,
+    );
 
     prepareRunDirectories(paths);
-    const codexBin = discoverCodex({ env });
-    assertPinnedCodexIdentity(codexBin, env);
-    assertChatGptLogin(codexBin, env);
-    const agent = prepareAgentWorktree(root, agentWorktreeBase, originMain, runId);
-    const prompt = buildAutomationPrompt({
-      runId,
-      staging: paths.staging,
-      snapshot,
-    });
-    invokeCodex({ codexBin, worktree: agent.worktree, paths, prompt });
-    const postCodexWorktree = inspectExistingWorktree(root, agent.worktree);
-    if (!postCodexWorktree.exists || postCodexWorktree.head !== originMain) {
-      fail("Agent worktree identity, cleanliness, or HEAD changed during Codex generation; no publication was attempted.");
+    let codexBin;
+    let agent;
+    for (const slug of CATEGORIES) {
+      job = loadCheckpointJob({
+        controlRoot,
+        reportDate: snapshot.announcementDate,
+        snapshotFingerprint,
+        runtimeFingerprint,
+        evaluationRunId: job.evaluationRunId,
+      });
+      if (job.completeCategories.includes(slug)) {
+        console.log(`CATEGORY_CHECKPOINT_REUSED: ${snapshot.announcementDate} ${slug}; model not started.`);
+        continue;
+      }
+      if (codexBin === undefined) {
+        codexBin = discoverCodex({ env });
+        assertPinnedCodexIdentity(codexBin, env);
+        assertChatGptLogin(codexBin, env);
+        agent = prepareAgentWorktree(root, agentWorktreeBase, originMain, runId);
+      }
+      appendCheckpointAttempt({
+        job,
+        attemptId: runId,
+        stage: "category_generation",
+        status: "started",
+        category: slug,
+        message: `Started ${slug} generation.`,
+      });
+      try {
+        const prompt = buildCategoryAutomationPrompt({
+          evaluationRunId: job.evaluationRunId,
+          staging: paths.categoryStaging[slug],
+          snapshot,
+          slug,
+        });
+        invokeCodexCategory({
+          codexBin,
+          worktree: agent.worktree,
+          runRoot: paths.runRoot,
+          logPath: paths.codexLogs[slug],
+          prompt,
+        });
+        const postCodexWorktree = inspectExistingWorktree(root, agent.worktree);
+        if (!postCodexWorktree.exists || postCodexWorktree.head !== originMain) {
+          fail("Agent worktree identity, cleanliness, or HEAD changed during category generation; no publication was attempted.");
+        }
+        const layout = validateCategoryModelOutputLayout({
+          stagingDirectory: paths.categoryStaging[slug],
+          outboxDirectory: paths.outbox,
+          date: snapshot.announcementDate,
+          slug,
+        });
+        chmodSync(layout.path, 0o600);
+        const report = parseJsonFile(layout.path);
+        validateCategoryCheckpointReport({
+          report,
+          date: snapshot.announcementDate,
+          slug,
+          policy,
+          evaluationRunId: job.evaluationRunId,
+          snapshot,
+          path: layout.path,
+        });
+        importCheckpointCategoryReport({
+          job,
+          category: slug,
+          sourcePath: realpathSync(layout.path),
+          attemptId: runId,
+          validateReport: (candidate, context) => validateCategoryCheckpointReport({
+            report: candidate,
+            date: context.reportDate,
+            slug: context.category,
+            policy,
+            evaluationRunId: context.evaluationRunId,
+            snapshot: context.snapshot,
+            path: `checkpoint.${context.category}`,
+          }),
+        });
+        job = loadCheckpointJob({
+          controlRoot,
+          reportDate: snapshot.announcementDate,
+          snapshotFingerprint,
+          runtimeFingerprint,
+          evaluationRunId: job.evaluationRunId,
+        });
+        appendCheckpointAttempt({
+          job,
+          attemptId: runId,
+          stage: "category_generation",
+          status: "completed",
+          category: slug,
+          message: `Validated and checkpointed ${slug}.`,
+        });
+        console.log(`CATEGORY_CHECKPOINTED: ${snapshot.announcementDate} ${slug}; next retry will not regenerate it.`);
+      } catch (error) {
+        try {
+          appendCheckpointAttempt({
+            job,
+            attemptId: runId,
+            stage: "category_generation",
+            status: "failed",
+            category: slug,
+            message: checkpointEventMessage(error.message),
+          });
+        } catch (checkpointError) {
+          error.message += `; could not append checkpoint failure event (${checkpointError.message})`;
+        }
+        throw error;
+      }
     }
-    validateModelOutputLayout({
-      stagingDirectory: paths.staging,
-      outboxDirectory: paths.outbox,
-      date: snapshot.announcementDate,
+
+    job = loadCheckpointJob({
+      controlRoot,
+      reportDate: snapshot.announcementDate,
+      snapshotFingerprint,
+      runtimeFingerprint,
+      evaluationRunId: job.evaluationRunId,
     });
-    const reports = copyReportsToHostStaging({
-      sourceDirectory: paths.staging,
-      hostDirectory: paths.hostStaging,
-      date: snapshot.announcementDate,
-    });
-    const policy = parseJsonFile(join(root, "data", "model-policy.json"));
+    const materialized = materializeCheckpointReports({ job, destination: paths.hostStaging });
+    const reports = Object.fromEntries(CATEGORIES.map((slug) => [slug, materialized[slug].report]));
     validateProductionReportSet(reports, {
       date: snapshot.announcementDate,
       policy,
-      expectedRunId: runId,
+      expectedRunId: job.evaluationRunId,
     });
-    validateReportsAgainstSnapshot(reports, snapshot, { date: snapshot.announcementDate });
+    validateReportsAgainstSnapshot(reports, snapshot);
 
     const freshPastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
     revalidatePastweekSnapshot(snapshot, freshPastweekWindow);
@@ -1234,7 +1624,36 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
       fail("Publisher worktree HEAD changed during generation; no publication was attempted.");
     }
     assertCleanWorktree(root);
-    invokePublisher({ worktree: root, date: snapshot.announcementDate, stagingPath: paths.hostStaging });
+    appendPublicationStatus({
+      job,
+      attemptId: runId,
+      status: "publishing",
+      message: "Validated checkpoint reports; starting fixed publisher.",
+    });
+    try {
+      invokePublisher({ worktree: root, date: snapshot.announcementDate, stagingPath: paths.hostStaging });
+    } catch (error) {
+      try {
+        appendPublicationStatus({
+          job,
+          attemptId: runId,
+          status: "failed",
+          message: checkpointEventMessage(error.message),
+        });
+      } catch (checkpointError) {
+        error.message += `; could not append publication failure event (${checkpointError.message})`;
+      }
+      console.error(`PUBLISH_RETRY: ${snapshot.announcementDate}; all category checkpoints are complete, so the next run will not call the model.`);
+      throw error;
+    }
+    const publishedCommit = git(root, ["rev-parse", "HEAD"]);
+    appendPublicationStatus({
+      job,
+      attemptId: runId,
+      status: "published",
+      commit: publishedCommit,
+      message: "Fixed publisher confirmed origin/main publication.",
+    });
     console.log(`AUTOMATION_PUBLISHED: ${snapshot.announcementDate} (runId ${runId}).`);
     notifyMac("published");
     try {

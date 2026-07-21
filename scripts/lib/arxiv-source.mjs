@@ -18,6 +18,8 @@ export const ARXIV_PASTWEEK_FETCH_URLS = Object.freeze(Object.fromEntries(
 export const MAX_ARXIV_LISTING_BYTES = 8 * 1024 * 1024;
 
 const FETCH_TIMEOUT_MS = 30_000;
+const SNAPSHOT_MAX_ATTEMPTS = 3;
+const SNAPSHOT_RETRY_DELAYS_MS = Object.freeze([3_000, 10_000]);
 const FULL_TEXT_READINESS_TIMEOUT_MS = 30_000;
 const FULL_TEXT_READINESS_DELAY_MS = 3_000;
 const ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}$/;
@@ -48,9 +50,11 @@ const RAW_TEXT_ELEMENTS = new Set(["script", "style", "textarea", "title", "xmp"
 
 export class ArxivSourceError extends Error {
   constructor(code, message, options) {
-    super(message, options);
+    const { retryable = false, ...errorOptions } = options ?? {};
+    super(message, errorOptions);
     this.name = "ArxivSourceError";
     this.code = code;
+    this.retryable = retryable;
   }
 }
 
@@ -1052,70 +1056,76 @@ function reportMismatch(path, message) {
   fail("REPORT_SOURCE_MISMATCH", `${path}: ${message}`);
 }
 
+function validateReportAgainstSnapshotUnchecked(report, snapshot, slug) {
+  const reportPath = `reports.${slug}`;
+  if (report === null || typeof report !== "object" || Array.isArray(report)) reportMismatch(reportPath, "must be an object");
+  const source = snapshot.categories[slug];
+  if (report.slug !== slug) reportMismatch(`${reportPath}.slug`, `must equal ${slug}`);
+  if (report.reportDate !== snapshot.announcementDate) {
+    reportMismatch(`${reportPath}.reportDate`, `must equal ${snapshot.announcementDate}`);
+  }
+  if (report.totalNew !== source.newCount) reportMismatch(`${reportPath}.totalNew`, `must equal ${source.newCount}`);
+  if (report.evaluatedCount !== source.newCount) reportMismatch(`${reportPath}.evaluatedCount`, `must equal ${source.newCount}`);
+  if (report.crosslistsExcluded !== source.crosslistCount) {
+    reportMismatch(`${reportPath}.crosslistsExcluded`, `must equal ${source.crosslistCount}`);
+  }
+  if (!Array.isArray(report.papers) || report.papers.length !== source.newCount) {
+    reportMismatch(`${reportPath}.papers`, `must contain exactly ${source.newCount} papers`);
+  }
+  const reportIds = [];
+  for (const [index, paper] of report.papers.entries()) {
+    if (paper === null || typeof paper !== "object" || Array.isArray(paper)) {
+      reportMismatch(`${reportPath}.papers[${index}]`, "must be an object");
+    }
+    if (typeof paper.arxivId !== "string" || !ARXIV_ID_PATTERN.test(paper.arxivId)) {
+      reportMismatch(`${reportPath}.papers[${index}].arxivId`, "must be an unversioned modern arXiv ID");
+    }
+    if (paper.primaryCategory !== slug) {
+      reportMismatch(`${reportPath}.papers[${index}].primaryCategory`, `must equal ${slug}`);
+    }
+    if (paper.arxivVersion !== "v1") reportMismatch(`${reportPath}.papers[${index}].arxivVersion`, "must equal v1");
+    if (paper.submissionType !== "new") reportMismatch(`${reportPath}.papers[${index}].submissionType`, "must equal new");
+    reportIds.push(paper.arxivId);
+  }
+  if (new Set(reportIds).size !== reportIds.length) reportMismatch(`${reportPath}.papers`, "contains duplicate arXiv IDs");
+  const sortedReportIds = [...reportIds].sort();
+  if (sortedReportIds.join("\0") !== source.newIds.join("\0")) {
+    reportMismatch(`${reportPath}.papers`, "arXiv IDs do not exactly match the official New submissions IDs");
+  }
+
+  const audit = report.audit;
+  if (audit === null || typeof audit !== "object" || Array.isArray(audit)) reportMismatch(`${reportPath}.audit`, "must be an object");
+  if (audit.listingUrl !== source.sourceUrl) reportMismatch(`${reportPath}.audit.listingUrl`, `must equal ${source.sourceUrl}`);
+  if (audit.announcementDate !== snapshot.announcementDate) {
+    reportMismatch(`${reportPath}.audit.announcementDate`, `must equal ${snapshot.announcementDate}`);
+  }
+  const counts = audit.sourceCounts;
+  if (counts === null || typeof counts !== "object" || Array.isArray(counts)) {
+    reportMismatch(`${reportPath}.audit.sourceCounts`, "must be an object");
+  }
+  if (counts.newPrimary !== source.newCount) {
+    reportMismatch(`${reportPath}.audit.sourceCounts.newPrimary`, `must equal ${source.newCount}`);
+  }
+  if (counts.crosslistsExcluded !== source.crosslistCount) {
+    reportMismatch(`${reportPath}.audit.sourceCounts.crosslistsExcluded`, `must equal ${source.crosslistCount}`);
+  }
+  if (counts.titleAuthorAbstractEvaluated !== source.newCount) {
+    reportMismatch(`${reportPath}.audit.sourceCounts.titleAuthorAbstractEvaluated`, `must equal ${source.newCount}`);
+  }
+  return true;
+}
+
+export function validateReportAgainstSnapshot(report, snapshot, slug) {
+  assertSnapshot(snapshot);
+  supportedSlug(slug);
+  return validateReportAgainstSnapshotUnchecked(report, snapshot, slug);
+}
+
 export function validateReportsAgainstSnapshot(reports, snapshot) {
   assertSnapshot(snapshot);
-  try {
-    exactKeys(reports, ARXIV_CATEGORIES, "reports", "REPORT_SOURCE_MISMATCH");
-  } catch (error) {
-    if (error instanceof ArxivSourceError) throw error;
-    throw error;
-  }
+  exactKeys(reports, ARXIV_CATEGORIES, "reports", "REPORT_SOURCE_MISMATCH");
   for (const slug of ARXIV_CATEGORIES) {
-    const report = reports[slug];
-    if (report === null || typeof report !== "object" || Array.isArray(report)) reportMismatch(`reports.${slug}`, "must be an object");
-    const source = snapshot.categories[slug];
-    if (report.slug !== slug) reportMismatch(`reports.${slug}.slug`, `must equal ${slug}`);
-    if (report.reportDate !== snapshot.announcementDate) {
-      reportMismatch(`reports.${slug}.reportDate`, `must equal ${snapshot.announcementDate}`);
-    }
-    if (report.totalNew !== source.newCount) reportMismatch(`reports.${slug}.totalNew`, `must equal ${source.newCount}`);
-    if (report.evaluatedCount !== source.newCount) reportMismatch(`reports.${slug}.evaluatedCount`, `must equal ${source.newCount}`);
-    if (report.crosslistsExcluded !== source.crosslistCount) {
-      reportMismatch(`reports.${slug}.crosslistsExcluded`, `must equal ${source.crosslistCount}`);
-    }
-    if (!Array.isArray(report.papers) || report.papers.length !== source.newCount) {
-      reportMismatch(`reports.${slug}.papers`, `must contain exactly ${source.newCount} papers`);
-    }
-    const reportIds = [];
-    for (const [index, paper] of report.papers.entries()) {
-      if (paper === null || typeof paper !== "object" || Array.isArray(paper)) {
-        reportMismatch(`reports.${slug}.papers[${index}]`, "must be an object");
-      }
-      if (typeof paper.arxivId !== "string" || !ARXIV_ID_PATTERN.test(paper.arxivId)) {
-        reportMismatch(`reports.${slug}.papers[${index}].arxivId`, "must be an unversioned modern arXiv ID");
-      }
-      if (paper.primaryCategory !== slug) {
-        reportMismatch(`reports.${slug}.papers[${index}].primaryCategory`, `must equal ${slug}`);
-      }
-      if (paper.arxivVersion !== "v1") reportMismatch(`reports.${slug}.papers[${index}].arxivVersion`, "must equal v1");
-      if (paper.submissionType !== "new") reportMismatch(`reports.${slug}.papers[${index}].submissionType`, "must equal new");
-      reportIds.push(paper.arxivId);
-    }
-    if (new Set(reportIds).size !== reportIds.length) reportMismatch(`reports.${slug}.papers`, "contains duplicate arXiv IDs");
-    const sortedReportIds = [...reportIds].sort();
-    if (sortedReportIds.join("\0") !== source.newIds.join("\0")) {
-      reportMismatch(`reports.${slug}.papers`, "arXiv IDs do not exactly match the official New submissions IDs");
-    }
-
-    const audit = report.audit;
-    if (audit === null || typeof audit !== "object" || Array.isArray(audit)) reportMismatch(`reports.${slug}.audit`, "must be an object");
-    if (audit.listingUrl !== source.sourceUrl) reportMismatch(`reports.${slug}.audit.listingUrl`, `must equal ${source.sourceUrl}`);
-    if (audit.announcementDate !== snapshot.announcementDate) {
-      reportMismatch(`reports.${slug}.audit.announcementDate`, `must equal ${snapshot.announcementDate}`);
-    }
-    const counts = audit.sourceCounts;
-    if (counts === null || typeof counts !== "object" || Array.isArray(counts)) {
-      reportMismatch(`reports.${slug}.audit.sourceCounts`, "must be an object");
-    }
-    if (counts.newPrimary !== source.newCount) {
-      reportMismatch(`reports.${slug}.audit.sourceCounts.newPrimary`, `must equal ${source.newCount}`);
-    }
-    if (counts.crosslistsExcluded !== source.crosslistCount) {
-      reportMismatch(`reports.${slug}.audit.sourceCounts.crosslistsExcluded`, `must equal ${source.crosslistCount}`);
-    }
-    if (counts.titleAuthorAbstractEvaluated !== source.newCount) {
-      reportMismatch(`reports.${slug}.audit.sourceCounts.titleAuthorAbstractEvaluated`, `must equal ${source.newCount}`);
-    }
+    validateReportAgainstSnapshotUnchecked(reports[slug], snapshot, slug);
   }
   return true;
 }
@@ -1123,7 +1133,9 @@ export function validateReportsAgainstSnapshot(reports, snapshot) {
 async function readBoundedHtml(response, sourceUrl) {
   if (response === null || typeof response !== "object") fail("SOURCE_FETCH", `${sourceUrl} did not return a Response.`);
   if (response.status !== 200 || response.ok !== true) {
-    fail("SOURCE_FETCH", `${sourceUrl} returned HTTP ${String(response.status)}.`);
+    fail("SOURCE_FETCH", `${sourceUrl} returned HTTP ${String(response.status)}.`, {
+      retryable: [408, 425, 429, 500, 502, 503, 504].includes(response.status),
+    });
   }
   if (response.url !== sourceUrl) fail("SOURCE_FETCH", `${sourceUrl} redirected or returned an unexpected final URL.`);
   const contentType = response.headers?.get?.("content-type");
@@ -1157,15 +1169,18 @@ async function readBoundedHtml(response, sourceUrl) {
     html += decoder.decode();
   } catch (error) {
     if (error instanceof ArxivSourceError) throw error;
-    fail("SOURCE_FETCH", `${sourceUrl} response could not be decoded as bounded UTF-8 HTML.`, { cause: error });
+    fail("SOURCE_FETCH", `${sourceUrl} response could not be decoded as bounded UTF-8 HTML.`, {
+      cause: error,
+      retryable: true,
+    });
   }
-  if (total === 0 || html.length === 0) fail("SOURCE_FETCH", `${sourceUrl} returned an empty response.`);
+  if (total === 0 || html.length === 0) {
+    fail("SOURCE_FETCH", `${sourceUrl} returned an empty response.`, { retryable: true });
+  }
   return html;
 }
 
-async function fetchOfficialCategorySource({ fetchImpl, signal, fetchUrls, parser, build }) {
-  if (typeof fetchImpl !== "function") fail("SOURCE_INVALID", "fetchImpl must be a function.");
-  if (signal !== undefined && !(signal instanceof AbortSignal)) fail("SOURCE_INVALID", "signal must be an AbortSignal.");
+async function fetchOfficialCategorySourceAttempt({ fetchImpl, signal, fetchUrls, parser, build }) {
   const timeoutController = new AbortController();
   const timer = setTimeout(() => timeoutController.abort(new Error("arXiv listing fetch timed out")), FETCH_TIMEOUT_MS);
   timer.unref?.();
@@ -1190,7 +1205,7 @@ async function fetchOfficialCategorySource({ fetchImpl, signal, fetchUrls, parse
           signal: combinedSignal,
         });
       } catch (error) {
-        fail("SOURCE_FETCH", `${sourceUrl} could not be fetched.`, { cause: error });
+        fail("SOURCE_FETCH", `${sourceUrl} could not be fetched.`, { cause: error, retryable: true });
       }
       return parser(await readBoundedHtml(response, sourceUrl), slug);
     }));
@@ -1203,20 +1218,83 @@ async function fetchOfficialCategorySource({ fetchImpl, signal, fetchUrls, parse
   }
 }
 
-export async function fetchOfficialListingSnapshot({ fetchImpl = globalThis.fetch, signal } = {}) {
+function sleep(milliseconds, signal) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    if (signal?.aborted) {
+      rejectPromise(signal.reason ?? new Error("arXiv snapshot fetch was aborted"));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      rejectPromise(signal.reason ?? new Error("arXiv snapshot fetch was aborted"));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolvePromise();
+    }, milliseconds);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function fetchOfficialCategorySource({
+  fetchImpl,
+  signal,
+  fetchUrls,
+  parser,
+  build,
+  sleepImpl,
+  maxAttempts,
+}) {
+  if (typeof fetchImpl !== "function") fail("SOURCE_INVALID", "fetchImpl must be a function.");
+  if (typeof sleepImpl !== "function") fail("SOURCE_INVALID", "sleepImpl must be a function.");
+  if (signal !== undefined && !(signal instanceof AbortSignal)) fail("SOURCE_INVALID", "signal must be an AbortSignal.");
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > SNAPSHOT_MAX_ATTEMPTS) {
+    fail("SOURCE_INVALID", `snapshot fetch attempts must be from 1 through ${SNAPSHOT_MAX_ATTEMPTS}.`);
+  }
+  let lastError;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    if (signal?.aborted) throw signal.reason ?? new Error("arXiv snapshot fetch was aborted");
+    try {
+      return await fetchOfficialCategorySourceAttempt({ fetchImpl, signal, fetchUrls, parser, build });
+    } catch (error) {
+      lastError = error;
+      const retryable = error instanceof ArxivSourceError
+        && (error.retryable === true || error.code === "SOURCE_INCOMPLETE");
+      if (!retryable || signal?.aborted || attempt === maxAttempts) throw error;
+      await sleepImpl(SNAPSHOT_RETRY_DELAYS_MS[attempt - 1], signal);
+    }
+  }
+  throw lastError;
+}
+
+export async function fetchOfficialListingSnapshot({
+  fetchImpl = globalThis.fetch,
+  signal,
+  sleepImpl = sleep,
+  maxAttempts = SNAPSHOT_MAX_ATTEMPTS,
+} = {}) {
   return fetchOfficialCategorySource({
     fetchImpl,
     signal,
+    sleepImpl,
+    maxAttempts,
     fetchUrls: ARXIV_FETCH_URLS,
     parser: parseArxivNewListing,
     build: buildOfficialListingSnapshot,
   });
 }
 
-export async function fetchOfficialPastweekWindow({ fetchImpl = globalThis.fetch, signal } = {}) {
+export async function fetchOfficialPastweekWindow({
+  fetchImpl = globalThis.fetch,
+  signal,
+  sleepImpl = sleep,
+  maxAttempts = SNAPSHOT_MAX_ATTEMPTS,
+} = {}) {
   return fetchOfficialCategorySource({
     fetchImpl,
     signal,
+    sleepImpl,
+    maxAttempts,
     fetchUrls: ARXIV_PASTWEEK_FETCH_URLS,
     parser: parseArxivPastweekListing,
     build: buildOfficialPastweekWindow,

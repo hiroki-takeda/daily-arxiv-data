@@ -12,12 +12,16 @@ import {
   assertChatGptLogin,
   assertPinnedCodexIdentity,
   buildAutomationPrompt,
+  buildCategoryAutomationPrompt,
   buildCodexArgs,
   codexBinaryIdentity,
   classifyFullTextReadiness,
   copyReportsToHostStaging,
   discoverCodex,
+  fingerprintAutomationRuntime,
+  isRetryableGitNetworkFailure,
   makeRunId,
+  openRecoverableCheckpointJob,
   parseMode,
   removeSuccessfulRunArtifacts,
   resolveAgentWorktreeBase,
@@ -25,9 +29,14 @@ import {
   runPaths,
   sanitizedChildEnv,
   validateCodexCompletionResponse,
+  validateCategoryModelOutputLayout,
   validateManifest,
   validateModelOutputLayout,
 } from "../scripts/lib/local-automation.mjs";
+import {
+  importCheckpointCategoryReport,
+} from "../scripts/lib/checkpoint.mjs";
+import { validPolicy, validReport, validRun } from "./helpers.mjs";
 
 const RUN_ID = "run-20990105T123456Z-abcdef123456";
 const DATE = "2099-01-05";
@@ -79,8 +88,11 @@ test("runtime update barrier covers every scheduled runtime dependency", () => {
     "scripts/lib/local-automation.mjs",
     "scripts/lib/macos-schedule.mjs",
     "scripts/lib/arxiv-source.mjs",
+    "scripts/lib/checkpoint.mjs",
     "scripts/lib/pipeline.mjs",
+    "scripts/validate-staged-category.mjs",
   ]) assert.ok(AUTOMATION_RUNTIME_PATHS.includes(path), path);
+  assert.match(fingerprintAutomationRuntime(process.cwd()), /^[a-f0-9]{64}$/u);
 });
 
 test("runId generation is stable-format and injectable for tests", () => {
@@ -94,6 +106,11 @@ test("full-text readiness defers fresh propagation and transient failures but re
   assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: 429 } }, { isLatestAnnouncement: false }), "defer");
   assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: null } }, { isLatestAnnouncement: true }), "defer");
   assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: 403 } }, { isLatestAnnouncement: true }), "fail");
+});
+
+test("Git network retry recognizes the launchd SSH failure without classifying ordinary Git errors", () => {
+  assert.equal(isRetryableGitNetworkFailure("ssh: connect to host github.com port 22: Undefined error: 0\nfatal: Could not read from remote repository."), true);
+  assert.equal(isRetryableGitNetworkFailure("fatal: pathspec 'missing' did not match any files"), false);
 });
 
 test("Codex invocation fixes Sol, High reasoning, beta permissions, network, approvals, and web search", () => {
@@ -182,6 +199,88 @@ test("automation prompt binds host runId and requires validator-last output with
   assert.match(prompt, /2099\.00001/);
 });
 
+test("category prompt binds one resumable category and forbids ID/index fallback scoring", () => {
+  const staging = "/tmp/daily-arxiv-automation-501/run-20990105T123456Z-abcdef123456/staging/quant-ph";
+  const prompt = buildCategoryAutomationPrompt({
+    evaluationRunId: RUN_ID,
+    staging,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+  });
+  assert.match(prompt, /assigned category: quant-ph/);
+  assert.match(prompt, /one resumable category/);
+  assert.match(prompt, /2099\.00003/);
+  assert.doesNotMatch(prompt, /2099\.00002/);
+  assert.match(prompt, /provisional top min\(12, totalNew\)/);
+  assert.match(prompt, /arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula/);
+  assert.match(prompt, /audit-staged-language\.mjs 2099-01-05/);
+  assert.match(prompt, /validate-staged-category\.mjs 2099-01-05 quant-ph/);
+  assert.match(prompt, new RegExp(RUN_ID));
+});
+
+test("recoverable checkpoint helper uses the runtime-specific job and receipts an orphan before model orchestration", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-recoverable-helper-test-")));
+  const controlRoot = join(root, "control");
+  mkdirSync(controlRoot, { mode: 0o700 });
+  const runtimeFingerprint = "a".repeat(64);
+  const policy = validPolicy();
+  const run = { ...validRun(), runId: RUN_ID };
+  const reports = Object.fromEntries(CATEGORIES.map((slug) => [slug, validReport(slug, { count: 1, run })]));
+  const snapshot = {
+    announcementDate: DATE,
+    categories: Object.fromEntries(CATEGORIES.map((slug) => [slug, {
+      slug,
+      sourceUrl: `https://arxiv.org/list/${slug}/new`,
+      newCount: 1,
+      crosslistCount: 2,
+      newIds: [reports[slug].papers[0].arxivId],
+    }])),
+  };
+  const created = openRecoverableCheckpointJob({
+    controlRoot,
+    snapshot,
+    runtimeFingerprint,
+    attemptId: RUN_ID,
+    policy,
+    now: new Date("2099-01-05T12:00:00.000Z"),
+  });
+  assert.equal(created.checkpointExisted, false);
+  assert.equal(created.job.path.endsWith(`/${runtimeFingerprint}`), true);
+
+  const sourcePath = join(root, `${DATE}-quant-ph.json`);
+  writeFileSync(sourcePath, `${JSON.stringify(reports["quant-ph"], null, 2)}\n`, { mode: 0o600 });
+  chmodSync(sourcePath, 0o600);
+  assert.throws(() => importCheckpointCategoryReport({
+    job: created.job,
+    category: "quant-ph",
+    sourcePath,
+    attemptId: RUN_ID,
+    now: new Date(Number.NaN),
+    validateReport: () => true,
+  }), /timestamp is invalid/);
+
+  const retryId = "run-20990105T130000Z-123456abcdef";
+  const recovered = openRecoverableCheckpointJob({
+    controlRoot,
+    snapshot,
+    runtimeFingerprint,
+    attemptId: retryId,
+    policy,
+    now: new Date("2099-01-05T13:00:00.000Z"),
+  });
+  assert.equal(recovered.checkpointExisted, true);
+  assert.deepEqual(recovered.recoveredCategories, ["quant-ph"]);
+  assert.deepEqual(recovered.job.completeCategories, ["quant-ph"]);
+  assert.equal(recovered.job.evaluationRunId, RUN_ID, "the first durable evaluation run ID is reused");
+  assert.equal(recovered.job.path, created.job.path, "the same runtime-specific job is resumed");
+  assert.deepEqual(
+    recovered.job.attempts
+      .filter((event) => event.stage === "category_recovery" && event.category === "quant-ph")
+      .map((event) => [event.attemptId, event.status]),
+    [[retryId, "resumed"], [retryId, "completed"]],
+  );
+});
+
 test("Codex completion gate accepts only the exact validated response", () => {
   assert.equal(validateCodexCompletionResponse("STAGED_REPORTS_VALID\n"), "STAGED_REPORTS_VALID");
   assert.throws(
@@ -205,11 +304,13 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /Daily arXiv rubric 3\.0/);
   assert.match(specification, /technicalStrength`の18点以上は全文確認/);
   assert.match(specification, /node scripts\/extract-arxiv-source\.mjs/);
-  assert.match(specification, /node scripts\/validate-staged-reports\.mjs YYYY-MM-DD/);
+  assert.match(specification, /node scripts\/validate-staged-category\.mjs YYYY-MM-DD/);
   assert.match(specification, /manifest、completion marker、status fileを作らず/);
   assert.match(specification, /outboxは空のまま/);
-  assert.match(specification, /`STAGED_REPORTS_VALID`になった場合は、それを最後のコマンドとして直ちに終了/);
-  assert.match(specification, /最終応答を正確に`STAGED_REPORTS_VALID`の1行だけ/);
+  assert.match(specification, /`STAGED_CATEGORY_VALID`になった場合は、それを最後のコマンドとして直ちに終了/);
+  assert.match(specification, /最終応答を正確に`STAGED_CATEGORY_VALID`の1行だけ/);
+  assert.match(specification, /失敗または未完了の最初のカテゴリだけから再開/);
+  assert.match(specification, /モデル評価を繰り返さず公開だけを再試行/);
   assert.match(specification, /全文未確認論文の各軸が24点未満かつ`technicalStrength`が17点以下/);
   assert.match(specification, /`scope: "category"`/);
   assert.match(specification, /`data\/reports\/`、`public\/data\/`、`scripts\/lib\/pipeline\.mjs`、testsを例として読みません/);
@@ -357,6 +458,8 @@ test("lock/control state and host staging stay outside model-writable system tem
   assert.equal(paths.lock, "/Users/test/Library/Application Support/Daily arXiv/active-run.lock");
   assert.ok(paths.runRoot.startsWith("/tmp/daily-arxiv-automation-501/"));
   assert.equal(paths.hostStaging, `/Users/test/Library/Application Support/Daily arXiv/host-staging/${RUN_ID}`);
+  assert.equal(paths.categoryStaging["quant-ph"], `${paths.runRoot}/staging/quant-ph`);
+  assert.equal(paths.codexLogs["quant-ph"], `/Users/test/Library/Application Support/Daily arXiv/logs/${RUN_ID}.quant-ph.codex.log`);
   assert.ok(!paths.hostStaging.startsWith("/tmp/"));
   assert.ok(!paths.lock.startsWith("/tmp/"));
 });
@@ -428,6 +531,29 @@ test("host output layout requires exact regular reports and an empty outbox", as
     }),
     /symlink/,
   );
+});
+
+test("category output layout accepts exactly one assigned regular report", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-category-layout-test-"));
+  const staging = join(root, "quant-ph");
+  const outbox = join(root, "outbox");
+  mkdirSync(staging);
+  mkdirSync(outbox);
+  const report = join(staging, `${DATE}-quant-ph.json`);
+  writeFileSync(report, "{}\n");
+  assert.deepEqual(validateCategoryModelOutputLayout({
+    stagingDirectory: staging,
+    outboxDirectory: outbox,
+    date: DATE,
+    slug: "quant-ph",
+  }), { date: DATE, slug: "quant-ph", path: report });
+  writeFileSync(join(staging, "extra.json"), "{}\n");
+  assert.throws(() => validateCategoryModelOutputLayout({
+    stagingDirectory: staging,
+    outboxDirectory: outbox,
+    date: DATE,
+    slug: "quant-ph",
+  }), /exactly/);
 });
 
 test("a successful run removes only its own temporary directories and Codex log", async () => {

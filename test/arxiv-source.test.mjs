@@ -21,6 +21,7 @@ import {
   revalidatePastweekSnapshot,
   selectBackfillSnapshot,
   selectFullTextReadinessCanary,
+  validateReportAgainstSnapshot,
   validateReportsAgainstSnapshot,
 } from "../scripts/lib/arxiv-source.mjs";
 
@@ -609,6 +610,15 @@ test("report guard requires exact announcement, listing, counts, crosslists, and
   }
 });
 
+test("single-report guard validates one category against the same official snapshot", () => {
+  const snapshot = snapshotFixture();
+  const report = reportsFixture(snapshot)["quant-ph"];
+  assert.equal(validateReportAgainstSnapshot(report, snapshot, "quant-ph"), true);
+  const changed = structuredClone(report);
+  changed.papers[0].arxivVersion = "v2";
+  assert.throws(() => validateReportAgainstSnapshot(changed, snapshot, "quant-ph"), /arxivVersion/);
+});
+
 test("fetcher requests only hardcoded HTTPS listing URLs and returns a same-date snapshot", async () => {
   const calls = [];
   const fetchImpl = async (url, options) => {
@@ -673,8 +683,47 @@ test("an early category fetch failure aborts every still-pending sibling request
       }, { once: true });
     });
   };
-  await assert.rejects(() => fetchOfficialListingSnapshot({ fetchImpl }), /HTTP 503/);
+  await assert.rejects(() => fetchOfficialListingSnapshot({ fetchImpl, maxAttempts: 1 }), /HTTP 503/);
   assert.equal(pendingAborts, 2);
+});
+
+test("a transient malformed UTF-8 category retries the complete three-category snapshot", async () => {
+  const calls = new Map(ARXIV_CATEGORIES.map((slug) => [slug, 0]));
+  const delays = [];
+  const target = "gr-qc";
+  const fetchImpl = async (url) => {
+    const slug = ARXIV_CATEGORIES.find((candidate) => ARXIV_FETCH_URLS[candidate] === url);
+    assert.ok(slug, `unexpected URL ${url}`);
+    calls.set(slug, calls.get(slug) + 1);
+    if (slug === target && calls.get(slug) === 1) {
+      return {
+        status: 200,
+        ok: true,
+        url,
+        headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array([0xc3, 0x28]));
+            controller.close();
+          },
+        }),
+      };
+    }
+    const crossIds = Array.from({ length: CROSS_COUNTS[slug] }, (_, index) => `2606.${String(10000 + ARXIV_CATEGORIES.indexOf(slug) * 100 + index)}`);
+    return responseFor(listingHtml({ newIds: IDS[slug], crossIds }), url);
+  };
+  const snapshot = await fetchOfficialListingSnapshot({
+    fetchImpl,
+    maxAttempts: 2,
+    sleepImpl: async (milliseconds) => { delays.push(milliseconds); },
+  });
+  assert.equal(snapshot.announcementDate, DATE);
+  assert.deepEqual(Object.fromEntries(calls), {
+    "quant-ph": 2,
+    "gr-qc": 2,
+    "hep-th": 2,
+  });
+  assert.deepEqual(delays, [3_000]);
 });
 
 test("fetcher rejects redirects, non-HTML, declared oversize, and streamed oversize bodies", async (t) => {

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -20,13 +20,26 @@ async function fixture(reports = validReportSet()) {
   return { root, staging };
 }
 
-function runAudit({ root, staging, output }) {
-  return spawnSync(process.execPath, [AUDIT_SCRIPT, DATE, staging, output], {
+function runAudit({ root, staging, output, category }) {
+  return spawnSync(process.execPath, [AUDIT_SCRIPT, DATE, staging, output, ...(category ? [category] : [])], {
     cwd: REPOSITORY_ROOT,
     encoding: "utf8",
     env: { ...process.env, TMPDIR: root },
   });
 }
+
+test("language audit accepts the fixed one-category resumable staging layout", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-category-language-audit-test-"));
+  const staging = join(root, "staging", "quant-ph");
+  mkdirSync(staging, { recursive: true });
+  const report = validReportSet()["quant-ph"];
+  writeFileSync(join(staging, `${DATE}-quant-ph.json`), `${JSON.stringify(report, null, 2)}\n`);
+  const output = join(root, "quant-ph-language-issues-before.json");
+  const result = runAudit({ root, staging, output, category: "quant-ph" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, new RegExp(`STAGED_LANGUAGE_AUDIT: ${DATE}; issues=0;`));
+  assert.deepEqual(JSON.parse(readFileSync(output, "utf8")), { date: DATE, count: 0, issues: [] });
+});
 
 function makeCategoryProseDiverse(reports) {
   for (const report of Object.values(reports)) {

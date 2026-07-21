@@ -23,6 +23,7 @@ import {
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const EXPECTED_REMOTE = /^(?:git@github\.com:|https:\/\/github\.com\/|ssh:\/\/git@github\.com\/)(?:hiroki-takeda\/daily-arxiv-data)(?:\.git)?$/;
+const NETWORK_RETRY_DELAYS_MS = Object.freeze([2_000, 10_000]);
 
 function git(args, { allowFailure = false } = {}) {
   const result = spawnSync("git", args, {
@@ -35,6 +36,26 @@ function git(args, { allowFailure = false } = {}) {
   if (result.error) throw result.error;
   if (result.status !== 0 && !allowFailure) {
     throw new Error(`git ${args[0]} failed (${result.status}): ${(result.stderr || result.stdout).trim()}`);
+  }
+  return result;
+}
+
+function retryableGitNetworkFailure(result) {
+  const output = `${result.stderr ?? ""}\n${result.stdout ?? ""}`;
+  return /(?:ssh: connect to host .* port \d+:|Could not resolve (?:host|hostname)|Could not read from remote repository|Connection (?:timed out|reset|refused|closed)|Operation timed out|Network is unreachable|remote end hung up|RPC failed|fatal: unable to access|HTTP 408|HTTP 425|HTTP 429|HTTP 5\d\d)/iu.test(output);
+}
+
+function waitSynchronously(milliseconds) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
+function gitNetwork(args) {
+  let result;
+  for (let attempt = 0; attempt <= NETWORK_RETRY_DELAYS_MS.length; attempt += 1) {
+    result = git(args, { allowFailure: true });
+    if (result.status === 0) return result;
+    if (attempt >= NETWORK_RETRY_DELAYS_MS.length || !retryableGitNetworkFailure(result)) return result;
+    waitSynchronously(NETWORK_RETRY_DELAYS_MS[attempt]);
   }
   return result;
 }
@@ -79,7 +100,10 @@ function verifyRepositoryAndRemote() {
 }
 
 function fetchOriginMain() {
-  git(["fetch", "--quiet", "origin", "main"]);
+  const fetched = gitNetwork(["fetch", "--quiet", "origin", "main"]);
+  if (fetched.status !== 0) {
+    throw new Error(`git fetch failed (${fetched.status}): ${(fetched.stderr || fetched.stdout).trim()}`);
+  }
   return git(["rev-parse", "refs/remotes/origin/main"]).stdout.trim();
 }
 
@@ -172,9 +196,9 @@ try {
     if (!sameSet(new Set(committedPaths), new Set(allowlist))) {
       throw new Error(`Commit escaped the six-file allowlist: ${committedPaths.join(", ")}`);
     }
-    const pushed = git(["push", "origin", "HEAD:main"], { allowFailure: true });
+    const pushed = gitNetwork(["push", "origin", "HEAD:main"]);
     if (pushed.status !== 0) {
-      const fetched = git(["fetch", "--quiet", "origin", "main"], { allowFailure: true });
+      const fetched = gitNetwork(["fetch", "--quiet", "origin", "main"]);
       const remoteAfterFailure = fetched.status === 0
         ? git(["rev-parse", "refs/remotes/origin/main"], { allowFailure: true }).stdout.trim()
         : "";

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import {
   existsSync,
@@ -6,12 +7,14 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { gzipSync } from "node:zlib";
 import test from "node:test";
 
 import {
   extractArxivSource,
+  enforcePoliteSourceInterval,
   fetchArxivSourceArchive,
   parseArxivSourceArchive,
   validateArxivSourceId,
@@ -78,6 +81,31 @@ function successfulSourceResponse(payload, arxivId = "2607.00001") {
   };
 }
 
+function runPacingChild(runRoot, arxivId) {
+  const moduleUrl = new URL("../scripts/extract-arxiv-source.mjs", import.meta.url).href;
+  const program = `import { extractArxivSource } from ${JSON.stringify(moduleUrl)}; try { await extractArxivSource(${JSON.stringify(arxivId)}, { maxAttempts: 1, fetchImpl: async () => { process.stdout.write(String(Date.now())); return { status: 418, ok: false, url: "https://arxiv.org/e-print/${arxivId}v1", headers: new Headers(), body: new ReadableStream({ start(controller) { controller.close(); } }) }; } }); } catch {}`;
+  return new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(process.execPath, ["--input-type=module", "--eval", program], {
+      env: { ...process.env, TMPDIR: runRoot },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.once("error", rejectPromise);
+    child.once("close", (code) => {
+      if (code !== 0) {
+        rejectPromise(new Error(`pacing child exited ${String(code)}: ${stderr}`));
+        return;
+      }
+      resolvePromise(Number(stdout));
+    });
+  });
+}
+
 test("official e-print parser extracts bounded text and ignores binary figures", () => {
   const archive = gzipSync(makeTar([
     { path: "paper/main.tex", content: "\\documentclass{article}\n\\begin{document}Result\\end{document}\n" },
@@ -114,6 +142,22 @@ test("official e-print parser rejects invalid UTF-8 and text control characters"
   ]));
   assert.throws(() => parseArxivSourceArchive(invalidUtf8, "2607.00001"), /valid UTF-8/u);
   assert.throws(() => parseArxivSourceArchive(controlCharacter, "2607.00001"), /control characters/u);
+});
+
+test("official e-print parser skips malformed optional bib and bbl files but keeps strict TeX validation", () => {
+  const archive = gzipSync(makeTar([
+    { path: "main.tex", content: "\\documentclass{article}\n\\begin{document}Text\\end{document}\n" },
+    { path: "references.bib", content: Buffer.from([0x40, 0x61, 0xc3, 0x28]) },
+    { path: "generated.bbl", content: Buffer.from("entry\u001bcontrol\n", "utf8") },
+  ]));
+  const files = parseArxivSourceArchive(archive, "2607.00001");
+  assert.deepEqual(files.map(({ path }) => path), ["main.tex"]);
+
+  const malformedTex = gzipSync(makeTar([
+    { path: "main.tex", content: Buffer.from([0x5c, 0x74, 0xc3, 0x28]) },
+    { path: "references.bib", content: "@article{x,title={Reference}}\n" },
+  ]));
+  assert.throws(() => parseArxivSourceArchive(malformedTex, "2607.00001"), /valid UTF-8/u);
 });
 
 test("official e-print fetcher uses arxiv.org and requires its exact version-fixed redirect", async () => {
@@ -189,6 +233,84 @@ test("official e-print fetcher retries a transient 429 with bounded backoff", as
   assert.deepEqual(delays, [7_000]);
 });
 
+test("official e-print fetcher retries HTTP 500 and a truncated declared body", async () => {
+  const payload = gzipSync(Buffer.from("\\documentclass{article}\n"));
+  let attempts = 0;
+  const delays = [];
+  const result = await fetchArxivSourceArchive("2607.00001", {
+    maxAttempts: 3,
+    sleepImpl: async (milliseconds) => { delays.push(milliseconds); },
+    fetchImpl: async () => {
+      attempts += 1;
+      if (attempts === 1) {
+        return {
+          status: 500,
+          ok: false,
+          url: "https://arxiv.org/e-print/2607.00001v1",
+          headers: new Headers(),
+          body: new ReadableStream({ start(controller) { controller.close(); } }),
+        };
+      }
+      return {
+        status: 200,
+        ok: true,
+        url: "https://arxiv.org/src/2607.00001v1",
+        headers: new Headers({
+          "content-length": String(attempts === 2 ? payload.length + 7 : payload.length),
+        }),
+        body: new ReadableStream({ start(controller) { controller.enqueue(payload); controller.close(); } }),
+      };
+    },
+  });
+  assert.deepEqual(result, payload);
+  assert.equal(attempts, 3);
+  assert.deepEqual(delays, [10_000, 30_000]);
+});
+
+test("official e-print fetcher retries a chunked truncated gzip before accepting a complete archive", async () => {
+  const payload = gzipSync(makeTar([
+    { path: "main.tex", content: "\\documentclass{article}\n\\begin{document}Text\\end{document}\n" },
+  ]));
+  const truncated = payload.subarray(0, payload.length - 8);
+  let attempts = 0;
+  const delays = [];
+  const result = await fetchArxivSourceArchive("2607.00001", {
+    maxAttempts: 2,
+    sleepImpl: async (milliseconds) => { delays.push(milliseconds); },
+    fetchImpl: async () => {
+      attempts += 1;
+      const body = attempts === 1 ? truncated : payload;
+      return {
+        status: 200,
+        ok: true,
+        url: "https://arxiv.org/src/2607.00001v1",
+        headers: new Headers(),
+        body: new ReadableStream({ start(controller) { controller.enqueue(body); controller.close(); } }),
+      };
+    },
+  });
+  assert.deepEqual(result, payload);
+  assert.equal(attempts, 2);
+  assert.deepEqual(delays, [10_000]);
+});
+
+test("official e-print fetcher fails closed without retrying an unsafe archive", async () => {
+  const payload = gzipSync(makeTar([
+    { path: "../escape.tex", content: "\\documentclass{article}\n" },
+  ]));
+  let attempts = 0;
+  const delays = [];
+  await assert.rejects(() => fetchArxivSourceArchive("2607.00001", {
+    sleepImpl: async (milliseconds) => { delays.push(milliseconds); },
+    fetchImpl: async () => {
+      attempts += 1;
+      return successfulSourceResponse(payload);
+    },
+  }), /path traversal/u);
+  assert.equal(attempts, 1);
+  assert.deepEqual(delays, []);
+});
+
 test("source writer publishes only a complete atomically renamed directory", (t) => {
   const runRoot = makeRunRoot(t);
   const env = { TMPDIR: runRoot };
@@ -225,5 +347,84 @@ test("source pacing state is atomically replaced before a fetch attempt", async 
   assert.deepEqual(JSON.parse(readFileSync(`${runRoot}/.source-fetch-state.json`, "utf8")), {
     lastAttemptAt: 12_345,
   });
+  assert.deepEqual(readdirSync(runRoot), [".source-fetch-state.json"]);
+});
+
+test("every production retry is admitted through the shared pacing lease", async (t) => {
+  const runRoot = makeRunRoot(t);
+  const clock = [10_000, 10_000, 10_000, 13_000];
+  const delays = [];
+  let attempts = 0;
+  await assert.rejects(() => extractArxivSource("2607.00001", {
+    env: { TMPDIR: runRoot },
+    maxAttempts: 2,
+    now: () => clock.shift(),
+    sleepImpl: async (milliseconds) => { delays.push(milliseconds); },
+    fetchImpl: async () => {
+      attempts += 1;
+      return {
+        status: attempts === 1 ? 429 : 418,
+        ok: false,
+        url: "https://arxiv.org/e-print/2607.00001v1",
+        headers: new Headers(attempts === 1 ? { "retry-after": "0" } : {}),
+        body: new ReadableStream({ start(controller) { controller.close(); } }),
+      };
+    },
+  }), /HTTP 418/u);
+  assert.equal(attempts, 2);
+  assert.deepEqual(delays, [0, 3_000]);
+  assert.deepEqual(JSON.parse(readFileSync(`${runRoot}/.source-fetch-state.json`, "utf8")), {
+    lastAttemptAt: 13_000,
+  });
+});
+
+test("source pacing lease serializes independent processes sharing one run root", { timeout: 10_000 }, async (t) => {
+  const runRoot = makeRunRoot(t);
+  const [first, second] = await Promise.all([
+    runPacingChild(runRoot, "2607.00001"),
+    runPacingChild(runRoot, "2607.00002"),
+  ]);
+  assert.equal(Number.isSafeInteger(first), true);
+  assert.equal(Number.isSafeInteger(second), true);
+  assert.ok(Math.abs(first - second) >= 2_800, `source attempts were only ${String(Math.abs(first - second))} ms apart`);
+  assert.deepEqual(readdirSync(runRoot), [".source-fetch-state.json"]);
+});
+
+test("source pacing lease conservatively recovers a validated stale lock whose owner exited", async (t) => {
+  const runRoot = makeRunRoot(t);
+  const exited = spawn(process.execPath, ["--eval", ""], { stdio: "ignore" });
+  const exitedPid = exited.pid;
+  await new Promise((resolvePromise, rejectPromise) => {
+    exited.once("error", rejectPromise);
+    exited.once("close", resolvePromise);
+  });
+  const uid = typeof process.getuid === "function" ? process.getuid() : 0;
+  writeFileSync(`${runRoot}/.source-fetch-lock.json`, `${JSON.stringify({
+    version: 1,
+    pid: exitedPid,
+    uid,
+    createdAt: 0,
+    token: "a".repeat(32),
+  })}\n`, { mode: 0o600 });
+
+  await enforcePoliteSourceInterval({ env: { TMPDIR: runRoot } });
+  assert.deepEqual(readdirSync(runRoot), [".source-fetch-state.json"]);
+});
+
+test("source pacing lease fails closed without deleting an untrusted lock file", async (t) => {
+  const runRoot = makeRunRoot(t);
+  const lockPath = `${runRoot}/.source-fetch-lock.json`;
+  writeFileSync(lockPath, "not a Daily arXiv lease\n", { mode: 0o600 });
+  await assert.rejects(
+    () => enforcePoliteSourceInterval({ env: { TMPDIR: runRoot } }),
+    /Invalid source-fetch pacing lock/u,
+  );
+  assert.equal(readFileSync(lockPath, "utf8"), "not a Daily arXiv lease\n");
+  assert.deepEqual(readdirSync(runRoot), [".source-fetch-lock.json"]);
+});
+
+test("source pacing helper remains directly usable by the host process", async (t) => {
+  const runRoot = makeRunRoot(t);
+  await enforcePoliteSourceInterval({ env: { TMPDIR: runRoot } });
   assert.deepEqual(readdirSync(runRoot), [".source-fetch-state.json"]);
 });

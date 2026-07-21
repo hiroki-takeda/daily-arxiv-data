@@ -9,6 +9,7 @@ import {
   existsSync,
   fsyncSync,
   lstatSync,
+  linkSync,
   mkdtempSync,
   mkdirSync,
   openSync,
@@ -31,6 +32,9 @@ const MAX_EXTRACTED_BYTES = 40 * 1024 * 1024;
 const MAX_ARCHIVE_ENTRIES = 10_000;
 const MAX_TEXT_FILES = 512;
 const MIN_SOURCE_REQUEST_INTERVAL_MS = 3_000;
+const SOURCE_PACING_LOCK_STALE_MS = 30_000;
+const SOURCE_PACING_LOCK_WAIT_MS = 45_000;
+const SOURCE_PACING_LOCK_POLL_MS = 100;
 const SOURCE_RETRY_DELAYS_MS = Object.freeze([10_000, 30_000, 60_000]);
 const DEFAULT_SOURCE_REQUEST_TIMEOUT_MS = 60_000;
 const MAX_SOURCE_REQUEST_TIMEOUT_MS = 120_000;
@@ -40,9 +44,23 @@ const TEXT_EXTENSIONS = new Set([
   ".cls", ".sty", ".def", ".cfg", ".ins", ".dtx",
   ".json", ".yaml", ".yml",
 ]);
+const OPTIONAL_BIBLIOGRAPHY_EXTENSIONS = new Set([".bib", ".bbl"]);
 
 function fail(message) {
   throw new Error(message);
+}
+
+function transientFail(message) {
+  const error = new Error(message);
+  error.retryable = true;
+  throw error;
+}
+
+function archiveIntegrityIsRetryable(error) {
+  const message = String(error?.message ?? "");
+  return /gzip extraction failed:.*(?:unexpected end|unexpected eof|incorrect data check|checksum)/iu.test(message)
+    || /tar checksum/iu.test(message)
+    || /archive contains (?:a )?truncated (?:entry|PAX metadata)/iu.test(message);
 }
 
 export function validateArxivSourceId(value) {
@@ -149,10 +167,15 @@ function looksLikeTexText(text) {
   return /\\(?:documentclass|begin\s*\{document\}|section\s*\{|title\s*\{)/u.test(sample);
 }
 
-function eligibleTextFile(path, content) {
+function eligibleTextFile(path, content, { skipMalformedOptionalBibliography = false } = {}) {
   const extension = extname(path).toLocaleLowerCase("en-US");
   if (TEXT_EXTENSIONS.has(extension)) {
-    decodeStrictSourceText(content, path);
+    try {
+      decodeStrictSourceText(content, path);
+    } catch (error) {
+      if (skipMalformedOptionalBibliography && OPTIONAL_BIBLIOGRAPHY_EXTENSIONS.has(extension)) return false;
+      throw error;
+    }
     return true;
   }
   if (extension !== "") return false;
@@ -200,7 +223,11 @@ function parseTarArchive(buffer) {
       pendingPath = undefined;
       if (type === "0") {
         const path = safeArchivePath(candidatePath);
-        if (eligibleTextFile(path, content)) {
+        const extension = extname(path).toLocaleLowerCase("en-US");
+        if (TEXT_EXTENSIONS.has(extension) && content.length > MAX_SOURCE_FILE_BYTES) {
+          fail(`arXiv source text file is too large: ${path}.`);
+        }
+        if (eligibleTextFile(path, content, { skipMalformedOptionalBibliography: true })) {
           if (content.length > MAX_SOURCE_FILE_BYTES) fail(`arXiv source text file is too large: ${path}.`);
           if (seen.has(path)) fail(`arXiv source archive repeats a text path: ${path}.`);
           seen.add(path);
@@ -235,9 +262,10 @@ export function parseArxivSourceArchive(compressed, arxivId) {
 
   if (unpacked.length >= 512) {
     const firstHeader = unpacked.subarray(0, 512);
-    let isTar = false;
+    const hasTarMagic = firstHeader.subarray(257, 262).toString("ascii") === "ustar";
+    let isTar = hasTarMagic;
     try {
-      isTar = !allZero(firstHeader)
+      isTar ||= !allZero(firstHeader)
         && tarChecksum(firstHeader) === parseTarOctal(firstHeader.subarray(148, 156), "tar checksum");
     } catch {
       // A gzip-compressed single TeX source is not a tar archive.
@@ -251,10 +279,12 @@ export function parseArxivSourceArchive(compressed, arxivId) {
 
 async function readBoundedBody(response) {
   const declared = response.headers?.get?.("content-length");
+  let declaredBytes;
   if (declared !== null && declared !== undefined) {
     if (!/^(0|[1-9]\d*)$/u.test(declared) || Number(declared) > MAX_DOWNLOAD_BYTES) {
       fail("arXiv source response has an invalid or excessive Content-Length.");
     }
+    declaredBytes = Number(declared);
   }
   const reader = response.body?.getReader?.();
   if (!reader) fail("arXiv source response body is not readable.");
@@ -271,12 +301,16 @@ async function readBoundedBody(response) {
     }
     chunks.push(Buffer.from(value));
   }
-  if (total === 0) fail("arXiv source response was empty.");
+  if (total === 0) transientFail("arXiv source response was empty or terminated before data arrived.");
+  if (declaredBytes !== undefined && total !== declaredBytes) {
+    transientFail(`arXiv source response terminated at ${total} of ${declaredBytes} declared bytes.`);
+  }
   return Buffer.concat(chunks, total);
 }
 
 function retryableFetchError(error) {
-  return error instanceof TypeError
+  return error?.retryable === true
+    || error instanceof TypeError
     || error?.name === "AbortError"
     || /terminated|fetch failed|ECONNRESET|UND_ERR|timed out/iu.test(String(error?.message ?? ""));
 }
@@ -296,12 +330,14 @@ function sleep(milliseconds) {
 export async function fetchArxivSourceArchive(arxivId, {
   fetchImpl = globalThis.fetch,
   sleepImpl = sleep,
+  beforeAttempt,
   maxAttempts = 4,
   requestTimeoutMs = DEFAULT_SOURCE_REQUEST_TIMEOUT_MS,
 } = {}) {
   validateArxivSourceId(arxivId);
   if (typeof fetchImpl !== "function") fail("A fetch implementation is required.");
   if (typeof sleepImpl !== "function") fail("A sleep implementation is required.");
+  if (beforeAttempt !== undefined && typeof beforeAttempt !== "function") fail("Source fetch attempt hook must be a function.");
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) fail("Source fetch attempts must be from 1 through 5.");
   if (!Number.isSafeInteger(requestTimeoutMs) || requestTimeoutMs < 1 || requestTimeoutMs > MAX_SOURCE_REQUEST_TIMEOUT_MS) {
     fail("Source request timeout is outside the permitted range.");
@@ -310,8 +346,10 @@ export async function fetchArxivSourceArchive(arxivId, {
   const expectedFinalUrl = `https://arxiv.org/src/${arxivId}v1`;
   let lastError;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    if (beforeAttempt) await beforeAttempt(Object.freeze({ arxivId, attempt }));
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(new Error("arXiv source request timed out")), requestTimeoutMs);
+    timer.unref?.();
     let response;
     try {
       response = await fetchImpl(requested, {
@@ -326,7 +364,7 @@ export async function fetchArxivSourceArchive(arxivId, {
         },
         signal: controller.signal,
       });
-      if ([429, 502, 503, 504].includes(response.status)) {
+      if ([408, 425, 429, 500, 502, 503, 504].includes(response.status)) {
         lastError = new Error(`arXiv source endpoint returned transient HTTP ${response.status}.`);
         await response.body?.cancel?.("retrying transient source response");
       } else {
@@ -341,7 +379,14 @@ export async function fetchArxivSourceArchive(arxivId, {
         ) {
           fail(`arXiv source endpoint redirected to an unexpected URL: ${response.url}.`);
         }
-        return await readBoundedBody(response);
+        const archive = await readBoundedBody(response);
+        try {
+          parseArxivSourceArchive(archive, arxivId);
+        } catch (error) {
+          if (!archiveIntegrityIsRetryable(error)) throw error;
+          transientFail(`arXiv source response failed an integrity check: ${error.message}`);
+        }
+        return archive;
       }
     } catch (error) {
       if (!retryableFetchError(error)) throw error;
@@ -394,26 +439,149 @@ function atomicWriteFile(path, content, mode = 0o600) {
   }
 }
 
-async function enforcePoliteSourceInterval({ env = process.env, now = () => Date.now(), sleepImpl = sleep } = {}) {
-  const runRoot = safeRunRoot(env);
-  const statePath = resolve(runRoot, ".source-fetch-state.json");
-  let lastAttemptAt = 0;
-  if (existsSync(statePath)) {
-    const entry = lstatSync(statePath);
-    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > 1_024) fail("Unsafe source-fetch pacing state.");
-    const parsed = JSON.parse(readFileSync(statePath, "utf8"));
-    if (Object.keys(parsed).join("\0") !== "lastAttemptAt" || !Number.isSafeInteger(parsed.lastAttemptAt) || parsed.lastAttemptAt < 0) {
-      fail("Invalid source-fetch pacing state.");
-    }
-    lastAttemptAt = parsed.lastAttemptAt;
+function readSourcePacingLease(lockPath, expectedUid) {
+  let entry;
+  try {
+    entry = lstatSync(lockPath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return undefined;
+    throw error;
   }
-  const observedAt = now();
-  if (!Number.isSafeInteger(observedAt) || observedAt < 0) fail("Invalid source-fetch pacing timestamp.");
-  const delay = Math.max(0, MIN_SOURCE_REQUEST_INTERVAL_MS - (observedAt - lastAttemptAt));
-  if (delay > 0) await sleepImpl(delay);
-  const attemptAt = now();
-  if (!Number.isSafeInteger(attemptAt) || attemptAt < 0) fail("Invalid source-fetch pacing timestamp.");
-  atomicWriteFile(statePath, `${JSON.stringify({ lastAttemptAt: attemptAt })}\n`);
+  if (entry.isSymbolicLink() || !entry.isFile() || entry.uid !== expectedUid || entry.size < 1 || entry.size > 1_024) {
+    fail("Unsafe source-fetch pacing lock.");
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(lockPath, "utf8"));
+  } catch {
+    fail("Invalid source-fetch pacing lock.");
+  }
+  const keys = Object.keys(parsed).sort().join("\0");
+  if (
+    keys !== "createdAt\0pid\0token\0uid\0version"
+    || parsed.version !== 1
+    || !Number.isSafeInteger(parsed.pid)
+    || parsed.pid < 1
+    || !Number.isSafeInteger(parsed.uid)
+    || parsed.uid !== expectedUid
+    || !Number.isSafeInteger(parsed.createdAt)
+    || parsed.createdAt < 0
+    || typeof parsed.token !== "string"
+    || !/^[a-f0-9]{32}$/u.test(parsed.token)
+  ) {
+    fail("Invalid source-fetch pacing lock.");
+  }
+  let confirmed;
+  try {
+    confirmed = lstatSync(lockPath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return undefined;
+    throw error;
+  }
+  if (confirmed.dev !== entry.dev || confirmed.ino !== entry.ino || confirmed.size !== entry.size) {
+    return undefined;
+  }
+  return Object.freeze({ ...parsed, dev: entry.dev, ino: entry.ino });
+}
+
+function sourcePacingOwnerIsAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code !== "ESRCH";
+  }
+}
+
+function unlinkMatchingLease(path, lease, { required = false } = {}) {
+  let current;
+  try {
+    current = lstatSync(path);
+  } catch (error) {
+    if (!required && error?.code === "ENOENT") return false;
+    throw error;
+  }
+  if (current.isSymbolicLink() || !current.isFile() || current.dev !== lease.dev || current.ino !== lease.ino) {
+    if (required) fail("Source-fetch pacing lock ownership changed unexpectedly.");
+    return false;
+  }
+  unlinkSync(path);
+  return true;
+}
+
+function recoverStaleSourcePacingLease(lockPath, observed, wallClockNow) {
+  if (wallClockNow - observed.createdAt < SOURCE_PACING_LOCK_STALE_MS) return false;
+  if (sourcePacingOwnerIsAlive(observed.pid)) return false;
+  const current = readSourcePacingLease(lockPath, observed.uid);
+  if (!current || current.dev !== observed.dev || current.ino !== observed.ino || current.token !== observed.token) return false;
+  return unlinkMatchingLease(lockPath, current);
+}
+
+async function acquireSourcePacingLease(runRoot, { sleepImpl = sleep } = {}) {
+  const uid = typeof process.getuid === "function" ? process.getuid() : 0;
+  const lockPath = resolve(runRoot, ".source-fetch-lock.json");
+  const waitStartedAt = Date.now();
+  while (true) {
+    const token = randomBytes(16).toString("hex");
+    const candidatePath = resolve(runRoot, `.source-fetch-lease-${process.pid}-${token}.json`);
+    const createdAt = Date.now();
+    atomicWriteFile(candidatePath, `${JSON.stringify({ version: 1, pid: process.pid, uid, createdAt, token })}\n`);
+    const candidateEntry = lstatSync(candidatePath);
+    const candidate = Object.freeze({ token, dev: candidateEntry.dev, ino: candidateEntry.ino });
+    let linked = false;
+    try {
+      linkSync(candidatePath, lockPath);
+      linked = true;
+      const acquired = readSourcePacingLease(lockPath, uid);
+      if (!acquired || acquired.dev !== candidate.dev || acquired.ino !== candidate.ino || acquired.token !== token) {
+        fail("Source-fetch pacing lock acquisition could not be verified.");
+      }
+      return Object.freeze({ ...acquired, lockPath, candidatePath });
+    } catch (error) {
+      if (linked) unlinkMatchingLease(lockPath, candidate);
+      unlinkMatchingLease(candidatePath, candidate);
+      if (error?.code !== "EEXIST") throw error;
+    }
+
+    const observed = readSourcePacingLease(lockPath, uid);
+    if (observed && recoverStaleSourcePacingLease(lockPath, observed, Date.now())) continue;
+    if (Date.now() - waitStartedAt >= SOURCE_PACING_LOCK_WAIT_MS) {
+      fail("Timed out waiting for the source-fetch pacing lock.");
+    }
+    await sleepImpl(SOURCE_PACING_LOCK_POLL_MS);
+  }
+}
+
+function releaseSourcePacingLease(lease) {
+  unlinkMatchingLease(lease.lockPath, lease, { required: true });
+  unlinkMatchingLease(lease.candidatePath, lease);
+}
+
+export async function enforcePoliteSourceInterval({ env = process.env, now = () => Date.now(), sleepImpl = sleep } = {}) {
+  const runRoot = safeRunRoot(env);
+  const lease = await acquireSourcePacingLease(runRoot, { sleepImpl });
+  try {
+    const statePath = resolve(runRoot, ".source-fetch-state.json");
+    let lastAttemptAt = 0;
+    if (existsSync(statePath)) {
+      const entry = lstatSync(statePath);
+      if (entry.isSymbolicLink() || !entry.isFile() || entry.size > 1_024) fail("Unsafe source-fetch pacing state.");
+      const parsed = JSON.parse(readFileSync(statePath, "utf8"));
+      if (Object.keys(parsed).join("\0") !== "lastAttemptAt" || !Number.isSafeInteger(parsed.lastAttemptAt) || parsed.lastAttemptAt < 0) {
+        fail("Invalid source-fetch pacing state.");
+      }
+      lastAttemptAt = parsed.lastAttemptAt;
+    }
+    const observedAt = now();
+    if (!Number.isSafeInteger(observedAt) || observedAt < 0) fail("Invalid source-fetch pacing timestamp.");
+    const delay = Math.max(0, MIN_SOURCE_REQUEST_INTERVAL_MS - (observedAt - lastAttemptAt));
+    if (delay > 0) await sleepImpl(delay);
+    const attemptAt = now();
+    if (!Number.isSafeInteger(attemptAt) || attemptAt < 0) fail("Invalid source-fetch pacing timestamp.");
+    atomicWriteFile(statePath, `${JSON.stringify({ lastAttemptAt: attemptAt })}\n`);
+  } finally {
+    releaseSourcePacingLease(lease);
+  }
 }
 
 function normalizeSourceFiles(files) {
@@ -482,8 +650,17 @@ export function writeArxivSourceFiles(files, arxivId, { env = process.env } = {}
 }
 
 export async function extractArxivSource(arxivId, options = {}) {
-  await enforcePoliteSourceInterval(options);
-  const archive = await fetchArxivSourceArchive(arxivId, options);
+  const attemptObserver = options.beforeAttempt;
+  if (attemptObserver !== undefined && typeof attemptObserver !== "function") {
+    fail("Source fetch attempt hook must be a function.");
+  }
+  const archive = await fetchArxivSourceArchive(arxivId, {
+    ...options,
+    beforeAttempt: async (context) => {
+      await enforcePoliteSourceInterval(options);
+      if (attemptObserver) await attemptObserver(context);
+    },
+  });
   const files = parseArxivSourceArchive(archive, arxivId);
   return writeArxivSourceFiles(files, arxivId, options);
 }

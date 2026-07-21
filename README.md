@@ -20,17 +20,19 @@
   → 公開済みならCodexを呼ばず終了
   → バッチ末尾の版固定PDF・e-printをHEAD確認し、未配信ならCodexを呼ばず16:30へ延期
   → モデル専用の別worktreeをorigin/mainへ同期
-  → Codex CLIをGPT-5.6-Sol / Highで実行
-  → arXivのNew submissionsを全件一次評価
+  → quant-ph → gr-qc → hep-thの順に、未完了カテゴリだけをGPT-5.6-Sol / Highで実行
+  → 各カテゴリのNew submissionsを全件一次評価
   → 各カテゴリの暫定上位12件までをv1 PDFと公式e-print本文で確認し、最終上位10件を全文確認済みにする
-  → 候補JSONを指定run固有/tmpへ出力
-  → Application Support内のホスト専用stagingへ安全にコピーし、公式ID集合と再照合
+  → 1カテゴリずつ言語監査・validatorを通し、日付・snapshot・runtimeごとの保護checkpointへ保存
+  → 中断時は完成済みカテゴリを再利用し、失敗または未完了カテゴリだけを次回runで再評価
+  → 3カテゴリが揃ったらApplication Support内のホスト専用stagingへ安全に結合し、公式ID集合と再照合
   → 選択日の公式snapshotがrun中も同一な場合だけ固定publisherが6ファイルをcommit・push
+  → 公開処理だけが失敗した場合は、次回runでCodexを呼ばずcommit・pushだけを再試行
   → GitHub Actionsが再検証してPagesへ公開
   → 共用PCが5分以内に新データを取得
 ```
 
-午前の公開に成功していれば午後は無変更で終了します。公式一覧だけが先に更新され、PDF・e-printがまだ配信されていない場合は`AUTOMATION_DEFERRED`で正常終了し、Solの利用枠を消費せず16:30に再確認します。新着発表がない日、既に公開済みの日、3カテゴリの発表日が揃わない場合は前回正常版を維持します。検証失敗時も`current.json`は変更されません。
+午前の公開に成功していれば午後は無変更で終了します。公式一覧だけが先に更新され、PDF・e-printがまだ配信されていない場合は`AUTOMATION_DEFERRED`で正常終了し、Solの利用枠を消費せず16:30に再確認します。カテゴリ途中で失敗しても、それ以前にホスト検証済みのcheckpointは保護されるため、同じ日付の全カテゴリを最初から評価し直しません。新着発表がない日、既に公開済みの日、3カテゴリの発表日が揃わない場合は前回正常版を維持します。検証失敗時も`current.json`は変更されません。
 
 ChatGPTデスクトップ、ブラウザ、共用表示PCは実行ホストではありません。自動処理用Macは電源オンかつユーザーがログイン済みである必要がありますが、画面は消えていて構いません。スリープ中の時刻は次の起床時に実行されます。完全にシャットダウンしている間は動きません。
 
@@ -53,7 +55,7 @@ node scripts/configure-macos-schedule.mjs install
 
 `install`は既存の同名plistを上書き・削除しません。登録直後には最新の未公開分を調べる追いつき確認が1回走り、必要ならそのまま評価・pushします。詳しい確認方法、ログ、停止時の扱いは[自動運用ガイド](docs/AUTOMATION.md)を参照してください。
 
-登録後は、モデルが一度も書けない`daily-arxiv-data-publisher` worktree、モデル専用の`daily-arxiv-data-agent` worktree、`~/Library/Application Support/Daily arXiv/`のロック・ログ・ホストstagingを使います。公開成功時は、そのrun自身が作った一時PDF・staging・Codexログだけを消します。失敗資料と既存フォルダは残し、モデルがagent worktreeを汚した場合も証拠として保存して次回は新しいrun固有worktreeへ切り替えます。
+登録後は、モデルが一度も書けない`daily-arxiv-data-publisher` worktree、モデル専用の`daily-arxiv-data-agent` worktree、`~/Library/Application Support/Daily arXiv/`のロック・ログ・ホストstaging・日付別checkpointを使います。checkpointは`jobs/<日付>-<snapshot fingerprint>/<runtime fingerprint>/`へ検証済みカテゴリと追記専用の試行・公開履歴を保存し、公開後も小さな監査記録として残します。公開成功時に消すのは、そのrun自身が作った一時PDF・source・staging・Codexログだけです。失敗資料と既存フォルダは残し、モデルがagent worktreeを汚した場合も証拠として保存して次回は新しいrun固有worktreeへ切り替えます。
 
 ## 検証
 
@@ -66,7 +68,7 @@ npm run validate
 git diff --check
 ```
 
-日次Codex runには、ホストから指定されたrun固有`/tmp`へ3レポートだけを書くよう要求します。Codex自身は`git add`、`commit`、`push`を行いません。シェルの外向き通信とWeb検索は`arxiv.org` / `export.arxiv.org`だけに制限し、リポジトリ、ChatGPT認証保存領域、publisher、ホスト制御領域への書込みを拒否します。現在のmacOS版Codexでは共通ツール用system tempがscratchとして書込み可能なため、`/tmp`全体を非信頼領域として扱い、公開用のホストstaging・lock・ログ・秘密情報は置きません。モデルが終了した後、別のpublisher worktreeにあるホスト側ランナーだけが次を呼びます。
+各Codexカテゴリrunには、ホストから指定されたrun固有`/tmp`のカテゴリ専用stagingへ1レポートだけを書くよう要求します。Codex自身は`git add`、`commit`、`push`を行いません。シェルの外向き通信とWeb検索は`arxiv.org` / `export.arxiv.org`だけに制限し、リポジトリ、ChatGPT認証保存領域、publisher、checkpointを含むホスト制御領域への書込みを拒否します。現在のmacOS版Codexでは共通ツール用system tempがscratchとして書込み可能なため、`/tmp`全体を非信頼領域として扱い、公開用のホストstaging・lock・ログ・秘密情報は置きません。モデル終了後にホストが単一カテゴリを独立検証してcheckpointへ取り込み、3カテゴリが揃った後だけ、別のpublisher worktreeにあるホスト側ランナーが次を呼びます。
 
 ```bash
 node scripts/publish-edition.mjs YYYY-MM-DD /tmp/.../staging

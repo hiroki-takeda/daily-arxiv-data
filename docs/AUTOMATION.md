@@ -14,7 +14,7 @@ OpenAI API課金なしで現在もっとも確実な本番経路は、ChatGPTア
 
 - OpenAI APIキーとAPI従量課金は使いません。
 - ChatGPTログイン済みCodex CLIを使うため、契約中ChatGPTプランのCodex利用枠を消費します。
-- 全abstractを一次評価し、各カテゴリの暫定上位12件だけをPDFで確認します。最終上位10件の全文確認を維持しつつ、全文取得を最大36件へ制限します。利用枠、モデル利用可否、ネットワークのいずれかで失敗した場合は公開せず、午後または翌営業日に再試行します。
+- 全abstractを一次評価し、各カテゴリの暫定上位12件だけを全文確認します。最終上位10件の全文確認を維持しつつ、全文取得を最大36件へ制限します。カテゴリは`quant-ph`、`gr-qc`、`hep-th`の順に独立実行し、検証済みcheckpointを再利用するため、利用枠、モデル、ネットワークのいずれかで失敗しても次回は失敗または未完了のカテゴリだけを再試行します。
 - 公式一覧の日付が既に公開済みならCodexを起動しないため、午後runを含め利用枠を消費しません。
 - 公式一覧だけが先に更新された場合は、全New IDを取得せず、当日バッチの最大arXiv IDをcanaryとして版固定PDFとe-printへ順次`HEAD`します。未配信なら`AUTOMATION_DEFERRED`で正常終了し、Codexを起動せず次の定時runへ回します。これはバッチ伝播の軽量確認であり、個別論文の可用性はモデル側でも引き続き安全確認します。
 
@@ -30,14 +30,18 @@ launchd（平日11:30・16:30 JST）
   → 公開済みならNO_CHANGE（Codex未使用）
   → v1 PDF・e-print canaryが未配信ならAUTOMATION_DEFERRED（Codex未使用）
   → 別のdaily-arxiv-data-agent worktree
-  → Codex CLI（GPT-5.6-Sol / High）
-  → 公式v1 PDFの版確認 + 公式e-print TeXのbounded抽出（追加package不要）
-  → run固有/tmpのstagingへ正確な3 JSON（outboxは空のまま）
-  → Application Support内のホスト専用stagingへ安全にコピー
-  → schemaと公式snapshotを完全照合
+  → quant-ph → gr-qc → hep-thの固定順で未完了カテゴリだけを実行
+  → 各カテゴリをCodex CLI（GPT-5.6-Sol / High）で全abstract一次評価
+  → 暫定上位12件の公式v1 PDF確認 + 公式e-print TeXのbounded抽出（追加package不要）
+  → run固有/tmpのカテゴリ専用stagingへ正確な1 JSON（outboxは空のまま）
+  → カテゴリ単位の言語監査・schema・公式snapshot照合
+  → Application Support内の日付・snapshot・runtime別checkpointへ検証済みレポートを保存
+  → 失敗時は完成済みカテゴリを再利用し、次回runで未完了カテゴリから再開
+  → 3カテゴリが揃ったら空のホスト専用stagingへ安全に結合して全体を再検証
   → pastweekを再取得し、選択した日付のID・件数が同一か確認
   → モデルが触れないpublisher worktreeの固定publisher
   → 6ファイルだけcommitしてorigin/mainへpush
+  → 公開失敗時はcheckpointからCodexなしでpublisherだけを再試行
   → GitHub Actions再検証
   → GitHub Pages
 ```
@@ -59,13 +63,22 @@ launchd（平日11:30・16:30 JST）
 ~/Library/Application Support/Daily arXiv/
   モデルから書込不可のlock、lock履歴、ホストstaging、Codex/launchdログ
 
+~/Library/Application Support/Daily arXiv/jobs/<date>-<snapshot-fingerprint>/<runtime-fingerprint>/
+  不変のjob・snapshot、検証済みカテゴリreport/receipt、追記専用の試行・公開履歴
+
 /tmp/daily-arxiv-automation-<uid>/run-.../
-  モデル出力用staging、空のoutbox、一時HOME/TMPDIR
+  カテゴリ別のモデル出力用staging、空のoutbox、一時HOME/TMPDIR
   macOSのsystem temp全体をモデル側から見た非信頼scratchとして扱う
 ```
 
-モデルとpublisherを同じworktreeで動かしません。Codexは独立process groupで起動し、終了時には残存childも停止します。万一background processが残っても、publisher、ホストlock、ホストstagingへ書けない構成です。ホストが信頼するstaging、lock、ログ、秘密情報はsystem tempへ置きません。公開成功後は、そのrunが作成したrun固有`/tmp`、Application Support内のホストstaging、Codexログだけを削除します。失敗時の調査資料、既存フォルダ、worktreeを自動削除・上書きして復旧する処理はありません。
+モデルとpublisherを同じworktreeで動かしません。Codexは独立process groupで起動し、終了時には残存childも停止します。万一background processが残っても、publisher、ホストlock、ホストstaging、checkpointへ書けない構成です。ホストが信頼するstaging、lock、ログ、checkpoint、秘密情報はsystem tempへ置きません。公開成功後は、そのrunが作成したrun固有`/tmp`、Application Support内の一時ホストstaging、Codexログだけを削除します。`jobs/`の完成済みjob metadata、report digest、試行・公開記録は小さな監査記録として保持します。失敗時の調査資料、既存フォルダ、worktree、checkpointを自動削除・上書きして復旧する処理はありません。
 Codexのstdout/stderrはホストが20 MiBで打ち切り、上限超過runは公開しません。モデル出力がログ領域を無制限に埋めることも防ぎます。
+
+### 日付checkpointと再開
+
+1日分のjobは、announcement dateと公式snapshotのSHA-256で親ディレクトリを選び、その中を評価runtimeのSHA-256で分離した`jobs/<date>-<snapshot-fingerprint>/<runtime-fingerprint>/`に置きます。`job.json`、`snapshot.json`、共有`evaluationRunId`は初回に固定し、既存値を上書きしません。受理した各カテゴリは`reports/<category>.json`とdigest付き`<category>.receipt.json`として保存します。モデル試行は`attempts/*.json`、公開試行は`publication/*.json`へ追記し、content-addressedな`.writes/*.blob`も含め既存記録を削除・置換しません。
+
+次の定時runでは、同じsnapshotとruntime fingerprintのjobを開き、完成済みカテゴリのdigestとschemaを再検証します。有効なカテゴリはCodexを呼ばず再利用し、`quant-ph`、`gr-qc`、`hep-th`の順で最初の未完了カテゴリから再開します。レビュー済みruntimeが変わった場合は、旧jobを削除・上書きせず、同じ日付・snapshotの下に新しいruntime用jobを開始します。3カテゴリがすべて有効になった後だけ、空のhost stagingへmaterializeして公開します。公開のネットワーク処理だけが失敗または延期された場合は、次回runでモデルを起動せず公開処理だけを再試行します。`published`記録が一度追記されたjobからは二重公開しません。
 
 ### Codexの固定条件
 
@@ -95,14 +108,16 @@ AIの評価内容を機械的に証明することはできませんが、次は
 - 中間日復元では、公開済み日が公式pastweekの発表日列にあり、選択日まで欠落がないこと
 - reportの全ID集合、カテゴリ、`v1`、New件数、Cross件数が公式snapshotと完全一致すること
 - generation前後で、選択したpastweek日付のsnapshot fingerprintが同一であること
-- モデル終了後もoutboxが空で、stagingがホストsnapshotの日付に対応する正確な3レポートだけを含むこと
-- 3レポートがschema 1.4、Daily arXiv rubric 3.0、同じrunId、固定モデル情報を持つこと
+- 各モデル終了後もoutboxが空で、カテゴリ専用stagingがホストsnapshotの日付・カテゴリに対応する正確な1レポートだけを含むこと
+- 各カテゴリの言語監査と単一カテゴリvalidatorが成功し、その後にホストが公式ID集合・件数・digestを独立検証してcheckpointしたこと
+- 完成した3レポートがschema 1.4、Daily arXiv rubric 3.0、同じrunId、固定モデル情報を持つこと
+- checkpointのjob・snapshot・receipt・report digestが整合し、3カテゴリすべてが揃うまでpublisherを起動しないこと
 - 全論文が4軸と正確に対応する4キーの`scoreReasons`を持ち、`audit.scoreRubric`が`Daily arXiv rubric 3.0`で始まること
 - 各最終上位10件に全文確認記録があること
 - 各カテゴリの全文確認件数が12件以下であること
 - 秘密情報、PDF、symlink、nested `.git`、10 MiB超ファイルがないこと
 - commit対象が日付に対応する正確な6ファイルだけであること
-- push直前までHEADと`origin/main`が競合していないこと
+- push直前までHEADと`origin/main`が競合していないこと。公開失敗後の再試行でも同じcheckpointを再検証すること
 
 長時間run中に新しい発表日が追加されても、選択済みの過去日が公式pastweek内に完全な形で残り、fingerprintが同一ならその過去日を公開できます。選択日が範囲外へ落ちた、部分表示になった、または内容が変わった場合は公開せず、次回runまたは手動確認へ回します。
 
@@ -158,7 +173,7 @@ node scripts/configure-macos-schedule.mjs print
 node scripts/configure-macos-schedule.mjs install
 ```
 
-`install`でserviceを読み込んだ直後にも追いつき確認が1回走ります。既に公開済みならCodexを呼ばず`NO_CHANGE`で終了します。当日一覧に対して公式本文の配信がまだなら、Codexを呼ばず`AUTOMATION_DEFERRED`で終了し、次の定時runに再確認します。未公開日が複数ある場合は最古の1日を評価・公開し、次の定時runで次の日へ進みます。以後もMac再起動後のユーザーログイン時に同じ確認を行います。
+`install`でserviceを読み込んだ直後にも追いつき確認が1回走ります。既に公開済みならCodexを呼ばず`NO_CHANGE`で終了します。当日一覧に対して公式本文の配信がまだなら、Codexを呼ばず`AUTOMATION_DEFERRED`で終了し、次の定時runに再確認します。未公開日が複数ある場合は最古の1日を選び、カテゴリcheckpointを順に完成させて公開します。途中で終了しても次の定時runは有効なcheckpointを再利用し、同じ日付の未完了カテゴリから続けます。以後もMac再起動後のユーザーログイン時に同じ確認を行います。
 
 公式`pastweek`は直近5発表日の見出しを提供しますが、最古日は一覧の時間境界で一部だけの場合があります。最古日は公開済み日を特定する基準として使い、復元には3カテゴリすべてが完全表示された後続日だけを使います。公開済み日が5発表日の範囲外なら、自動で日付を飛ばさず手動確認を求めます。
 
@@ -198,7 +213,7 @@ tail -n 200 "$HOME/Library/Application Support/Daily arXiv/logs/launchd.stderr.l
 git -C /Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data status --short --branch
 ```
 
-正常時は`AUTOMATION_PUBLISHED`、既発表なら`NO_CHANGE`です。公式本文の配信待ちは`AUTOMATION_DEFERRED`で、Codexを起動せず次の定時runへ回します。`NO_CHANGE`と`AUTOMATION_DEFERRED`ではデスクトップ通知を出しません。push完了時の通知はPages公開完了ではなく、GitHub Actionsによる検証・配信開始を示します。失敗時は`ACTION_REQUIRED:`で始まり、`current.json`と`origin/main`を維持します。
+正常時は`CHECKPOINT_CREATED`が日付jobの開始、`CATEGORY_CHECKPOINTED`がカテゴリ受理、`CHECKPOINT_RESUMED`と`CATEGORY_CHECKPOINT_REUSED`が完成済みカテゴリを使った再開を示します。report保存直後に異常終了してreceiptだけが未作成だった場合は、次回runがreportを再検証して`CATEGORY_CHECKPOINT_RECOVERED`を記録し、モデルで再生成しません。`AUTOMATION_PUBLISHED`がpush完了、公開処理だけを再試行する場合は`PUBLISH_RETRY`です。既発表なら`NO_CHANGE`、公式本文の配信待ちは`AUTOMATION_DEFERRED`で、Codexを起動せず次の定時runへ回します。`NO_CHANGE`と`AUTOMATION_DEFERRED`ではデスクトップ通知を出しません。push完了時の通知はPages公開完了ではなく、GitHub Actionsによる検証・配信開始を示します。失敗時は`ACTION_REQUIRED:`で始まり、完成済みcheckpoint、`current.json`、`origin/main`を維持します。
 
 異常終了したlockはすぐ削除せず保存します。元processが存在せず5時間以上経過したlockだけを`stale-locks`へ移し、午後または翌日のrunを継続します。正常lockも削除せず`lock-history`へ移して監査履歴にします。
 
