@@ -257,25 +257,46 @@ generatedAtJst
 <category staging>/YYYY-MM-DD-quant-ph.json
 ```
 
-固定言語監査の前に、機械的な整合性を1回だけ自己点検します。少なくとも、`totalScore`が4軸の和であること、順位がtie-breakどおりであること、全文未確認論文の各軸が24点未満かつ`technicalStrength`が17点以下であること、最終上位10件が全文確認済みであること、全文確認数と監査件数が一致することを全件で確認します。16件以上のカテゴリでは、8件以上かつ全体の35%超へ同じ総合点を与えたり、8件以上かつ全体の20%超へ同じ4軸ベクトルを再利用したりしていないことも確認します。違反があれば点数を機械的に散らすのではなく、各abstractまたは本文証拠へ戻って4軸を再評価し、合計・順位をまとめて再計算してから言語監査へ進みます。最終validatorをこの自己点検の代用として先に実行しません。
+固定監査の前に、機械的な整合性を1回だけ自己点検します。各論文は、先頭や上位10件だけでなく**全件それぞれ**について、上記schema 1.4の全キーを正確に持たなければなりません。特に`url`、`arxivVersion`、`submissionType`を全論文へ入れ、`scores`と`scoreReasons`を正確な4キーだけにし、`fullTextReviewStatus`は`fullTextEvaluated=true`の論文だけに入れます。加えて、`totalScore`が4軸の和であること、順位がtie-breakどおりであること、全文未確認論文の各軸が24点未満かつ`technicalStrength`が17点以下であること、最終上位10件が全文確認済みであること、全文確認数と監査件数が一致することを全件で確認します。16件以上のカテゴリでは、8件以上かつ全体の35%超へ同じ総合点を与えたり、8件以上かつ全体の20%超へ同じ4軸ベクトルを再利用したりしていないことも確認します。違反があれば点数を機械的に散らすのではなく、各abstractまたは本文証拠へ戻って4軸を再評価し、合計・順位をまとめて再計算します。最終validatorをこの自己点検の代用として先に実行しません。
 
-1ファイルを書いた後、まず不自然な日本語をカテゴリ全体について一括列挙する固定監査を1回だけ実行します。監査のsourceを読まず、出力JSONに列挙された全フィールドを、一つずつではなく1回のbatchで修正します。以下の`<category>`はホスト指定の`quant-ph`、`gr-qc`、`hep-th`のいずれか、`<evaluation-run-id>`はホスト指定の`runId`です。
-
-出力中の通常項目は指定された1論文の`path`だけを修正します。`scope: "category"`で`path`が文章フィールドの場合、`affectedPapers`に列挙された論文が同一文や句読点を軸にした同一の文骨格を過剰に再利用していることを示します。論文固有の事実を保ったまま、列挙された対象をまとめて異なる自然な日本語構文へ書き直します。`path`が`totalScore`または`scores`の場合は、同じ総合点または4軸ベクトルを機械的に再利用した集団を示します。列挙対象のabstractまたは本文証拠を比較して4軸を再評価し、`totalScore`、決定的順位、`rank`をカテゴリ全体で再計算します。単に重複を避けるためだけに点数を散らしません。対象外の良好な文章まで一律に書き換えません。
+1ファイルを書いた後、文章品質検査に妨げられず、全論文の欠落・追加キー、得点分布、合計・順位、上位10件の全文確認tuple、件数、source URLを含む決定的な値の不整合をまとめて列挙する固定構造監査を実行します。監査のsourceを読まず、番号付き構造監査を1から順に実行します。以下の`<category>`はホスト指定の`quant-ph`、`gr-qc`、`hep-th`のいずれか、`<evaluation-run-id>`はホスト指定の`runId`です。
 
 ```bash
-node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-issues-before.json" <category>
+node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id> "$TMPDIR/<category>-structure-audit-1.json"
 ```
 
-修正後の固定監査も1回だけです。
+`issues=0`ならそこで構造段階を終了し、後続番号の構造監査ファイルを作らず言語監査へ進みます。`issues`が非ゼロなら、出力に列挙された全項目を1回のbatchで修正し、次の番号だけを実行します。missing keyは該当論文だけへ追加し、extra keyはschemaに照らして除きます。得点分布の異常は各abstractまたは本文証拠に戻って4軸を再評価し、単に重複を避けるためだけに点数を散らさず、`totalScore`、決定的順位、`rank`をカテゴリ全体で再計算します。合計・順位・上位10件の`fullTextEvaluated`、`evaluationBasis`、`fullTextReviewStatus`、`sourceUrls`の整合したtuple・件数も同じbatchで直します。構造監査を口実に、正常な研究内容や日本語表現を一律に書き換えません。
 
 ```bash
-node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-issues-after.json" <category>
+node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id> "$TMPDIR/<category>-structure-audit-2.json"
+node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id> "$TMPDIR/<category>-structure-audit-3.json"
+node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id> "$TMPDIR/<category>-structure-audit-4.json"
 ```
 
-2回目の出力が`issues=0`でなければ、そのrunでは追加の逐次修正を行わず異常終了します。これは同じ巨大レポートを「最初のエラー1件」ごとに繰り返し編集して、利用枠とログを消費することを防ぐためです。
+監査1〜3が非ゼロなら、各監査につき1回だけ一括修正できます。監査4が非ゼロなら追加修正せず異常終了します。4回を超える構造監査、3回を超える構造修正batch、`issues=0`の後に後続番号の監査ファイルを作ることは禁止です。得点分布と得点・順位・全文確認tuple・件数・URLの修正はこの構造段階だけで完了させ、後続の言語監査では変更しません。
 
-2回目の一括監査が`issues=0`になった場合だけ、次の読取り専用validatorを正確に1回実行します。validatorのsourceを読まず、成功・失敗だけを使います。
+どれかの構造監査が`issues=0`の場合だけ、不自然な日本語をカテゴリ全体について一括列挙する文章専用の固定言語監査を、番号順に最大5回実行します。各言語監査は処理開始前に、現在のレポートを正規の構造validatorで再検証し、ホスト指定の`runId`と一致することも確認します。構造、得点、順位、全文確認状態のいずれかが変化していれば、文章監査を行わず異常終了します。言語監査のsourceを読まず、非ゼロの監査出力に列挙された全フィールドを、一つずつではなく1回のbatchで修正します。修正batchは最大4回です。
+
+出力中の通常項目は指定された1論文の`path`だけを修正します。ただし、監査の`message`はそのフィールドで最初に表面化した診断であり、その語だけを直せばフィールド全体が適合するという意味ではありません。列挙された現在値全体を読み直し、未翻訳の一般英語、日本語語境界のASCII空白、不自然な定型句、評価作業の来歴表現、およびその他の指摘をすべて除き、論文固有の事実を保った自然な日本語へ直します。引用された語だけの置換や全レポートへの一律な置換表を使わず、対象外の良好な文章は書き換えません。
+
+`scope: "category"`で`path`が文章フィールドの場合、`affectedPapers`に列挙された論文が同一文や句読点を軸にした同一の文骨格を過剰に再利用していることを示します。論文固有の事実を保ったまま、列挙された対象を同じbatchで異なる自然な日本語構文へ書き直します。言語監査は文章フィールドだけを対象とし、`totalScore`、`scores`、`rank`、全文確認tuple、件数、URLは変更しません。
+
+```bash
+node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-1.json" <category> <evaluation-run-id>
+```
+
+`issues=0`なら、後続番号の監査ファイルを作らず、直ちに下記validatorへ進みます。非ゼロなら全項目を1回のwhole-field batchで修正し、次の番号だけを実行します。監査2〜5の固定名は次のとおりです。
+
+```bash
+node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-2.json" <category> <evaluation-run-id>
+node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-3.json" <category> <evaluation-run-id>
+node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-4.json" <category> <evaluation-run-id>
+node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-5.json" <category> <evaluation-run-id>
+```
+
+監査1〜4が非ゼロなら各監査につき1回だけ一括修正できます。監査5が非ゼロなら追加修正せず異常終了します。個々のエラーごとに監査を回すこと、6回目を作ること、`issues=0`の後に次の監査を実行することは禁止です。これにより、同じ巨大レポートを無制限に編集して利用枠とログを消費することを防ぎつつ、同じフィールドで順に表面化する複数の違反を有限回で処理できます。
+
+いずれかの番号付き監査が`issues=0`になった場合だけ、次の読取り専用validatorを正確に1回実行します。validatorのsourceを読まず、成功・失敗だけを使います。
 
 ```bash
 node scripts/validate-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id>
@@ -295,7 +316,7 @@ Codex終了後、ホストはoutboxが空であること、カテゴリ専用sta
 ~/Library/Application Support/Daily arXiv/jobs/<YYYY-MM-DD>-<snapshot-fingerprint>/<runtime-fingerprint>/
 ```
 
-ここには不変の`job.json`と`snapshot.json`、カテゴリ別の`reports/*.json`と`*.receipt.json`、追記専用の`attempts/*.json`と`publication/*.json`、content-addressedな`.writes/*.blob`を保持します。既存checkpointを削除、上書きしません。同じsnapshotでもレビュー済みruntimeが変われば旧jobを保存したまま別のruntime用jobを開始します。次の定時runは同じruntimeでdigestを再検証した完成済みカテゴリをCodexなしで再利用し、失敗または未完了の最初のカテゴリだけから再開します。
+ここには不変の`job.json`と`snapshot.json`、カテゴリ別の`reports/*.json`と`*.receipt.json`、厳格検証済み失敗出力の`drafts/<attemptId>.<category>.json`とreceipt、追記専用の`attempts/*.json`と`publication/*.json`、content-addressedな`.writes/*.blob`を保持します。既存checkpointを削除、上書きしません。draft本文の保存直後に停止してreceiptだけが欠けた場合も、次回runが本文を厳格に再検証してreceiptだけを追記します。同じsnapshotでもレビュー済みruntimeが変われば旧jobを保存したまま別のruntime用jobを開始し、旧runtimeのdraftは再利用しません。次の定時runは同じruntimeでdigestを再検証した完成済みカテゴリをCodexなしで再利用します。未完了カテゴリに有効なdraftがある場合は、新規調査、Web検索、arXiv再取得、source抽出、再採点、再順位付けを禁止し、欠けた`arxivVersion`、`submissionType`、`url`の決定的追加と、既存根拠を変えない読者向け日本語の修復だけを行います。同じdraft digestから開始した修復が2回失敗した後は、3回目のモデル起動前に安全停止します。draftがなければ失敗または未完了の最初のカテゴリだけから再開し、通常評価を行います。
 
 3カテゴリが同じsnapshot fingerprintとrunIdで揃った場合だけ、ホストは空のhost stagingへ3レポートをmaterializeして全体を再検証します。publisherのfetch、commit、pushだけが失敗した場合もcheckpointを保持し、次の定時runはモデル評価を繰り返さず公開だけを再試行します。`published`記録が追記された後は同じjobから二重公開しません。
 

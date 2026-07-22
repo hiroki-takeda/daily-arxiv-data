@@ -19,6 +19,7 @@ import { fingerprintSnapshot } from "./arxiv-source.mjs";
 
 export const CHECKPOINT_SCHEMA_VERSION = "1.0";
 export const CHECKPOINT_CATEGORIES = Object.freeze(["quant-ph", "gr-qc", "hep-th"]);
+export const CATEGORY_DRAFT_SCHEMA_VERSION = "1.0";
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/u;
 const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
@@ -32,6 +33,7 @@ const MAX_RECORD_BYTES = 64 * 1024;
 const DIRECTORY_MODE = 0o700;
 const IMMUTABLE_FILE_MODE = 0o400;
 const MATERIALIZED_FILE_MODE = 0o600;
+const DRAFT_ATTEMPT_STAGES = Object.freeze(["category_generation", "category_repair"]);
 
 function fail(message) {
   throw new Error(message);
@@ -217,6 +219,7 @@ function jobPaths(jobPath) {
     snapshot: join(jobPath, "snapshot.json"),
     manifest: join(jobPath, "job.json"),
     reports: join(jobPath, "reports"),
+    drafts: join(jobPath, "drafts"),
     attempts: join(jobPath, "attempts"),
     publication: join(jobPath, "publication"),
   });
@@ -395,6 +398,130 @@ function loadReports(paths, manifest, blobsByInode) {
   return Object.freeze({ reports: Object.freeze(reports), incompleteReports: Object.freeze(incompleteReports) });
 }
 
+function categoryDraftPaths(paths, attemptId, category) {
+  validateSafeId(attemptId, "Category draft attemptId");
+  validateCategory(category);
+  const stem = `${attemptId}.${category}`;
+  return Object.freeze({
+    report: join(paths.drafts, `${stem}.json`),
+    receipt: join(paths.drafts, `${stem}.receipt.json`),
+  });
+}
+
+function validateCategoryDraftReceipt(receipt, manifest, { attemptId, category }, label) {
+  exactKeys(receipt, [
+    "schemaVersion",
+    "kind",
+    "reportDate",
+    "snapshotFingerprint",
+    "runtimeFingerprint",
+    "evaluationRunId",
+    "category",
+    "fileName",
+    "sha256",
+    "bytes",
+    "preservedAt",
+    "attemptId",
+  ], label);
+  if (receipt.schemaVersion !== CATEGORY_DRAFT_SCHEMA_VERSION || receipt.kind !== "failed_category_draft") {
+    fail(`${label} has an invalid schema or kind.`);
+  }
+  if (receipt.reportDate !== manifest.reportDate) fail(`${label}.reportDate does not match the job.`);
+  if (receipt.snapshotFingerprint !== manifest.snapshotFingerprint) fail(`${label}.snapshotFingerprint does not match the job.`);
+  if (receipt.runtimeFingerprint !== manifest.runtimeFingerprint) fail(`${label}.runtimeFingerprint does not match the job.`);
+  if (receipt.evaluationRunId !== manifest.evaluationRunId) fail(`${label}.evaluationRunId does not match the job.`);
+  if (receipt.category !== category) fail(`${label}.category must be ${category}.`);
+  if (receipt.fileName !== `${manifest.reportDate}-${category}.json`) fail(`${label}.fileName is invalid.`);
+  validateSha256(receipt.sha256, `${label}.sha256`);
+  if (!Number.isSafeInteger(receipt.bytes) || receipt.bytes < 2 || receipt.bytes > MAX_REPORT_BYTES) {
+    fail(`${label}.bytes is invalid.`);
+  }
+  isoTimestamp(receipt.preservedAt, `${label}.preservedAt`);
+  validateSafeId(receipt.attemptId, `${label}.attemptId`);
+  if (receipt.attemptId !== attemptId) fail(`${label}.attemptId does not match its filename.`);
+  return receipt;
+}
+
+function eligibleCategoryDraftAttempts(attempts) {
+  const eligible = new Map();
+  for (const event of attempts) {
+    if (event.category === null || !DRAFT_ATTEMPT_STAGES.includes(event.stage)) continue;
+    const key = `${event.attemptId}\0${event.category}`;
+    if (!eligible.has(key)) {
+      eligible.set(key, Object.freeze({ attemptId: event.attemptId, category: event.category }));
+    }
+  }
+  return [...eligible.values()];
+}
+
+function loadCategoryDrafts(paths, manifest, blobsByInode, attempts) {
+  assertSecureDirectory(paths.drafts, "Checkpoint category drafts directory");
+  const eligible = eligibleCategoryDraftAttempts(attempts);
+  const allowedEntries = new Set();
+  for (const { attemptId, category } of eligible) {
+    const candidate = categoryDraftPaths(paths, attemptId, category);
+    allowedEntries.add(candidate.report.slice(paths.drafts.length + 1));
+    allowedEntries.add(candidate.receipt.slice(paths.drafts.length + 1));
+  }
+  for (const entry of readdirSync(paths.drafts)) {
+    if (!allowedEntries.has(entry)) fail(`Unexpected checkpoint category draft artifact: ${entry}`);
+  }
+
+  const drafts = Object.fromEntries(CHECKPOINT_CATEGORIES.map((category) => [category, []]));
+  const incompleteDrafts = [];
+  for (const { attemptId, category } of eligible) {
+    const candidate = categoryDraftPaths(paths, attemptId, category);
+    const reportExists = existsSync(candidate.report);
+    const receiptExists = existsSync(candidate.receipt);
+    if (!reportExists && !receiptExists) continue;
+    if (!reportExists) fail(`Checkpoint category draft receipt exists without its report: ${attemptId} ${category}`);
+    const content = readCheckpointArtifact(
+      candidate.report,
+      `Checkpoint category draft ${attemptId} ${category}`,
+      { maxBytes: MAX_REPORT_BYTES, blobsByInode },
+    );
+    const report = parseJsonBuffer(content, `Checkpoint category draft ${attemptId} ${category}`);
+    validateReportAssociation(report, manifest, category, `Checkpoint category draft ${attemptId} ${category}`);
+    if (!receiptExists) {
+      incompleteDrafts.push(Object.freeze({ attemptId, category, path: candidate.report }));
+      continue;
+    }
+    const receipt = validateCategoryDraftReceipt(
+      parseJsonBuffer(
+        readCheckpointArtifact(
+          candidate.receipt,
+          `Checkpoint category draft receipt ${attemptId} ${category}`,
+          { maxBytes: MAX_RECORD_BYTES, blobsByInode },
+        ),
+        `Checkpoint category draft receipt ${attemptId} ${category}`,
+      ),
+      manifest,
+      { attemptId, category },
+      `Checkpoint category draft receipt ${attemptId} ${category}`,
+    );
+    const digest = sha256(content);
+    if (digest !== receipt.sha256 || content.length !== receipt.bytes) {
+      fail(`Checkpoint category draft digest or byte count changed: ${attemptId} ${category}`);
+    }
+    drafts[category].push(Object.freeze({
+      attemptId,
+      category,
+      path: candidate.report,
+      receiptPath: candidate.receipt,
+      sha256: digest,
+      bytes: content.length,
+      report,
+      receipt: Object.freeze(receipt),
+    }));
+  }
+  return Object.freeze({
+    drafts: Object.freeze(Object.fromEntries(
+      CHECKPOINT_CATEGORIES.map((category) => [category, Object.freeze(drafts[category])]),
+    )),
+    incompleteDrafts: Object.freeze(incompleteDrafts),
+  });
+}
+
 function validateEventAssociation(event, manifest, kind, label) {
   const shared = [
     "schemaVersion", "kind", "eventId", "attemptId", "reportDate", "snapshotFingerprint",
@@ -463,7 +590,7 @@ export function loadCheckpointJob({
   assertSecureDirectory(jobs, "Checkpoint jobs directory");
   const paths = jobPaths(root);
   assertSecureDirectory(paths.root, "Checkpoint job directory");
-  assertExactDirectoryEntries(paths.root, [".writes", "attempts", "job.json", "publication", "reports", "snapshot.json"], "Checkpoint job directory");
+  assertExactDirectoryEntries(paths.root, [".writes", "attempts", "drafts", "job.json", "publication", "reports", "snapshot.json"], "Checkpoint job directory");
   for (const [key, path] of Object.entries(paths)) {
     if (["root", "manifest", "snapshot"].includes(key)) continue;
     assertSecureDirectory(path, `Checkpoint ${key} directory`);
@@ -488,8 +615,9 @@ export function loadCheckpointJob({
   if (snapshot.announcementDate !== reportDate || fingerprintSnapshot(snapshot) !== snapshotFingerprint) {
     fail("Checkpoint snapshot no longer matches its report date or semantic fingerprint.");
   }
-  const loadedReports = loadReports(paths, manifest, blobsByInode);
   const attempts = loadEvents(paths.attempts, manifest, "attempt", blobsByInode);
+  const loadedReports = loadReports(paths, manifest, blobsByInode);
+  const loadedDrafts = loadCategoryDrafts(paths, manifest, blobsByInode, attempts);
   const publicationEvents = loadEvents(paths.publication, manifest, "publication", blobsByInode);
   const publishedEvents = publicationEvents.filter((event) => event.status === "published");
   if (publishedEvents.length > 1 && new Set(publishedEvents.map((event) => event.commit)).size !== 1) {
@@ -505,6 +633,8 @@ export function loadCheckpointJob({
     evaluationRunId: manifest.evaluationRunId,
     reports: loadedReports.reports,
     incompleteReports: loadedReports.incompleteReports,
+    drafts: loadedDrafts.drafts,
+    incompleteDrafts: loadedDrafts.incompleteDrafts,
     completeCategories: Object.freeze(CHECKPOINT_CATEGORIES.filter((category) => category in loadedReports.reports)),
     isComplete: CHECKPOINT_CATEGORIES.every((category) => category in loadedReports.reports),
     attempts,
@@ -681,6 +811,168 @@ export function recoverIncompleteCheckpointReports({
     current = reloadJob(current);
   }
   return current;
+}
+
+function assertDraftAttemptStarted(current, attemptId, category) {
+  const started = current.attempts.some((event) => (
+    event.attemptId === attemptId
+    && event.category === category
+    && DRAFT_ATTEMPT_STAGES.includes(event.stage)
+    && event.status === "started"
+  ));
+  if (!started) fail(`Category draft ${attemptId} ${category} has no protected started-attempt event.`);
+}
+
+function writeMissingCategoryDraftReceipt({ current, attemptId, category, content, now }) {
+  validateSafeId(attemptId, "Category draft attemptId");
+  validateCategory(category);
+  assertDraftAttemptStarted(current, attemptId, category);
+  const destinations = categoryDraftPaths(current.paths, attemptId, category);
+  if (existsSync(destinations.receipt)) {
+    fail(`Refusing to overwrite an existing category draft receipt for ${attemptId} ${category}.`);
+  }
+  const receipt = {
+    schemaVersion: CATEGORY_DRAFT_SCHEMA_VERSION,
+    kind: "failed_category_draft",
+    reportDate: current.manifest.reportDate,
+    snapshotFingerprint: current.manifest.snapshotFingerprint,
+    runtimeFingerprint: current.manifest.runtimeFingerprint,
+    evaluationRunId: current.evaluationRunId,
+    category,
+    fileName: `${current.manifest.reportDate}-${category}.json`,
+    sha256: sha256(content),
+    bytes: content.length,
+    preservedAt: isoTimestamp(now, "Category draft preservedAt"),
+    attemptId,
+  };
+  validateCategoryDraftReceipt(
+    receipt,
+    current.manifest,
+    { attemptId, category },
+    `Category draft receipt ${attemptId} ${category}`,
+  );
+  writeAtomicExclusive(current.paths, destinations.receipt, serializeJson(receipt));
+  return receipt;
+}
+
+export function preserveCheckpointCategoryDraft({
+  job,
+  category,
+  sourcePath,
+  validateDraft,
+  attemptId,
+  now = new Date(),
+}) {
+  const current = reloadJob(job);
+  validateCategory(category);
+  validateSafeId(attemptId, "Category draft attemptId");
+  assertDraftAttemptStarted(current, attemptId, category);
+  if (typeof sourcePath !== "string" || !isAbsolute(sourcePath) || resolve(sourcePath) !== sourcePath) {
+    fail("Category draft sourcePath must be an absolute normalized path.");
+  }
+  const content = readStableSecureFile(sourcePath, `Category draft source ${category}`, {
+    maxBytes: MAX_REPORT_BYTES,
+    immutable: false,
+  });
+  const report = validateCheckpointReportCandidate({
+    current,
+    category,
+    content,
+    validateReport: validateDraft,
+    label: `Category draft source ${category}`,
+  });
+  const destinations = categoryDraftPaths(current.paths, attemptId, category);
+  if (existsSync(destinations.report) || existsSync(destinations.receipt)) {
+    fail(`Refusing to overwrite an existing category draft for ${attemptId} ${category}.`);
+  }
+  const digest = sha256(content);
+  writeAtomicExclusive(current.paths, destinations.report, content);
+  writeMissingCategoryDraftReceipt({ current, attemptId, category, content, now });
+  const saved = reloadJob(current).drafts[category].find((entry) => entry.attemptId === attemptId);
+  if (saved === undefined || saved.sha256 !== digest) fail(`Preserved category draft could not be reloaded: ${attemptId} ${category}`);
+  return Object.freeze({ ...saved, report });
+}
+
+function recoverIncompleteCategoryDrafts({ job, category, validateDraft, now }) {
+  let current = reloadJob(job);
+  for (const incomplete of current.incompleteDrafts.filter((entry) => entry.category === category)) {
+    assertDraftAttemptStarted(current, incomplete.attemptId, category);
+    const content = readStableSecureFile(
+      incomplete.path,
+      `Incomplete protected category draft ${incomplete.attemptId} ${category}`,
+      { maxBytes: MAX_REPORT_BYTES },
+    );
+    validateCheckpointReportCandidate({
+      current,
+      category,
+      content,
+      validateReport: validateDraft,
+      label: `Incomplete protected category draft ${incomplete.attemptId} ${category}`,
+    });
+    writeMissingCategoryDraftReceipt({
+      current,
+      attemptId: incomplete.attemptId,
+      category,
+      content,
+      now,
+    });
+    current = reloadJob(current);
+  }
+  return current;
+}
+
+export function latestCheckpointCategoryDraft({ job, category, validateDraft, now = new Date() }) {
+  validateCategory(category);
+  if (typeof validateDraft !== "function") fail("Category draft selection requires a validation callback.");
+  const current = recoverIncompleteCategoryDrafts({ job, category, validateDraft, now });
+  const draft = current.drafts[category].at(-1) ?? null;
+  if (draft === null) return null;
+  const validationResult = validateDraft(draft.report, {
+    category,
+    reportDate: current.manifest.reportDate,
+    evaluationRunId: current.evaluationRunId,
+    snapshot: current.snapshot,
+  });
+  if (validationResult === false) fail(`Protected category draft failed validation: ${draft.attemptId} ${category}`);
+  return draft;
+}
+
+export function materializeCheckpointCategoryDraft({ job, draft, destination }) {
+  const current = reloadJob(job);
+  if (!draft || typeof draft !== "object") fail("A selected protected category draft is required.");
+  validateCategory(draft.category);
+  validateSafeId(draft.attemptId, "Selected category draft attemptId");
+  const stored = current.drafts[draft.category].find((entry) => (
+    entry.attemptId === draft.attemptId && entry.sha256 === draft.sha256
+  ));
+  if (stored === undefined) fail("Selected category draft is not part of this runtime-specific checkpoint job.");
+  if (typeof destination !== "string" || !isAbsolute(destination) || resolve(destination) !== destination) {
+    fail("Category draft destination must be an absolute normalized path.");
+  }
+  const parent = dirname(destination);
+  assertSecureDirectory(parent, "Category draft materialization directory");
+  if (readdirSync(parent).length !== 0) fail("Category draft materialization directory must start empty.");
+  const expectedName = `${current.manifest.reportDate}-${draft.category}.json`;
+  if (destination !== join(parent, expectedName)) fail(`Category draft destination must end in ${expectedName}.`);
+  const content = readStableSecureFile(stored.path, `Protected category draft ${draft.category}`, {
+    maxBytes: MAX_REPORT_BYTES,
+  });
+  if (sha256(content) !== stored.sha256 || content.length !== stored.bytes) {
+    fail(`Protected category draft changed before materialization: ${draft.attemptId} ${draft.category}`);
+  }
+  let descriptor;
+  try {
+    descriptor = openSync(destination, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, MATERIALIZED_FILE_MODE);
+    writeFileSync(descriptor, content);
+    fsyncSync(descriptor);
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+  assertSecureFile(destination, `Materialized category draft ${draft.category}`, {
+    maxBytes: MAX_REPORT_BYTES,
+    immutable: false,
+  });
+  return Object.freeze({ path: destination, sha256: stored.sha256, bytes: stored.bytes });
 }
 
 function eventFileName(at, eventId) {

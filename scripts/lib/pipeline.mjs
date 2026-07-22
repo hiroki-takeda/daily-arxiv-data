@@ -20,6 +20,8 @@ export const LEGACY_SCHEMA = "1.2";
 export const RUBRIC_3_MARKER = "Daily arXiv rubric 3.0";
 export const CATEGORIES = Object.freeze(["quant-ph", "gr-qc", "hep-th"]);
 export const MAX_FULL_TEXT_EVALUATED_PER_CATEGORY = 12;
+export const MAX_STRUCTURE_AUDIT_PASSES = 4;
+export const MAX_LANGUAGE_AUDIT_PASSES = 5;
 export const CURRENT_QUALITY_GATE_EFFECTIVE_DATE = "2026-07-16";
 export const SCORE_KEYS = Object.freeze([
   "broadImpact",
@@ -370,6 +372,18 @@ function historicalRunException(policy, date, runId) {
     exception.reportDate === date && exception.runId === runId);
 }
 
+export function productionExpectedReasoningEffort({ policy, date, runId }) {
+  return historicalRunException(policy, date, runId)?.reasoningEffort
+    ?? policy.requiredReasoningEffort;
+}
+
+export function productionFullTextEvaluationLimit({ policy, date, slug, runId, totalNew }) {
+  const exception = historicalRunException(policy, date, runId);
+  const configuredLimit = exception?.maximumFullTextEvaluated?.[slug]
+    ?? MAX_FULL_TEXT_EVALUATED_PER_CATEGORY;
+  return Math.min(configuredLimit, totalNew);
+}
+
 export function validateEvaluationRun(run, policy, path = "evaluationRun", { date } = {}) {
   assertObject(run, path);
   assertExactKeys(run, [
@@ -383,8 +397,7 @@ export function validateEvaluationRun(run, policy, path = "evaluationRun", { dat
   if (run.modelDisplayName !== policy.requiredModelDisplayName) {
     fail(`${path}.modelDisplayName`, `must be ${policy.requiredModelDisplayName}`);
   }
-  const historicalException = historicalRunException(policy, date, run.runId);
-  const expectedEffort = historicalException?.reasoningEffort ?? policy.requiredReasoningEffort;
+  const expectedEffort = productionExpectedReasoningEffort({ policy, date, runId: run.runId });
   if (run.reasoningEffort !== expectedEffort) {
     fail(`${path}.reasoningEffort`, `must be ${expectedEffort}`);
   }
@@ -418,7 +431,7 @@ export function validateDistinguishedRegistry(registry, path = "data/distinguish
       fail(`${entryPath}.aliases`, "must be an array of non-empty strings");
     }
     for (const name of [entry.canonicalName, ...entry.aliases]) {
-      const key = normalize(name);
+      const key = normalizeAuthorIdentity(name);
       if (identities.has(key)) fail(entryPath, `duplicate registry identity ${name}`);
       identities.add(key);
     }
@@ -435,7 +448,7 @@ export function validateDistinguishedRegistry(registry, path = "data/distinguish
   return registry;
 }
 
-function normalize(value) {
+export function normalizeAuthorIdentity(value) {
   return String(value ?? "")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -590,7 +603,7 @@ function validateAuthors(authors, path) {
   const seen = new Set();
   for (const [index, author] of authors.entries()) {
     assertNonEmptyString(author, `${path}[${index}]`);
-    const key = normalize(author);
+    const key = normalizeAuthorIdentity(author);
     if (seen.has(key)) fail(path, `contains duplicate author ${author}`);
     seen.add(key);
   }
@@ -676,6 +689,7 @@ function validatePaper(paper, slug, path, {
   structuredSchema,
   allowEminentAuthors = false,
   enforceCurrentQualityGates = false,
+  validateProse = true,
 } = {}) {
   assertObject(paper, path);
   validateArxivIdentity(paper, path);
@@ -683,7 +697,7 @@ function validatePaper(paper, slug, path, {
   assertNonEmptyString(paper.title, `${path}.title`);
   validateAuthors(paper.authors, `${path}.authors`);
   assertNonEmptyString(paper.paperType, `${path}.paperType`);
-  if (structuredSchema === PRODUCTION_SCHEMA) {
+  if (structuredSchema === PRODUCTION_SCHEMA && validateProse) {
     assertNaturalJapanese(paper.paperType, `${path}.paperType`);
   }
   if (!Number.isInteger(paper.totalScore) || paper.totalScore < 0 || paper.totalScore > 100) {
@@ -726,11 +740,17 @@ function validatePaper(paper, slug, path, {
   if (paper.primaryCategory !== slug) fail(`${path}.primaryCategory`, `must be ${slug}`);
   for (const field of TEXT_FIELDS) assertNonEmptyString(paper[field], `${path}.${field}`);
   validateScores(paper, path);
+  if (structuredSchema === PRODUCTION_SCHEMA && !validateProse) {
+    assertExactKeys(paper.scoreReasons, SCORE_KEYS, `${path}.scoreReasons`);
+    for (const key of SCORE_KEYS) {
+      assertNonEmptyString(paper.scoreReasons[key], `${path}.scoreReasons.${key}`);
+    }
+  }
   if (!Array.isArray(paper.abstractLines) || paper.abstractLines.length !== 3) {
     fail(`${path}.abstractLines`, "must contain exactly three lines");
   }
   paper.abstractLines.forEach((line, index) => assertNonEmptyString(line, `${path}.abstractLines[${index}]`));
-  if (structuredSchema === PRODUCTION_SCHEMA) {
+  if (structuredSchema === PRODUCTION_SCHEMA && validateProse) {
     validateDetailedProductionPaperProse(paper, path, { enforceCurrentQualityGates });
   }
   const requiredAbstractUrl = structuredSchema !== undefined ? arxivVersionedAbsUrl(paper.arxivId) : arxivAbsUrl(paper.arxivId);
@@ -928,12 +948,13 @@ export function validateProductionReportProseDiversity(report, path = "report") 
   return report;
 }
 
-export function validateProductionReport(report, {
+function validateProductionReportInternal(report, {
   date,
   slug,
   policy,
   path = "report",
   requiredSchema = PRODUCTION_SCHEMA,
+  validateProse,
 }) {
   assertObject(report, path);
   assertExactKeys(report, [
@@ -977,6 +998,7 @@ export function validateProductionReport(report, {
     validatePaper(paper, slug, `${path}.papers[${index}]`, {
       structuredSchema: report.schemaVersion,
       enforceCurrentQualityGates,
+      validateProse,
     });
     if (ids.has(paper.arxivId)) fail(`${path}.papers[${index}].arxivId`, "is duplicated in this report");
     ids.add(paper.arxivId);
@@ -987,7 +1009,7 @@ export function validateProductionReport(report, {
       fail(`${path}.papers.${scoreDistributionIssue.path}`, scoreDistributionIssue.message);
     }
   }
-  if (report.schemaVersion === PRODUCTION_SCHEMA) {
+  if (report.schemaVersion === PRODUCTION_SCHEMA && validateProse) {
     validateProductionReportProseDiversity(report, path);
   }
   const ranked = [...report.papers].sort(comparePapers);
@@ -1004,10 +1026,13 @@ export function validateProductionReport(report, {
   if (ranked.slice(0, topCount).some((paper) => !paper.fullTextEvaluated)) {
     fail(`${path}.papers`, `every final top-${topCount} paper must have a documented full-text review`);
   }
-  const exception = historicalRunException(policy, date, report.evaluationRun.runId);
-  const configuredFullTextLimit = exception?.maximumFullTextEvaluated?.[slug]
-    ?? MAX_FULL_TEXT_EVALUATED_PER_CATEGORY;
-  const fullTextLimit = Math.min(configuredFullTextLimit, report.totalNew);
+  const fullTextLimit = productionFullTextEvaluationLimit({
+    policy,
+    date,
+    slug,
+    runId: report.evaluationRun.runId,
+    totalNew: report.totalNew,
+  });
   if (actualFullTextCount > fullTextLimit) {
     fail(
       `${path}.fullTextEvaluatedCount`,
@@ -1015,6 +1040,14 @@ export function validateProductionReport(report, {
     );
   }
   return report;
+}
+
+export function validateProductionReportStructure(report, options = {}) {
+  return validateProductionReportInternal(report, { ...options, validateProse: false });
+}
+
+export function validateProductionReport(report, options = {}) {
+  return validateProductionReportInternal(report, { ...options, validateProse: true });
 }
 
 export function validateProductionReportSet(reports, {
@@ -1060,11 +1093,11 @@ export function validateProductionReportSet(reports, {
 
 function validateBadgeList(value, authors, path) {
   if (!Array.isArray(value)) fail(path, "must be an array");
-  const authorKeys = new Set(authors.map(normalize));
+  const authorKeys = new Set(authors.map(normalizeAuthorIdentity));
   const seen = new Set();
   for (const [index, badge] of value.entries()) {
     assertObject(badge, `${path}[${index}]`);
-    const key = normalize(badge.authorName);
+    const key = normalizeAuthorIdentity(badge.authorName);
     if (!key || !authorKeys.has(key) || seen.has(key)) fail(`${path}[${index}].authorName`, "must identify one listed author once");
     seen.add(key);
     if (badge.label !== "著名著者") fail(`${path}[${index}].label`, "must be 著名著者");
@@ -1476,10 +1509,10 @@ export function validateRepository(root) {
 
 function registryBadges(paper, slug, registry) {
   return paper.authors.flatMap((authorName) => {
-    const key = normalize(authorName);
+    const key = normalizeAuthorIdentity(authorName);
     const match = (registry.authors ?? []).find((entry) =>
       (entry.fieldTags ?? []).includes(slug) &&
-      [entry.canonicalName, ...(entry.aliases ?? [])].some((name) => normalize(name) === key));
+      [entry.canonicalName, ...(entry.aliases ?? [])].some((name) => normalizeAuthorIdentity(name) === key));
     if (!match) return [];
     return [{
       authorName,

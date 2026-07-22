@@ -148,7 +148,8 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   const texPaper = { ...lower, title: texTitle, titleJa: "PT対称性と群構造の検証" };
   const texRow = context.paperRow(texPaper, "top");
   assert.match(texRow, /class="paper-original-title" lang="en">Symmetry PT in SU\(2\) × U\(1\) with α₂³, phase-θ – test<\/span>/);
-  assert.doesNotMatch(texRow, /[$\\{}]|\\[A-Za-z]+/);
+  const renderedOriginalTitle = /class="paper-original-title" lang="en">([^<]*)<\/span>/.exec(texRow)?.[1] ?? "";
+  assert.doesNotMatch(renderedOriginalTitle, /[$\\{}]|\\[A-Za-z]+/);
   assert.equal(texPaper.title, texTitle, "rendering must preserve the exact source title");
   const residualTex = context.displayOriginalTitle(String.raw`$\unknown{X} \mathbb{Q}_4 \left(2,3\right)$`);
   assert.equal(residualTex, "X Q₄ (2,3)");

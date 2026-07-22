@@ -37,12 +37,30 @@ import {
   appendPublicationStatus,
   checkpointJobPath,
   importCheckpointCategoryReport,
+  latestCheckpointCategoryDraft,
   loadCheckpointJob,
+  materializeCheckpointCategoryDraft,
   materializeCheckpointReports,
   openCheckpointJob,
+  preserveCheckpointCategoryDraft,
   recoverIncompleteCheckpointReports,
 } from "./checkpoint.mjs";
-import { parseJsonFile, validateProductionReport, validateProductionReportSet } from "./pipeline.mjs";
+import {
+  CURRENT_QUALITY_GATE_EFFECTIVE_DATE,
+  MAX_LANGUAGE_AUDIT_PASSES,
+  MAX_STRUCTURE_AUDIT_PASSES,
+  PRODUCTION_SCHEMA,
+  RUBRIC_3_MARKER,
+  SCORE_KEYS,
+  comparePapers,
+  findProductionScoreDistributionIssues,
+  parseJsonFile,
+  productionFullTextEvaluationLimit,
+  validateEvaluationRun,
+  validateJstTimestamp,
+  validateProductionReport,
+  validateProductionReportSet,
+} from "./pipeline.mjs";
 
 export const MODEL_ID = "gpt-5.6-sol";
 export const MODEL_DISPLAY_NAME = "GPT-5.6-Sol";
@@ -59,6 +77,8 @@ const MAX_LOCK_BYTES = 64 * 1024;
 const MAX_CODEX_LOG_BYTES = 20 * 1024 * 1024;
 const STALE_LOCK_MS = 5 * 60 * 60 * 1000;
 const GIT_NETWORK_RETRY_DELAYS_MS = Object.freeze([2_000, 10_000]);
+const REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX = "REPAIR_SOURCE_DRAFT_SHA256=";
+export const MAX_UNCHANGED_DRAFT_REPAIR_FAILURES = 2;
 export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   ".codex/rules/daily-arxiv.rules",
   "AGENTS.md",
@@ -68,6 +88,7 @@ export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   "package.json",
   "scripts/audit-staged-language.mjs",
   "scripts/extract-arxiv-source.mjs",
+  "scripts/preflight-staged-category.mjs",
   "scripts/lib/arxiv-source.mjs",
   "scripts/lib/checkpoint.mjs",
   "scripts/lib/local-automation.mjs",
@@ -466,36 +487,8 @@ export function buildCodexArgs({ worktree, runRoot }) {
   ];
 }
 
-export function buildAutomationPrompt({ runId, staging, snapshot }) {
-  validateRunId(runId);
-  if (!snapshot || typeof snapshot !== "object") fail("An official arXiv snapshot is required for the model prompt.");
-  const snapshotJson = JSON.stringify(snapshot, null, 2);
-  return `You are the content-generation stage of the Daily arXiv production automation.
-
-Host-enforced runtime contract:
-- modelId: ${MODEL_ID}
-- modelDisplayName: ${MODEL_DISPLAY_NAME}
-- reasoningEffort: ${REASONING_EFFORT}
-- runId: ${runId}
-- staging directory: ${staging}
-
-The host independently fetched and parsed the official arXiv /new and, when needed, /pastweek listings before this run. This snapshot is authoritative for the edition date, exact primary-new arXiv IDs, and cross-list counts. Do not substitute another date or paper set:
-${snapshotJson}
-
-Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely, then follow their research, selection, rubric 3.0 scoring, natural-Japanese writing, paper-specific score-reason, full-text review, schema 1.4, and safety requirements. Those two files are the complete contract: do not inspect historical reports, public data, pipeline implementation, or tests as examples, and do not reuse prior rankings or prose. Use the native web-search capability and official arXiv pages/PDFs. For reproducible full-text inspection, use the repository's dependency-free scripts/extract-arxiv-source.mjs helper exactly as specified; it retrieves version-fixed official e-print source and writes only bounded text under this run root. Do not use an API key. Never write a PDF, credential, cache, report, or generated data inside the Git worktree. Do not modify tracked files. Do not run git add, git commit, git push, npm run publish, or scripts/publish-edition.mjs. The host process alone publishes after validation.
-
-Use ${runId} unchanged in evaluationRun.runId for all three category reports. Use exactly ${MODEL_ID}, ${MODEL_DISPLAY_NAME}, ${REASONING_EFFORT}, and modelSelectionVerified=true in the three evaluationRun objects; these values come from the host CLI invocation and must not be altered or inferred from prose. Keep the rubric and runId identical across all three categories.
-
-Research and evaluate exactly the announcement date and paper IDs in the host snapshot. The host already confirmed that it is newer than the current public edition. Screen every abstract, but open full text only for the provisional top 12 papers in each category. Every final top-10 paper must be among those reviewed papers, and no category report may mark more than 12 papers as full-text evaluated. Keep each reader-facing field within the character budgets in docs/SCHEDULED_TASK_PROMPT.md. Write exactly these three files directly under ${staging}:
-  <YYYY-MM-DD>-quant-ph.json
-  <YYYY-MM-DD>-gr-qc.json
-  <YYYY-MM-DD>-hep-th.json
-Do not write any other file in the staging directory.
-
-After all three reports are complete, run the fixed exhaustive language audit once and repair every listed field in one batch. Run the exhaustive audit only once more after that batch. Never use the final validator as a one-error-at-a-time repair loop. The exact commands and bounded failure rule are in docs/SCHEDULED_TASK_PROMPT.md. Run the fixed final validator exactly once after the second audit reports zero issues. If either audit or the final validator fails, do not keep iterating: exit with an error so the previous public edition remains unchanged.
-
-The final validator is the last command in a successful model run. After it prints STAGED_REPORTS_VALID, stop immediately without any further filesystem action and make your final response exactly STAGED_REPORTS_VALID. Never create or write a manifest, completion marker, status file, or outbox entry; the host requires the outbox directory to remain empty and derives the expected date and filenames from its own snapshot. Do not claim success unless all three reports exactly cover the snapshot and are complete. On any research, model, network, date-alignment, or validation uncertainty, do not invent data; exit with an error.
-`;
+export function buildAutomationPrompt() {
+  fail("Legacy all-category automation is disabled; use buildCategoryAutomationPrompt.");
 }
 
 export function buildCategoryAutomationPrompt({ evaluationRunId, staging, snapshot, slug }) {
@@ -510,8 +503,14 @@ export function buildCategoryAutomationPrompt({ evaluationRunId, staging, snapsh
     category: structuredClone(snapshot.categories[slug]),
   };
   const reportPath = join(staging, `${date}-${slug}.json`);
-  const auditBefore = `$TMPDIR/${slug}-language-issues-before.json`;
-  const auditAfter = `$TMPDIR/${slug}-language-issues-after.json`;
+  const structureCommands = Array.from({ length: MAX_STRUCTURE_AUDIT_PASSES }, (_, index) => {
+    const pass = index + 1;
+    return `${pass}. node scripts/preflight-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId} "$TMPDIR/${slug}-structure-audit-${pass}.json"`;
+  }).join("\n");
+  const auditCommands = Array.from({ length: MAX_LANGUAGE_AUDIT_PASSES }, (_, index) => {
+    const pass = index + 1;
+    return `${pass}. node scripts/audit-staged-language.mjs ${date} ${staging} "$TMPDIR/${slug}-language-audit-${pass}.json" ${slug} ${evaluationRunId}`;
+  }).join("\n");
   return `You are one resumable category stage of the Daily arXiv production automation.
 
 Host-enforced runtime contract:
@@ -531,14 +530,84 @@ Screen every assigned abstract. After provisional scoring, inspect official v1 f
 
 Use exactly ${MODEL_ID}, ${MODEL_DISPLAY_NAME}, ${REASONING_EFFORT}, modelSelectionVerified=true, and runId=${evaluationRunId} in evaluationRun. Write only ${reportPath} inside the category staging directory. Do not write another report there. Official source extraction may write only bounded temporary text under $TMPDIR as specified by the helper. Do not modify the Git worktree, use an API key, run npm test, run git, invoke the publisher, or write credentials or PDFs to the repository.
 
-After creating the report, self-check totals, deterministic ranking, full-text flags, evidence-specific scoreReasons, and score distribution once. Then run the fixed language audit exactly once:
-node scripts/audit-staged-language.mjs ${date} ${staging} "${auditBefore}" ${slug}
-Repair every listed issue in one batch. Run the audit exactly once more:
-node scripts/audit-staged-language.mjs ${date} ${staging} "${auditAfter}" ${slug}
-If the second audit is not issues=0, stop with an error without another repair loop. Only after issues=0, run this read-only validator exactly once as the last command:
+After creating the report, self-check totals, deterministic ranking, full-text flags, evidence-specific scoreReasons, and score distribution once. Every paper, not only the first paper or the fully reviewed papers, must contain the exact schema 1.4 paper-key set. In particular, verify url, arxivVersion, and submissionType on every paper, the exact four keys in both scores and scoreReasons, and the conditional presence of fullTextReviewStatus.
+
+Before any language audit, use these fixed numbered structural-audit commands in order, running only the next command when the preceding audit was nonzero:
+${structureCommands}
+
+Stop immediately at the first structural audit that reports issues=0; do not create a later structural audit. After a nonzero structural audit 1 through ${MAX_STRUCTURE_AUDIT_PASSES - 1}, perform exactly one batch repair covering every listed missing/extra key, nested type/value, score distribution, deterministic rank, canonical top-ten full-text tuple, count, and URL issue. Re-evaluate affected papers from their evidence when score distribution changes; do not mechanically spread scores. Run at most ${MAX_STRUCTURE_AUDIT_PASSES} structural audits and ${MAX_STRUCTURE_AUDIT_PASSES - 1} structural repair batches. If structural audit ${MAX_STRUCTURE_AUDIT_PASSES} is nonzero, stop with an error. Only after a structural audit reports issues=0, use the following fixed numbered language-audit commands in order, running only the next command when the preceding audit was nonzero:
+${auditCommands}
+
+Stop immediately at the first language audit that reports issues=0; do not run or create any later numbered audit. After a nonzero language audit 1 through ${MAX_LANGUAGE_AUDIT_PASSES - 1}, perform exactly one whole-field batch repair covering every listed item. A leaf message is only the first surfaced diagnostic for that field. Reread the complete current field and remove every untranslated general English term, Japanese-boundary ASCII space, known unnatural expression, evaluator-provenance phrase, and other reported defect while preserving the paper-specific facts. Do not merely replace the quoted trigger, do not use a global token-substitution table, and do not rewrite unrelated valid fields. For a category-scoped prose issue, rewrite the complete listed affected set in that same batch as specified in docs/SCHEDULED_TASK_PROMPT.md; score and rank changes are confined to the preceding structural stage. Run at most ${MAX_LANGUAGE_AUDIT_PASSES} language audits and ${MAX_LANGUAGE_AUDIT_PASSES - 1} whole-field batch repairs. If language audit ${MAX_LANGUAGE_AUDIT_PASSES} is nonzero, stop with an error and do not repair again.
+
+Only after an audit reports issues=0, run this read-only validator exactly once as the last command:
 node scripts/validate-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId}
 
 After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. The host ignores success prose and independently validates the sole regular JSON file before importing it into a protected checkpoint. On any uncertainty or failure, exit nonzero and leave the previous public edition unchanged.
+`;
+}
+
+export function buildCategoryRepairPrompt({
+  evaluationRunId,
+  staging,
+  snapshot,
+  slug,
+  draftSha256,
+}) {
+  validateRunId(evaluationRunId);
+  if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
+  if (!snapshot || typeof snapshot !== "object" || snapshot.categories?.[slug] === undefined) {
+    fail("An official arXiv snapshot containing the requested category is required.");
+  }
+  if (typeof draftSha256 !== "string" || !/^[a-f0-9]{64}$/u.test(draftSha256)) {
+    fail("A protected category-draft SHA-256 is required for repair.");
+  }
+  const date = validateDate(snapshot.announcementDate);
+  const reportPath = join(staging, `${date}-${slug}.json`);
+  const structureCommands = Array.from({ length: MAX_STRUCTURE_AUDIT_PASSES }, (_, index) => {
+    const pass = index + 1;
+    return `${pass}. node scripts/preflight-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId} "$TMPDIR/${slug}-structure-audit-${pass}.json"`;
+  }).join("\n");
+  const auditCommands = Array.from({ length: MAX_LANGUAGE_AUDIT_PASSES }, (_, index) => {
+    const pass = index + 1;
+    return `${pass}. node scripts/audit-staged-language.mjs ${date} ${staging} "$TMPDIR/${slug}-language-audit-${pass}.json" ${slug} ${evaluationRunId}`;
+  }).join("\n");
+  const categorySnapshot = {
+    announcementDate: date,
+    category: structuredClone(snapshot.categories[slug]),
+  };
+  return `You are repairing a host-preserved Daily arXiv category draft. This is not a new research or evaluation run.
+
+Host-enforced repair identity:
+- modelId: ${MODEL_ID}
+- modelDisplayName: ${MODEL_DISPLAY_NAME}
+- reasoningEffort: ${REASONING_EFFORT}
+- evaluationRunId: ${evaluationRunId}
+- assigned category: ${slug}
+- protected input SHA-256: ${draftSha256}
+- sole in-place report: ${reportPath}
+
+The host already checked the draft's date, category, runId, exact official ID set, scores, deterministic ranks, full-text flags, source bounds, and snapshot association before restoring it. The authoritative identity snapshot is:
+${JSON.stringify(categorySnapshot, null, 2)}
+
+Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely for schema 1.4 and Japanese-quality rules, but this narrower repair contract replaces every instruction to research, screen, fetch, extract, score, or rank papers. Do not conduct new research, browse or search the web, refetch arXiv metadata or full text, run scripts/extract-arxiv-source.mjs, rescore any axis, rerank any paper, change an arXiv ID, change the original title or authors, or change a full-text-reviewed flag. Preserve all existing paper-specific facts and numerical judgments. If a validator would require new evidence, refetching, rescoring, or reranking, stop with an error instead of guessing.
+
+You may only (a) add a missing arxivVersion="v1", submissionType="new", or url="https://arxiv.org/abs/<arxivId>" value directly implied by the protected official ID, and (b) repair the natural Japanese of already-supported reader-facing prose while preserving its factual meaning. Do not add, remove, or alter any other structural field. A scoreReasons sentence may be rewritten for Japanese quality and specificity, but its score and evidence claim must not change. Modify only ${reportPath}; do not create another report or write to the outbox, Git worktree, checkpoint directories, or public data.
+
+Use these fixed numbered structural audits in order, running only the next command when the preceding audit was nonzero:
+${structureCommands}
+
+Stop at the first structural audit reporting issues=0 and do not create a later audit. After a nonzero audit 1 through ${MAX_STRUCTURE_AUDIT_PASSES - 1}, repair every listed deterministic structural issue in one batch without changing protected research judgments, then run only the next audit. The protected draft's scores, ranks, and full-text evidence are not repairable in this mode: if an audit requests score-distribution repair, rescoring, reranking, a full-text tuple that requires new evidence, or any other protected research change, stop with an error. Run at most ${MAX_STRUCTURE_AUDIT_PASSES} structural audits and ${MAX_STRUCTURE_AUDIT_PASSES - 1} deterministic structural-repair batches. If audit ${MAX_STRUCTURE_AUDIT_PASSES} remains nonzero, stop with an error.
+
+Only after structural issues=0, use these numbered language audits in order:
+${auditCommands}
+
+Stop at the first audit reporting issues=0. After a nonzero audit 1 through ${MAX_LANGUAGE_AUDIT_PASSES - 1}, make exactly one whole-field batch repair for every listed prose field, preserving facts and scores, then run only the next audit. Run at most ${MAX_LANGUAGE_AUDIT_PASSES} audits and ${MAX_LANGUAGE_AUDIT_PASSES - 1} language-repair batches. If audit ${MAX_LANGUAGE_AUDIT_PASSES} remains nonzero, or an audit asks for evidence-based rescoring, stop with an error.
+
+Only after an audit reports issues=0, run this read-only validator exactly once as the last command:
+node scripts/validate-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId}
+
+After it prints STAGED_CATEGORY_VALID, stop without any further filesystem action and respond exactly STAGED_CATEGORY_VALID. On any uncertainty, fail closed so the protected draft remains available for the bounded next repair attempt and the public edition remains unchanged.
 `;
 }
 
@@ -1278,6 +1347,372 @@ function checkpointEventMessage(value) {
     .slice(0, 2_000);
 }
 
+function requireNonEmptyString(value, label) {
+  if (typeof value !== "string" || value.trim() === "") fail(`${label} must be a non-empty string.`);
+}
+
+function requireExactOrDeterministicallyIncompletePaperKeys(paper, required, deterministic, label) {
+  if (!paper || typeof paper !== "object" || Array.isArray(paper)) fail(`${label} must be a JSON object.`);
+  const allowed = new Set([...required, ...deterministic]);
+  const unexpected = Object.keys(paper).filter((key) => !allowed.has(key));
+  const missing = required.filter((key) => !Object.hasOwn(paper, key));
+  if (unexpected.length > 0 || missing.length > 0) {
+    fail(
+      `${label} has unsafe structural differences; missing=${missing.join(",") || "none"}; `
+      + `unexpected=${unexpected.join(",") || "none"}.`,
+    );
+  }
+}
+
+function canonicalJsonValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalJsonValue);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalJsonValue(value[key])]));
+  }
+  return value;
+}
+
+function categoryRepairProtectedProjection(report) {
+  return {
+    schemaVersion: report.schemaVersion,
+    reportDate: report.reportDate,
+    evaluationRun: report.evaluationRun,
+    slug: report.slug,
+    label: report.label,
+    totalNew: report.totalNew,
+    crosslistsExcluded: report.crosslistsExcluded,
+    evaluatedCount: report.evaluatedCount,
+    fullTextEvaluatedCount: report.fullTextEvaluatedCount,
+    papers: report.papers.map((paper) => ({
+      rank: paper.rank,
+      arxivId: paper.arxivId,
+      title: paper.title,
+      authors: paper.authors,
+      primaryCategory: paper.primaryCategory,
+      scores: paper.scores,
+      totalScore: paper.totalScore,
+      evaluationBasis: paper.evaluationBasis,
+      fullTextEvaluated: paper.fullTextEvaluated,
+      sourceUrls: paper.sourceUrls,
+    })),
+    audit: report.audit,
+  };
+}
+
+export function validateCategoryRepairMutation({ source, repaired, path = "categoryRepair" }) {
+  if (!source || typeof source !== "object" || Array.isArray(source)
+    || !repaired || typeof repaired !== "object" || Array.isArray(repaired)
+    || !Array.isArray(source.papers) || !Array.isArray(repaired.papers)) {
+    fail(`${path} requires two category report objects.`);
+  }
+  const protectedBefore = JSON.stringify(canonicalJsonValue(categoryRepairProtectedProjection(source)));
+  const protectedAfter = JSON.stringify(canonicalJsonValue(categoryRepairProtectedProjection(repaired)));
+  if (protectedAfter !== protectedBefore) {
+    fail(
+      `${path} changed protected research fields; repair may only add deterministic identity keys `
+      + "and edit reader-facing prose without changing scores, ranks, review flags, source identity, original metadata, or audit provenance.",
+    );
+  }
+  return true;
+}
+
+export function validateCategoryDraftAssociation({
+  report,
+  date,
+  slug,
+  policy,
+  evaluationRunId,
+  snapshot,
+  path = "categoryDraft",
+}) {
+  validateDate(date);
+  if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) {
+    fail("A valid official arXiv snapshot is required for category-draft validation.");
+  }
+  fingerprintSnapshot(snapshot);
+  if (snapshot.announcementDate !== date || snapshot.categories?.[slug] === undefined) {
+    fail(`${path} does not match the supplied snapshot date or category.`);
+  }
+  exactKeys(report, [
+    "schemaVersion",
+    "reportDate",
+    "evaluationRun",
+    "slug",
+    "label",
+    "totalNew",
+    "crosslistsExcluded",
+    "evaluatedCount",
+    "fullTextEvaluatedCount",
+    "papers",
+    "audit",
+  ], path);
+  if (report.schemaVersion !== PRODUCTION_SCHEMA) fail(`${path}.schemaVersion must be ${PRODUCTION_SCHEMA}.`);
+  if (report.reportDate !== date) fail(`${path}.reportDate must equal ${date}.`);
+  if (report.slug !== slug) fail(`${path}.slug must equal ${slug}.`);
+  requireNonEmptyString(report.label, `${path}.label`);
+  validateEvaluationRun(report.evaluationRun, policy, `${path}.evaluationRun`, { date });
+  if (report.evaluationRun.runId !== evaluationRunId) {
+    fail(`${path}.evaluationRun.runId does not match the protected checkpoint job.`);
+  }
+
+  const categorySnapshot = snapshot.categories[slug];
+  if (report.totalNew !== categorySnapshot.newCount) fail(`${path}.totalNew does not match the official snapshot.`);
+  if (report.crosslistsExcluded !== categorySnapshot.crosslistCount) {
+    fail(`${path}.crosslistsExcluded does not match the official snapshot.`);
+  }
+  if (report.evaluatedCount !== categorySnapshot.newCount) fail(`${path}.evaluatedCount does not match the official snapshot.`);
+  const fullTextLimit = productionFullTextEvaluationLimit({
+    policy,
+    date,
+    slug,
+    runId: report.evaluationRun.runId,
+    totalNew: categorySnapshot.newCount,
+  });
+  if (!Number.isSafeInteger(report.fullTextEvaluatedCount)
+    || report.fullTextEvaluatedCount < 0
+    || report.fullTextEvaluatedCount > fullTextLimit) {
+    fail(`${path}.fullTextEvaluatedCount is outside the allowed bounds.`);
+  }
+  if (!Array.isArray(report.papers) || report.papers.length !== categorySnapshot.newCount) {
+    fail(`${path}.papers must contain exactly the official new-submission count.`);
+  }
+
+  const baseRequiredPaperKeys = [
+    "rank",
+    "arxivId",
+    "title",
+    "titleJa",
+    "authors",
+    "primaryCategory",
+    "paperType",
+    "scores",
+    "scoreReasons",
+    "totalScore",
+    "abstractLines",
+    "curiosity",
+    "concept",
+    "conclusion",
+    "assessment",
+    "evaluationBasis",
+    "fullTextEvaluated",
+    "sourceUrls",
+  ];
+  const deterministicPaperKeys = ["arxivVersion", "submissionType", "url"];
+  const seenIds = new Set();
+  let actualFullTextCount = 0;
+  for (const [index, paper] of report.papers.entries()) {
+    const paperPath = `${path}.papers[${index}]`;
+    const requiredPaperKeys = [
+      ...baseRequiredPaperKeys,
+      ...(paper?.fullTextEvaluated === true ? ["fullTextReviewStatus"] : []),
+    ];
+    requireExactOrDeterministicallyIncompletePaperKeys(paper, requiredPaperKeys, deterministicPaperKeys, paperPath);
+    if (typeof paper.arxivId !== "string" || !/^\d{4}\.\d{4,5}$/u.test(paper.arxivId)) {
+      fail(`${paperPath}.arxivId must be an unversioned modern arXiv ID.`);
+    }
+    if (seenIds.has(paper.arxivId)) fail(`${paperPath}.arxivId is duplicated.`);
+    seenIds.add(paper.arxivId);
+    if (paper.primaryCategory !== slug) fail(`${paperPath}.primaryCategory must equal ${slug}.`);
+    if (Object.hasOwn(paper, "arxivVersion") && paper.arxivVersion !== "v1") fail(`${paperPath}.arxivVersion must be v1.`);
+    if (Object.hasOwn(paper, "submissionType") && paper.submissionType !== "new") fail(`${paperPath}.submissionType must be new.`);
+    const expectedUrl = `https://arxiv.org/abs/${paper.arxivId}`;
+    if (Object.hasOwn(paper, "url") && paper.url !== expectedUrl) fail(`${paperPath}.url must equal ${expectedUrl}.`);
+    if (!Number.isSafeInteger(paper.rank) || paper.rank < 1 || paper.rank > categorySnapshot.newCount) {
+      fail(`${paperPath}.rank is outside the report bounds.`);
+    }
+    for (const field of ["title", "titleJa", "paperType", "curiosity", "concept", "conclusion", "assessment"]) {
+      requireNonEmptyString(paper[field], `${paperPath}.${field}`);
+    }
+    if (!Array.isArray(paper.authors) || paper.authors.length === 0) fail(`${paperPath}.authors must be non-empty.`);
+    paper.authors.forEach((author, authorIndex) => requireNonEmptyString(author, `${paperPath}.authors[${authorIndex}]`));
+    exactKeys(paper.scores, SCORE_KEYS, `${paperPath}.scores`);
+    exactKeys(paper.scoreReasons, SCORE_KEYS, `${paperPath}.scoreReasons`);
+    for (const key of SCORE_KEYS) {
+      if (!Number.isInteger(paper.scores[key]) || paper.scores[key] < 0 || paper.scores[key] > 25) {
+        fail(`${paperPath}.scores.${key} must be an integer from 0 through 25.`);
+      }
+      requireNonEmptyString(paper.scoreReasons[key], `${paperPath}.scoreReasons.${key}`);
+    }
+    const expectedTotal = SCORE_KEYS.reduce((sum, key) => sum + paper.scores[key], 0);
+    if (paper.totalScore !== expectedTotal) fail(`${paperPath}.totalScore must equal its four protected scores.`);
+    if (!Array.isArray(paper.abstractLines) || paper.abstractLines.length !== 3) {
+      fail(`${paperPath}.abstractLines must contain exactly three strings.`);
+    }
+    paper.abstractLines.forEach((line, lineIndex) => requireNonEmptyString(line, `${paperPath}.abstractLines[${lineIndex}]`));
+    if (paper.fullTextEvaluated === true) {
+      actualFullTextCount += 1;
+      if (paper.evaluationBasis !== "full_text_major_sections") {
+        fail(`${paperPath}.evaluationBasis is inconsistent with full-text review.`);
+      }
+      requireNonEmptyString(paper.fullTextReviewStatus, `${paperPath}.fullTextReviewStatus`);
+    } else if (paper.fullTextEvaluated === false) {
+      if (paper.evaluationBasis !== "title_authors_abstract") {
+        fail(`${paperPath}.evaluationBasis is inconsistent with abstract-only review.`);
+      }
+      if (SCORE_KEYS.some((key) => paper.scores[key] >= 24) || paper.scores.technicalStrength > 17) {
+        fail(`${paperPath}.scores exceed the abstract-only evidence bounds.`);
+      }
+    } else {
+      fail(`${paperPath}.fullTextEvaluated must be boolean.`);
+    }
+    const expectedSources = [
+      `https://arxiv.org/abs/${paper.arxivId}v1`,
+      ...(paper.fullTextEvaluated ? [`https://arxiv.org/pdf/${paper.arxivId}v1`] : []),
+    ];
+    if (!Array.isArray(paper.sourceUrls)
+      || paper.sourceUrls.length !== expectedSources.length
+      || new Set(paper.sourceUrls).size !== expectedSources.length
+      || paper.sourceUrls.some((url) => !expectedSources.includes(url))) {
+      fail(`${paperPath}.sourceUrls must contain only the exact version-fixed official sources.`);
+    }
+  }
+  const expectedIds = [...categorySnapshot.newIds].sort();
+  const actualIds = [...seenIds].sort();
+  if (actualIds.join("\0") !== expectedIds.join("\0")) fail(`${path}.papers do not match the official snapshot ID set.`);
+  if (actualFullTextCount !== report.fullTextEvaluatedCount) {
+    fail(`${path}.fullTextEvaluatedCount does not match the paper flags.`);
+  }
+  const ranked = [...report.papers].sort(comparePapers);
+  ranked.forEach((paper, index) => {
+    if (paper.rank !== index + 1) fail(`${path}.papers have inconsistent deterministic ranks.`);
+  });
+  const topCount = Math.min(10, report.totalNew);
+  if (ranked.slice(0, topCount).some((paper) => !paper.fullTextEvaluated)) {
+    fail(`${path}.papers omit full-text review from a protected top-${topCount} paper.`);
+  }
+  if (date >= CURRENT_QUALITY_GATE_EFFECTIVE_DATE && findProductionScoreDistributionIssues(report).length > 0) {
+    fail(`${path}.papers have an invalid protected score distribution.`);
+  }
+
+  exactKeys(report.audit, [
+    "listingUrl",
+    "announcementDate",
+    "selectionRule",
+    "sourceCounts",
+    "evaluationPolicy",
+    "scoreRubric",
+    "fullTextPolicy",
+    "fullTextEvaluatedCount",
+    "authorPolicy",
+    "rankingTieBreak",
+    "generatedAtJst",
+  ], `${path}.audit`);
+  if (report.audit.listingUrl !== categorySnapshot.sourceUrl) {
+    fail(`${path}.audit.listingUrl does not match the official snapshot family.`);
+  }
+  if (report.audit.announcementDate !== date) fail(`${path}.audit.announcementDate must equal ${date}.`);
+  exactKeys(
+    report.audit.sourceCounts,
+    ["newPrimary", "crosslistsExcluded", "titleAuthorAbstractEvaluated"],
+    `${path}.audit.sourceCounts`,
+  );
+  if (report.audit.sourceCounts.newPrimary !== categorySnapshot.newCount
+    || report.audit.sourceCounts.crosslistsExcluded !== categorySnapshot.crosslistCount
+    || report.audit.sourceCounts.titleAuthorAbstractEvaluated !== categorySnapshot.newCount) {
+    fail(`${path}.audit.sourceCounts do not match the official snapshot.`);
+  }
+  if (report.audit.fullTextEvaluatedCount !== report.fullTextEvaluatedCount) {
+    fail(`${path}.audit.fullTextEvaluatedCount does not match the protected flags.`);
+  }
+  for (const field of [
+    "selectionRule",
+    "evaluationPolicy",
+    "scoreRubric",
+    "fullTextPolicy",
+    "authorPolicy",
+    "rankingTieBreak",
+  ]) requireNonEmptyString(report.audit[field], `${path}.audit.${field}`);
+  if (!report.audit.scoreRubric.startsWith(RUBRIC_3_MARKER)) {
+    fail(`${path}.audit.scoreRubric must use ${RUBRIC_3_MARKER}.`);
+  }
+  validateJstTimestamp(report.audit.generatedAtJst, `${path}.audit.generatedAtJst`);
+  return true;
+}
+
+export function countUnchangedCategoryDraftRepairFailures({ job, slug, draftSha256 }) {
+  if (!job || !Array.isArray(job.attempts)) fail("A loaded checkpoint job is required for repair accounting.");
+  if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
+  if (typeof draftSha256 !== "string" || !/^[a-f0-9]{64}$/u.test(draftSha256)) {
+    fail("A category-draft SHA-256 is required for repair accounting.");
+  }
+  const marker = `${REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX}${draftSha256}`;
+  return new Set(job.attempts.filter((event) => (
+    event.category === slug
+    && event.stage === "category_repair"
+    && event.status === "started"
+    && (event.message === marker || event.message.startsWith(`${marker};`))
+  )).map((event) => event.attemptId)).size;
+}
+
+export function prepareCategoryExecution({ job, slug, staging, snapshot, policy }) {
+  if (!job || typeof job !== "object") fail("A loaded checkpoint job is required to prepare a category attempt.");
+  if (!isAbsolute(staging)) fail("Category staging path must be absolute.");
+  assertPlainDirectory(staging, "Category staging directory");
+  if (readdirSync(staging).length !== 0) fail("Category staging directory must start empty.");
+  const expectedSnapshotFingerprint = fingerprintSnapshot(snapshot);
+  const currentJob = loadCheckpointJob({
+    controlRoot: job.controlRoot,
+    reportDate: job.manifest?.reportDate,
+    snapshotFingerprint: job.manifest?.snapshotFingerprint,
+    runtimeFingerprint: job.manifest?.runtimeFingerprint,
+    evaluationRunId: job.evaluationRunId,
+  });
+  if (currentJob.manifest.snapshotFingerprint !== expectedSnapshotFingerprint
+    || currentJob.evaluationRunId !== currentJob.manifest.evaluationRunId) {
+    fail("Checkpoint job identity does not match the supplied runtime snapshot.");
+  }
+  const validateDraft = (candidate, context) => validateCategoryDraftAssociation({
+    report: candidate,
+    date: context.reportDate,
+    slug: context.category,
+    policy,
+    evaluationRunId: context.evaluationRunId,
+    snapshot: context.snapshot,
+    path: `checkpointDraft.${context.category}`,
+  });
+  const draft = latestCheckpointCategoryDraft({ job: currentJob, category: slug, validateDraft });
+  if (draft === null) {
+    return Object.freeze({
+      mode: "generation",
+      stage: "category_generation",
+      draft: null,
+      prompt: buildCategoryAutomationPrompt({
+        evaluationRunId: currentJob.evaluationRunId,
+        staging,
+        snapshot,
+        slug,
+      }),
+    });
+  }
+  const unchangedFailures = countUnchangedCategoryDraftRepairFailures({
+    job: currentJob,
+    slug,
+    draftSha256: draft.sha256,
+  });
+  if (unchangedFailures >= MAX_UNCHANGED_DRAFT_REPAIR_FAILURES) {
+    fail(
+      `Category repair stopped after ${MAX_UNCHANGED_DRAFT_REPAIR_FAILURES} unchanged attempts for `
+      + `${snapshot.announcementDate} ${slug} draft ${draft.sha256}; manual inspection is required.`,
+    );
+  }
+  const materializedPath = join(realpathSync(staging), `${snapshot.announcementDate}-${slug}.json`);
+  materializeCheckpointCategoryDraft({ job: currentJob, draft, destination: materializedPath });
+  return Object.freeze({
+    mode: "repair",
+    stage: "category_repair",
+    draft,
+    unchangedFailures,
+    prompt: buildCategoryRepairPrompt({
+      evaluationRunId: currentJob.evaluationRunId,
+      staging,
+      snapshot,
+      slug,
+      draftSha256: draft.sha256,
+    }),
+  });
+}
+
 function validateCategoryCheckpointReport({ report, date, slug, policy, evaluationRunId, snapshot, path }) {
   validateProductionReport(report, { date, slug, policy, path });
   if (report.evaluationRun.runId !== evaluationRunId) {
@@ -1505,6 +1940,13 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
         console.log(`CATEGORY_CHECKPOINT_REUSED: ${snapshot.announcementDate} ${slug}; model not started.`);
         continue;
       }
+      const execution = prepareCategoryExecution({
+        job,
+        slug,
+        staging: paths.categoryStaging[slug],
+        snapshot,
+        policy,
+      });
       if (codexBin === undefined) {
         codexBin = discoverCodex({ env });
         assertPinnedCodexIdentity(codexBin, env);
@@ -1514,28 +1956,24 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
       appendCheckpointAttempt({
         job,
         attemptId: runId,
-        stage: "category_generation",
+        stage: execution.stage,
         status: "started",
         category: slug,
-        message: `Started ${slug} generation.`,
+        message: execution.mode === "repair"
+          ? `${REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX}${execution.draft.sha256}; Started bounded ${slug} repair.`
+          : `Started ${slug} generation.`,
       });
       try {
-        const prompt = buildCategoryAutomationPrompt({
-          evaluationRunId: job.evaluationRunId,
-          staging: paths.categoryStaging[slug],
-          snapshot,
-          slug,
-        });
         invokeCodexCategory({
           codexBin,
           worktree: agent.worktree,
           runRoot: paths.runRoot,
           logPath: paths.codexLogs[slug],
-          prompt,
+          prompt: execution.prompt,
         });
         const postCodexWorktree = inspectExistingWorktree(root, agent.worktree);
         if (!postCodexWorktree.exists || postCodexWorktree.head !== originMain) {
-          fail("Agent worktree identity, cleanliness, or HEAD changed during category generation; no publication was attempted.");
+          fail("Agent worktree identity, cleanliness, or HEAD changed during category processing; no publication was attempted.");
         }
         const layout = validateCategoryModelOutputLayout({
           stagingDirectory: paths.categoryStaging[slug],
@@ -1554,20 +1992,37 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
           snapshot,
           path: layout.path,
         });
+        if (execution.mode === "repair") {
+          validateCategoryRepairMutation({
+            source: execution.draft.report,
+            repaired: report,
+            path: `repairOutput.${slug}`,
+          });
+        }
         importCheckpointCategoryReport({
           job,
           category: slug,
           sourcePath: realpathSync(layout.path),
           attemptId: runId,
-          validateReport: (candidate, context) => validateCategoryCheckpointReport({
-            report: candidate,
-            date: context.reportDate,
-            slug: context.category,
-            policy,
-            evaluationRunId: context.evaluationRunId,
-            snapshot: context.snapshot,
-            path: `checkpoint.${context.category}`,
-          }),
+          validateReport: (candidate, context) => {
+            validateCategoryCheckpointReport({
+              report: candidate,
+              date: context.reportDate,
+              slug: context.category,
+              policy,
+              evaluationRunId: context.evaluationRunId,
+              snapshot: context.snapshot,
+              path: `checkpoint.${context.category}`,
+            });
+            if (execution.mode === "repair") {
+              validateCategoryRepairMutation({
+                source: execution.draft.report,
+                repaired: candidate,
+                path: `checkpointRepair.${context.category}`,
+              });
+            }
+            return true;
+          },
         });
         job = loadCheckpointJob({
           controlRoot,
@@ -1579,24 +2034,73 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
         appendCheckpointAttempt({
           job,
           attemptId: runId,
-          stage: "category_generation",
+          stage: execution.stage,
           status: "completed",
           category: slug,
-          message: `Validated and checkpointed ${slug}.`,
+          message: `Validated and checkpointed ${slug} after ${execution.mode}.`,
         });
         console.log(`CATEGORY_CHECKPOINTED: ${snapshot.announcementDate} ${slug}; next retry will not regenerate it.`);
       } catch (error) {
+        let preservedDraft;
+        let preservationError;
         try {
+          const layout = validateCategoryModelOutputLayout({
+            stagingDirectory: paths.categoryStaging[slug],
+            outboxDirectory: paths.outbox,
+            date: snapshot.announcementDate,
+            slug,
+          });
+          chmodSync(layout.path, 0o600);
+          preservedDraft = preserveCheckpointCategoryDraft({
+            job,
+            category: slug,
+            sourcePath: realpathSync(layout.path),
+            attemptId: runId,
+            validateDraft: (candidate, context) => {
+              validateCategoryDraftAssociation({
+                report: candidate,
+                date: context.reportDate,
+                slug: context.category,
+                policy,
+                evaluationRunId: context.evaluationRunId,
+                snapshot: context.snapshot,
+                path: `failedDraft.${context.category}`,
+              });
+              if (execution.mode === "repair") {
+                validateCategoryRepairMutation({
+                  source: execution.draft.report,
+                  repaired: candidate,
+                  path: `failedRepairDraft.${context.category}`,
+                });
+              }
+              return true;
+            },
+          });
+        } catch (draftError) {
+          preservationError = draftError;
+        }
+        try {
+          const repairMarker = execution.mode === "repair"
+            ? `${REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX}${execution.draft.sha256}; `
+            : "";
+          const draftOutcome = preservedDraft === undefined
+            ? ` Draft was not preserved: ${checkpointEventMessage(preservationError?.message ?? "no valid bounded report was available")}.`
+            : ` Protected draft ${preservedDraft.sha256} was preserved outside the model-write area.`;
           appendCheckpointAttempt({
             job,
             attemptId: runId,
-            stage: "category_generation",
+            stage: execution.stage,
             status: "failed",
             category: slug,
-            message: checkpointEventMessage(error.message),
+            message: checkpointEventMessage(`${repairMarker}${error.message}.${draftOutcome}`),
           });
         } catch (checkpointError) {
           error.message += `; could not append checkpoint failure event (${checkpointError.message})`;
+        }
+        if (preservationError !== undefined) {
+          error.message += `; category draft was not preserved (${preservationError.message})`;
+        } else {
+          error.message += `; protected category draft preserved at ${preservedDraft.path}`;
         }
         throw error;
       }

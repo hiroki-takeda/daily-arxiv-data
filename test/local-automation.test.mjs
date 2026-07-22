@@ -13,6 +13,7 @@ import {
   assertPinnedCodexIdentity,
   buildAutomationPrompt,
   buildCategoryAutomationPrompt,
+  buildCategoryRepairPrompt,
   buildCodexArgs,
   codexBinaryIdentity,
   classifyFullTextReadiness,
@@ -83,6 +84,7 @@ test("runtime update barrier covers every scheduled runtime dependency", () => {
     "AGENTS.md",
     "docs/SCHEDULED_TASK_PROMPT.md",
     "scripts/extract-arxiv-source.mjs",
+    "scripts/preflight-staged-category.mjs",
     "scripts/run-local-automation.mjs",
     "scripts/validate-staged-reports.mjs",
     "scripts/lib/local-automation.mjs",
@@ -172,31 +174,12 @@ test("login preflight accepts ChatGPT login and rejects API-key login", async ()
   assert.throws(() => assertChatGptLogin(apiKey), /not authenticated with ChatGPT/);
 });
 
-test("automation prompt binds host runId and requires validator-last output without a manifest", () => {
-  const prompt = buildAutomationPrompt({
+test("legacy all-category automation prompt fails closed", () => {
+  assert.throws(() => buildAutomationPrompt({
     runId: RUN_ID,
     staging: "/tmp/run/staging",
     snapshot: SNAPSHOT,
-  });
-  assert.match(prompt, new RegExp(RUN_ID));
-  assert.match(prompt, /modelId: gpt-5\.6-sol/);
-  assert.match(prompt, /reasoningEffort: high/);
-  assert.match(prompt, /provisional top 12 papers in each category/);
-  assert.match(prompt, /extract-arxiv-source\.mjs helper/);
-  assert.match(prompt, /do not inspect historical reports, public data, pipeline implementation, or tests/);
-  assert.match(prompt, /no category report may mark more than 12 papers/);
-  assert.match(prompt, /rubric 3\.0 scoring/);
-  assert.match(prompt, /natural-Japanese writing/);
-  assert.match(prompt, /schema 1\.4/);
-  assert.match(prompt, /Do not run git add, git commit, git push/);
-  assert.match(prompt, /host process alone publishes/);
-  assert.match(prompt, /STAGED_REPORTS_VALID/);
-  assert.match(prompt, /final response exactly STAGED_REPORTS_VALID/);
-  assert.match(prompt, /outbox directory to remain empty/);
-  assert.match(prompt, /Never create or write a manifest/);
-  assert.doesNotMatch(prompt, /final manifest:/);
-  assert.doesNotMatch(prompt, /manifest\.json/);
-  assert.match(prompt, /2099\.00001/);
+  }), /Legacy all-category automation is disabled; use buildCategoryAutomationPrompt/);
 });
 
 test("category prompt binds one resumable category and forbids ID/index fallback scoring", () => {
@@ -213,9 +196,51 @@ test("category prompt binds one resumable category and forbids ID/index fallback
   assert.doesNotMatch(prompt, /2099\.00002/);
   assert.match(prompt, /provisional top min\(12, totalNew\)/);
   assert.match(prompt, /arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula/);
+  assert.match(prompt, /Every paper, not only the first paper or the fully reviewed papers, must contain the exact schema 1\.4 paper-key set/);
+  assert.match(prompt, /url, arxivVersion, and submissionType on every paper/);
+  assert.match(prompt, /preflight-staged-category\.mjs 2099-01-05 quant-ph/);
+  assert.match(prompt, /quant-ph-structure-audit-1\.json/);
+  assert.match(prompt, /quant-ph-structure-audit-4\.json/);
+  assert.match(prompt, /one batch repair covering every listed missing\/extra key/);
+  assert.match(prompt, /Run at most 4 structural audits and 3 structural repair batches/);
+  assert.match(prompt, /If structural audit 4 is nonzero, stop with an error/);
   assert.match(prompt, /audit-staged-language\.mjs 2099-01-05/);
+  assert.match(prompt, /quant-ph-language-audit-1\.json/);
+  assert.match(prompt, /quant-ph-language-audit-5\.json/);
+  assert.match(prompt, /Run at most 5 language audits and 4 whole-field batch repairs/);
+  assert.match(prompt, /Stop immediately at the first language audit that reports issues=0/);
+  assert.match(prompt, /do not run or create any later numbered audit/);
+  assert.match(prompt, /first surfaced diagnostic for that field/);
+  assert.match(prompt, /Do not merely replace the quoted trigger/);
+  assert.match(prompt, /If language audit 5 is nonzero, stop with an error and do not repair again/);
+  assert.doesNotMatch(prompt, /language-issues-(?:before|after)\.json/);
+  assert.doesNotMatch(prompt, /structure-issues-(?:before|after)\.json/);
+  assert.match(prompt, new RegExp(`quant-ph-language-audit-1\\.json" quant-ph ${RUN_ID}`));
   assert.match(prompt, /validate-staged-category\.mjs 2099-01-05 quant-ph/);
   assert.match(prompt, new RegExp(RUN_ID));
+  assert.ok(
+    prompt.indexOf("structure-audit-4.json") < prompt.indexOf("language-audit-1.json"),
+    "every permitted structural preflight must be listed before every language audit",
+  );
+});
+
+test("category repair prompt uses the same fixed audit protocol without legacy output names", () => {
+  const staging = "/tmp/daily-arxiv-automation-501/run-20990105T123456Z-abcdef123456/staging/quant-ph";
+  const prompt = buildCategoryRepairPrompt({
+    evaluationRunId: RUN_ID,
+    staging,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+    draftSha256: "a".repeat(64),
+  });
+  assert.match(prompt, /quant-ph-structure-audit-1\.json/);
+  assert.match(prompt, /quant-ph-structure-audit-4\.json/);
+  assert.match(prompt, /quant-ph-language-audit-1\.json/);
+  assert.match(prompt, /quant-ph-language-audit-5\.json/);
+  assert.match(prompt, new RegExp(`quant-ph-language-audit-1\\.json" quant-ph ${RUN_ID}`));
+  assert.doesNotMatch(prompt, /repair-(?:structure|language)/);
+  assert.doesNotMatch(prompt, /structure-issues-(?:before|after)/);
+  assert.match(prompt, /scores, ranks, and full-text evidence are not repairable in this mode/);
 });
 
 test("recoverable checkpoint helper uses the runtime-specific job and receipts an orphan before model orchestration", async () => {
@@ -304,6 +329,15 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /Daily arXiv rubric 3\.0/);
   assert.match(specification, /technicalStrength`の18点以上は全文確認/);
   assert.match(specification, /node scripts\/extract-arxiv-source\.mjs/);
+  assert.match(specification, /node scripts\/preflight-staged-category\.mjs YYYY-MM-DD/);
+  assert.match(specification, /<category>-structure-audit-1\.json/);
+  assert.match(specification, /<category>-structure-audit-4\.json/);
+  assert.match(specification, /先頭や上位10件だけでなく\*\*全件それぞれ\*\*/);
+  assert.match(specification, /特に`url`、`arxivVersion`、`submissionType`を全論文へ入れ/);
+  assert.match(specification, /どれかの構造監査が`issues=0`の場合だけ/);
+  assert.match(specification, /監査4が非ゼロなら追加修正せず異常終了/);
+  assert.match(specification, /言語監査は文章フィールドだけを対象/);
+  assert.match(specification, /<category>-language-audit-5\.json" <category> <evaluation-run-id>/);
   assert.match(specification, /node scripts\/validate-staged-category\.mjs YYYY-MM-DD/);
   assert.match(specification, /manifest、completion marker、status fileを作らず/);
   assert.match(specification, /outboxは空のまま/);
@@ -330,7 +364,7 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /abstractLines\[0\].*言い換えにはしません/);
   assert.match(specification, /`concept`へ`abstractLines\[1\]`.*一文そのままコピーしてはいけません/);
   assert.match(specification, /全体の35%超へ同じ総合点/);
-  assert.match(specification, /`path`が`totalScore`または`scores`/);
+  assert.match(specification, /`totalScore`、`scores`、`rank`/);
   assert.match(specification, /assessment.*点数や`scoreReasons`の反復/);
 });
 

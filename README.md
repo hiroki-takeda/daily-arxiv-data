@@ -23,8 +23,8 @@
   → quant-ph → gr-qc → hep-thの順に、未完了カテゴリだけをGPT-5.6-Sol / Highで実行
   → 各カテゴリのNew submissionsを全件一次評価
   → 各カテゴリの暫定上位12件までをv1 PDFと公式e-print本文で確認し、最終上位10件を全文確認済みにする
-  → 1カテゴリずつ言語監査・validatorを通し、日付・snapshot・runtimeごとの保護checkpointへ保存
-  → 中断時は完成済みカテゴリを再利用し、失敗または未完了カテゴリだけを次回runで再評価
+  → 1カテゴリずつ、最大4回の番号付き構造監査（最大3回の一括修正）で全論文の必須キー、得点分布、合計・順位、上位10件の全文確認状態を確定し、その後は最大5回の番号付き言語監査（最大4回のwhole-field一括修正）で文章だけを整え、validatorを通して保護checkpointへ保存
+  → 中断時は完成済みカテゴリを再利用し、厳格検証できた失敗ドラフトは同じruntimeの次回runで修復だけを再開（ドラフトがなければ未完了カテゴリを再評価）
   → 3カテゴリが揃ったらApplication Support内のホスト専用stagingへ安全に結合し、公式ID集合と再照合
   → 選択日の公式snapshotがrun中も同一な場合だけ固定publisherが6ファイルをcommit・push
   → 公開処理だけが失敗した場合は、次回runでCodexを呼ばずcommit・pushだけを再試行
@@ -55,7 +55,7 @@ node scripts/configure-macos-schedule.mjs install
 
 `install`は既存の同名plistを上書き・削除しません。登録直後には最新の未公開分を調べる追いつき確認が1回走り、必要ならそのまま評価・pushします。詳しい確認方法、ログ、停止時の扱いは[自動運用ガイド](docs/AUTOMATION.md)を参照してください。
 
-登録後は、モデルが一度も書けない`daily-arxiv-data-publisher` worktree、モデル専用の`daily-arxiv-data-agent` worktree、`~/Library/Application Support/Daily arXiv/`のロック・ログ・ホストstaging・日付別checkpointを使います。checkpointは`jobs/<日付>-<snapshot fingerprint>/<runtime fingerprint>/`へ検証済みカテゴリと追記専用の試行・公開履歴を保存し、公開後も小さな監査記録として残します。公開成功時に消すのは、そのrun自身が作った一時PDF・source・staging・Codexログだけです。失敗資料と既存フォルダは残し、モデルがagent worktreeを汚した場合も証拠として保存して次回は新しいrun固有worktreeへ切り替えます。
+登録後は、モデルが一度も書けない`daily-arxiv-data-publisher` worktree、モデル専用の`daily-arxiv-data-agent` worktree、`~/Library/Application Support/Daily arXiv/`のロック・ログ・ホストstaging・日付別checkpointを使います。checkpointは`jobs/<日付>-<snapshot fingerprint>/<runtime fingerprint>/`へ検証済みカテゴリ、厳格検証済みの失敗ドラフト、追記専用の試行・公開履歴を保存し、公開後も小さな監査記録として残します。失敗ドラフトは`drafts/`から同じruntimeだけへ復元され、新規調査・再取得・再採点をせず、決定的な3キーと既存根拠に沿う日本語だけを修復します。公開成功時に消すのは、そのrun自身が作った一時PDF・source・staging・Codexログだけです。失敗資料と既存フォルダは残し、モデルがagent worktreeを汚した場合も証拠として保存して次回は新しいrun固有worktreeへ切り替えます。
 
 ## 検証
 

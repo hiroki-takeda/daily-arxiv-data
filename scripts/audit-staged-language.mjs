@@ -1,18 +1,21 @@
 #!/usr/bin/env node
 
-import { lstatSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   CATEGORIES,
+  MAX_LANGUAGE_AUDIT_PASSES,
+  MAX_STRUCTURE_AUDIT_PASSES,
   SCORE_KEYS,
-  assertExactStagingReports,
   findCategoryProseDiversityIndices,
   findCategoryStructuralDiversityIndices,
-  findProductionScoreDistributionIssues,
   parseJsonFile,
   validateDate,
+  validateModelPolicy,
   validateProductionPaperProse,
+  validateProductionReportStructure,
   validateProductionReportProseDiversity,
 } from "./lib/pipeline.mjs";
 
@@ -23,7 +26,65 @@ function fail(message) {
 const FIELD_PATTERN = /^probe\.papers\[(\d+)\]\.(titleJa|paperType|curiosity|concept|conclusion|assessment|fullTextReviewStatus|abstractLines\[(\d+)\]|scoreReasons\.(broadImpact|categoryImpact|originality|technicalStrength)):/u;
 const SCORE_REASON_GROUP_PATTERN = /^probe\.papers\[(\d+)\]\.scoreReasons:/u;
 const CATEGORY_FIELD_PATTERN = /^probe\.papers\.(curiosity|concept|conclusion|assessment|fullTextReviewStatus|abstractLines\[(\d+)\]|scoreReasons\.(broadImpact|categoryImpact|originality|technicalStrength)):/u;
-const OUTPUT_NAMES = new Set(["language-issues-before.json", "language-issues-after.json"]);
+const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
+
+function auditOutputName(category, pass) {
+  return `${category}-language-audit-${pass}.json`;
+}
+
+function parseAuditPass(outputName, category) {
+  for (let pass = 1; pass <= MAX_LANGUAGE_AUDIT_PASSES; pass += 1) {
+    if (outputName === auditOutputName(category, pass)) return pass;
+  }
+  return undefined;
+}
+
+function validatePriorAudit(path, date, pass) {
+  const audit = parseJsonFile(path);
+  const keys = Object.keys(audit ?? {}).sort();
+  if (keys.join("\0") !== ["count", "date", "issues"].sort().join("\0")) {
+    fail(`Language audit pass ${pass} has an invalid result shape.`);
+  }
+  if (audit.date !== date) fail(`Language audit pass ${pass} is for ${audit.date}, not ${date}.`);
+  if (!Number.isSafeInteger(audit.count) || audit.count < 0 || !Array.isArray(audit.issues)) {
+    fail(`Language audit pass ${pass} has an invalid issue count.`);
+  }
+  if (audit.count !== audit.issues.length) {
+    fail(`Language audit pass ${pass} count does not match its issue array.`);
+  }
+  if (audit.count === 0) {
+    fail(`Language audit pass ${pass} already reported issues=0; no later audit is allowed.`);
+  }
+}
+
+function validateAuditSequence({ runRoot, category, date, pass }) {
+  for (let priorPass = 1; priorPass < pass; priorPass += 1) {
+    validatePriorAudit(resolve(runRoot, auditOutputName(category, priorPass)), date, priorPass);
+  }
+}
+
+function validateStructureGate(runRoot, date, category) {
+  for (let pass = 1; pass <= MAX_STRUCTURE_AUDIT_PASSES; pass += 1) {
+    const path = resolve(runRoot, `${category}-structure-audit-${pass}.json`);
+    if (!existsSync(path)) {
+      fail(`Structural audit pass ${pass} is missing; a zero result is required before a language audit.`);
+    }
+    const result = parseJsonFile(path);
+    const keys = Object.keys(result ?? {}).sort();
+    if (keys.join("\0") !== ["date", "slug", "count", "issues"].sort().join("\0")) {
+      fail(`Structural audit pass ${pass} result has an invalid shape.`);
+    }
+    if (result.date !== date || result.slug !== category) {
+      fail(`Structural audit pass ${pass} result must describe ${date} ${category}.`);
+    }
+    if (!Number.isSafeInteger(result.count) || result.count < 0 || !Array.isArray(result.issues)
+      || result.count !== result.issues.length) {
+      fail(`Structural audit pass ${pass} result has an invalid issue count.`);
+    }
+    if (result.count === 0) return;
+  }
+  fail(`Structural audit pass ${MAX_STRUCTURE_AUDIT_PASSES} is nonzero; no language audit is allowed.`);
+}
 
 function exactCategoryReport(staging, date, slug) {
   const expectedName = `${date}-${slug}.json`;
@@ -131,43 +192,50 @@ function recordCategoryIssue({ issues, categoryIssues, slug, original, path, mes
 }
 
 try {
-  if (![5, 6].includes(process.argv.length)) {
-    fail("Usage: node scripts/audit-staged-language.mjs <YYYY-MM-DD> <fixed-staging-directory> <fixed-output-file> [category]");
+  if (process.argv.length !== 7) {
+    fail("Usage: node scripts/audit-staged-language.mjs <YYYY-MM-DD> <fixed-category-staging-directory> <fixed-output-file> <category> <evaluation-run-id>");
   }
   const date = validateDate(process.argv[2]);
   const runRoot = resolve(process.env.TMPDIR ?? "");
   const staging = resolve(process.argv[3]);
   const output = resolve(process.argv[4]);
   const requestedCategory = process.argv[5];
-  if (requestedCategory !== undefined && !CATEGORIES.includes(requestedCategory)) {
+  const expectedEvaluationRunId = process.argv[6];
+  if (!CATEGORIES.includes(requestedCategory)) {
     fail(`Unsupported category ${requestedCategory}.`);
+  }
+  if (typeof expectedEvaluationRunId !== "string" || expectedEvaluationRunId.trim() === "") {
+    fail("A category language audit requires the host evaluation runId.");
   }
   const stagingEntry = lstatSync(staging);
   if (stagingEntry.isSymbolicLink() || !stagingEntry.isDirectory()) fail("Staging must be a real directory.");
   const canonicalRunRoot = realpathSync(runRoot);
-  const expectedStaging = requestedCategory === undefined
-    ? resolve(canonicalRunRoot, "staging")
-    : resolve(canonicalRunRoot, "staging", requestedCategory);
+  const expectedStaging = resolve(canonicalRunRoot, "staging", requestedCategory);
   if (realpathSync(staging) !== expectedStaging) {
     fail(`Staging directory must be ${expectedStaging}.`);
   }
-  const allowedOutputNames = requestedCategory === undefined
-    ? OUTPUT_NAMES
-    : new Set([`${requestedCategory}-language-issues-before.json`, `${requestedCategory}-language-issues-after.json`]);
-  if (realpathSync(dirname(output)) !== canonicalRunRoot || !allowedOutputNames.has(basename(output))) {
-    if (requestedCategory === undefined) {
-      fail(`Output must be language-issues-before.json or language-issues-after.json directly under ${runRoot}.`);
-    }
-    fail(`Output must be ${requestedCategory}-language-issues-before.json or ${requestedCategory}-language-issues-after.json directly under ${runRoot}.`);
+  const auditPass = parseAuditPass(basename(output), requestedCategory);
+  if (realpathSync(dirname(output)) !== canonicalRunRoot || auditPass === undefined) {
+    fail(`Output must be ${requestedCategory}-language-audit-1.json through ${requestedCategory}-language-audit-${MAX_LANGUAGE_AUDIT_PASSES}.json directly under ${runRoot}.`);
   }
-  const paths = requestedCategory === undefined
-    ? assertExactStagingReports(staging, date)
-    : { [requestedCategory]: exactCategoryReport(staging, date, requestedCategory) };
+  validateStructureGate(canonicalRunRoot, date, requestedCategory);
+  validateAuditSequence({
+    runRoot: canonicalRunRoot,
+    category: requestedCategory,
+    date,
+    pass: auditPass,
+  });
+  const paths = { [requestedCategory]: exactCategoryReport(staging, date, requestedCategory) };
   const issues = [];
   const categoryIssues = new Map();
+  const policy = validateModelPolicy(parseJsonFile(resolve(root, "data/model-policy.json")));
 
-  for (const slug of requestedCategory === undefined ? CATEGORIES : [requestedCategory]) {
+  for (const slug of [requestedCategory]) {
     const original = parseJsonFile(paths[slug]);
+    validateProductionReportStructure(original, { date, slug, policy, path: "report" });
+    if (original.evaluationRun.runId !== expectedEvaluationRunId) {
+      fail(`report.evaluationRun.runId must equal the host value ${expectedEvaluationRunId}.`);
+    }
     const paperProbe = structuredClone(original);
     const categoryProbe = structuredClone(original);
     const seen = new Set();
@@ -237,17 +305,6 @@ try {
     }
     if (!categoryCompleted) fail(`Language audit exceeded its bounded category iteration limit for ${slug}.`);
 
-    for (const scoreIssue of findProductionScoreDistributionIssues(original)) {
-      recordCategoryIssue({
-        issues,
-        categoryIssues,
-        slug,
-        original,
-        path: scoreIssue.path,
-        message: `probe.papers.${scoreIssue.path}: ${scoreIssue.message}`,
-        paperIndices: scoreIssue.paperIndices,
-      });
-    }
   }
 
   writeFileSync(output, `${JSON.stringify({ date, count: issues.length, issues }, null, 2)}\n`, {
