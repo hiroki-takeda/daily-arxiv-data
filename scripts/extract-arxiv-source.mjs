@@ -38,6 +38,8 @@ const SOURCE_PACING_LOCK_POLL_MS = 100;
 const SOURCE_RETRY_DELAYS_MS = Object.freeze([10_000, 30_000, 60_000]);
 const DEFAULT_SOURCE_REQUEST_TIMEOUT_MS = 60_000;
 const MAX_SOURCE_REQUEST_TIMEOUT_MS = 120_000;
+const ARXIV_SOURCE_FORMAT_UNSUPPORTED_CODE = "ARXIV_SOURCE_FORMAT_UNSUPPORTED";
+const ARXIV_SOURCE_UNAVAILABLE_CODE = "ARXIV_SOURCE_UNAVAILABLE";
 const DISALLOWED_TEXT_CONTROLS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/u;
 const TEXT_EXTENSIONS = new Set([
   ".tex", ".ltx", ".bib", ".bbl", ".txt", ".md",
@@ -48,6 +50,32 @@ const OPTIONAL_BIBLIOGRAPHY_EXTENSIONS = new Set([".bib", ".bbl"]);
 
 function fail(message) {
   throw new Error(message);
+}
+
+function formatUnsupported(message) {
+  const error = new Error(message);
+  error.code = ARXIV_SOURCE_FORMAT_UNSUPPORTED_CODE;
+  throw error;
+}
+
+export function isArxivSourceFormatUnsupported(error) {
+  return error?.code === ARXIV_SOURCE_FORMAT_UNSUPPORTED_CODE;
+}
+
+class ArxivSourceUnavailableError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ArxivSourceUnavailableError";
+    this.code = ARXIV_SOURCE_UNAVAILABLE_CODE;
+  }
+}
+
+function sourceUnavailable(message) {
+  throw new ArxivSourceUnavailableError(message);
+}
+
+export function isArxivSourceUnavailable(error) {
+  return error instanceof ArxivSourceUnavailableError;
 }
 
 function transientFail(message) {
@@ -153,10 +181,10 @@ function decodeStrictSourceText(bytes, label) {
   try {
     text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
-    fail(`arXiv source text is not valid UTF-8: ${label}.`);
+    formatUnsupported(`arXiv source text is not valid UTF-8: ${label}.`);
   }
   if (DISALLOWED_TEXT_CONTROLS.test(text)) {
-    fail(`arXiv source text contains disallowed control characters: ${label}.`);
+    formatUnsupported(`arXiv source text contains disallowed control characters: ${label}.`);
   }
   return text;
 }
@@ -242,7 +270,7 @@ function parseTarArchive(buffer) {
     }
     offset = dataStart + Math.ceil(size / 512) * 512;
   }
-  if (files.length === 0) fail("arXiv source archive contains no readable TeX or text source.");
+  if (files.length === 0) formatUnsupported("arXiv source archive contains no readable TeX or text source.");
   return files;
 }
 
@@ -273,7 +301,9 @@ export function parseArxivSourceArchive(compressed, arxivId) {
     if (isTar) return Object.freeze(parseTarArchive(unpacked));
   }
   const sourceText = decodeStrictSourceText(unpacked, `${arxivId}.tex`);
-  if (!looksLikeTexText(sourceText)) fail("arXiv source payload is neither a supported tar archive nor a TeX source.");
+  if (!looksLikeTexText(sourceText)) {
+    formatUnsupported("arXiv source payload is neither a supported tar archive nor a TeX source.");
+  }
   return Object.freeze([Object.freeze({ path: `${arxivId}.tex`, content: Buffer.from(unpacked) })]);
 }
 
@@ -369,6 +399,9 @@ export async function fetchArxivSourceArchive(arxivId, {
         await response.body?.cancel?.("retrying transient source response");
       } else {
         if (response.status !== 200 || response.ok !== true) {
+          if ([403, 404, 410].includes(response.status)) {
+            sourceUnavailable(`arXiv source endpoint returned HTTP ${String(response.status)}.`);
+          }
           fail(`arXiv source endpoint returned HTTP ${String(response.status)}.`);
         }
         const finalUrl = new URL(response.url);
@@ -399,7 +432,10 @@ export async function fetchArxivSourceArchive(arxivId, {
       await sleepImpl(delay);
     }
   }
-  fail(`arXiv source retrieval failed after ${maxAttempts} attempts: ${lastError?.message ?? "unknown network error"}`);
+  sourceUnavailable(
+    `arXiv source retrieval failed after ${maxAttempts} attempts: `
+    + `${lastError?.message ?? "unknown network error"}`,
+  );
 }
 
 function safeRunRoot(env = process.env) {

@@ -22,13 +22,22 @@ import {
   loadCheckpointJob,
   openCheckpointJob,
   preserveCheckpointCategoryDraft,
+  preserveCheckpointCategorySourceDraft,
 } from "../scripts/lib/checkpoint.mjs";
 import {
   MAX_UNCHANGED_DRAFT_REPAIR_FAILURES,
+  computeCategoryRetryState,
   prepareCategoryExecution,
   validateCategoryDraftAssociation,
   validateCategoryRepairMutation,
+  validateCategorySourceResumeDraft,
+  validateCategorySourceResumeMutation,
 } from "../scripts/lib/local-automation.mjs";
+import {
+  MODEL_SOURCE_FAILURE_CLASS,
+  decodeSourceBlockerEventMessage,
+  encodeSourceBlockerEventMessage,
+} from "../scripts/lib/source-blocker.mjs";
 import { validPolicy, validReport } from "./helpers.mjs";
 
 const DATE = "2099-01-05";
@@ -80,6 +89,25 @@ function fixtureSnapshot(report = fixtureReport()) {
       },
     },
   };
+}
+
+function provisionalFixtureReport() {
+  const report = fixtureReport();
+  const paper = report.papers[0];
+  paper.scores = {
+    broadImpact: 18,
+    categoryImpact: 18,
+    originality: 18,
+    technicalStrength: 17,
+  };
+  paper.totalScore = Object.values(paper.scores).reduce((sum, value) => sum + value, 0);
+  paper.fullTextEvaluated = false;
+  paper.evaluationBasis = "title_authors_abstract";
+  paper.sourceUrls = [`https://arxiv.org/abs/${paper.arxivId}v1`];
+  delete paper.fullTextReviewStatus;
+  report.fullTextEvaluatedCount = 0;
+  report.audit.fullTextEvaluatedCount = 0;
+  return report;
 }
 
 async function fixtureJob() {
@@ -239,6 +267,336 @@ test("a retry strictly revalidates an interrupted draft write and appends its mi
   assert.equal(statSync(draft.receiptPath).mode & 0o777, 0o400);
 });
 
+test("a source interruption resumes from the protected screening draft and fixed candidates", async () => {
+  const { root, controlRoot, snapshot, job, policy } = await fixtureJob();
+  const provisional = provisionalFixtureReport();
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: provisional.papers[0].arxivId,
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: [provisional.papers[0].arxivId],
+  };
+  startCategoryAttempt(job, RUN_ID);
+  const draft = preserveCheckpointCategorySourceDraft({
+    job,
+    category: CATEGORY,
+    sourcePath: writeSource(root, "source-incomplete.json", `${JSON.stringify(provisional)}\n`),
+    sourceReceipt: receipt,
+    attemptId: RUN_ID,
+    validateDraft: (candidate, context) => validateCategorySourceResumeDraft({
+      report: candidate,
+      receipt,
+      date: context.reportDate,
+      slug: context.category,
+      policy,
+      evaluationRunId: context.evaluationRunId,
+      snapshot: context.snapshot,
+      candidateOrderRequired: true,
+    }),
+  });
+  appendCheckpointAttempt({
+    job,
+    attemptId: RUN_ID,
+    stage: "category_generation",
+    status: "failed",
+    category: CATEGORY,
+    message: encodeSourceBlockerEventMessage(receipt, {
+      observedAt: new Date("2099-01-05T12:30:00.000Z"),
+    }),
+  });
+  const loaded = loadCheckpointJob({
+    controlRoot,
+    reportDate: DATE,
+    snapshotFingerprint: fingerprintSnapshot(snapshot),
+    runtimeFingerprint: RUNTIME,
+    evaluationRunId: RUN_ID,
+  });
+  const staging = join(root, "source-resume-staging");
+  mkdirSync(staging, { mode: 0o700 });
+  const execution = prepareCategoryExecution({
+    job: loaded,
+    slug: CATEGORY,
+    staging,
+    snapshot,
+    policy,
+  });
+  assert.equal(execution.mode, "source_resume");
+  assert.equal(execution.stage, "category_source_resume");
+  assert.equal(execution.draft.sha256, draft.sha256);
+  assert.deepEqual(execution.sourceReceipt.provisionalCandidateIds, receipt.provisionalCandidateIds);
+  assert.match(execution.prompt, /Do not restart abstract screening/);
+  assert.match(execution.prompt, new RegExp(draft.sha256));
+  assert.match(execution.prompt, new RegExp(receipt.provisionalCandidateIds[0].replace(".", "\\.")));
+  assert.doesNotMatch(execution.prompt, /Screen every assigned abstract/);
+  assert.deepEqual(
+    JSON.parse(readFileSync(join(staging, `${DATE}-${CATEGORY}.json`), "utf8")),
+    provisional,
+  );
+
+  const completed = fixtureReport();
+  assert.equal(validateCategorySourceResumeMutation({
+    source: provisional,
+    resumed: completed,
+    receipt,
+    requireComplete: true,
+  }), true);
+  const changedMetadata = structuredClone(completed);
+  changedMetadata.papers[0].title = "Unreviewed changed title";
+  assert.throws(() => validateCategorySourceResumeMutation({
+    source: provisional,
+    resumed: changedMetadata,
+    receipt,
+    requireComplete: true,
+  }), /changed immutable metadata/);
+  const incomplete = structuredClone(provisional);
+  assert.throws(() => validateCategorySourceResumeMutation({
+    source: provisional,
+    resumed: incomplete,
+    receipt,
+    requireComplete: true,
+  }), /complete full-text review/);
+
+  const compactSource = {
+    papers: [
+      {
+        arxivId: "2099.10001",
+        title: "Candidate",
+        authors: ["A"],
+        primaryCategory: CATEGORY,
+        scores: { broadImpact: 10 },
+        totalScore: 10,
+        evaluationBasis: "title_authors_abstract",
+        fullTextEvaluated: false,
+        sourceUrls: ["https://arxiv.org/abs/2099.10001v1"],
+        assessment: "候補の暫定評定。",
+      },
+      {
+        arxivId: "2099.10002",
+        title: "Noncandidate",
+        authors: ["B"],
+        primaryCategory: CATEGORY,
+        scores: { broadImpact: 9 },
+        totalScore: 9,
+        evaluationBasis: "title_authors_abstract",
+        fullTextEvaluated: false,
+        sourceUrls: ["https://arxiv.org/abs/2099.10002v1"],
+        assessment: "候補外の暫定評定。",
+      },
+    ],
+  };
+  const proseOnly = structuredClone(compactSource);
+  proseOnly.papers[1].assessment = "意味を保って自然な日本語へ整えた評定。";
+  assert.equal(validateCategorySourceResumeMutation({
+    source: compactSource,
+    resumed: proseOnly,
+    receipt: { provisionalCandidateIds: ["2099.10001"] },
+    requireComplete: false,
+  }), true);
+  const changedNoncandidateScore = structuredClone(proseOnly);
+  changedNoncandidateScore.papers[1].scores.broadImpact = 8;
+  changedNoncandidateScore.papers[1].totalScore = 8;
+  assert.throws(() => validateCategorySourceResumeMutation({
+    source: compactSource,
+    resumed: changedNoncandidateScore,
+    receipt: { provisionalCandidateIds: ["2099.10001"] },
+    requireComplete: false,
+  }), /changed protected abstract-screening content/);
+});
+
+test("a source draft atomically preserves its receipt association across a host crash", async () => {
+  const { root, controlRoot, snapshot, job, policy } = await fixtureJob();
+  const provisional = provisionalFixtureReport();
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: provisional.papers[0].arxivId,
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: [provisional.papers[0].arxivId],
+  };
+  startCategoryAttempt(job, RUN_ID);
+  const draft = preserveCheckpointCategorySourceDraft({
+    job,
+    category: CATEGORY,
+    sourcePath: writeSource(root, "source-crash.json", `${JSON.stringify(provisional)}\n`),
+    sourceReceipt: receipt,
+    attemptId: RUN_ID,
+    now: new Date("2099-01-05T12:30:00.000Z"),
+    validateDraft: (candidate, context) => validateCategorySourceResumeDraft({
+      report: candidate,
+      receipt,
+      date: context.reportDate,
+      slug: context.category,
+      policy,
+      evaluationRunId: context.evaluationRunId,
+      snapshot: context.snapshot,
+      candidateOrderRequired: true,
+    }),
+  });
+  // Simulate loss after the one-file source envelope was published but before
+  // the separate retry/audit event was appended.
+  let loaded = loadCheckpointJob({
+    controlRoot,
+    reportDate: DATE,
+    snapshotFingerprint: fingerprintSnapshot(snapshot),
+    runtimeFingerprint: RUNTIME,
+    evaluationRunId: RUN_ID,
+  });
+  assert.equal(loaded.incompleteDrafts.length, 0);
+  assert.equal(loaded.drafts[CATEGORY].length, 1);
+  assert.equal(loaded.drafts[CATEGORY][0].storageKind, "source_envelope");
+  assert.deepEqual(loaded.drafts[CATEGORY][0].sourceReceipt, receipt);
+  assert.equal(readdirSync(loaded.paths.drafts).length, 1);
+  assert.match(readdirSync(loaded.paths.drafts)[0], /\.source-draft\.json$/u);
+
+  const staging = join(root, "source-crash-retry-staging");
+  mkdirSync(staging, { mode: 0o700 });
+  const execution = prepareCategoryExecution({
+    job: loaded,
+    slug: CATEGORY,
+    staging,
+    snapshot,
+    policy,
+  });
+  assert.equal(execution.mode, "source_resume", "a source draft must never become a generic repair");
+  assert.equal(execution.draft.sha256, draft.sha256);
+  loaded = loadCheckpointJob({
+    controlRoot,
+    reportDate: DATE,
+    snapshotFingerprint: fingerprintSnapshot(snapshot),
+    runtimeFingerprint: RUNTIME,
+    evaluationRunId: RUN_ID,
+  });
+  const recoveredEvents = loaded.attempts.filter((event) => (
+    event.attemptId === RUN_ID
+    && decodeSourceBlockerEventMessage(event.message) !== null
+  ));
+  assert.equal(recoveredEvents.length, 1, "the retry/backoff event is recoverable from the atomic envelope");
+  assert.deepEqual(decodeSourceBlockerEventMessage(recoveredEvents[0].message).receipt, receipt);
+});
+
+test("a crash cannot turn an unfinished fixed candidate 11 or 12 into a publishable generic draft", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-source-tail-crash-test-")));
+  const controlRoot = join(root, "control");
+  mkdirSync(controlRoot, { mode: 0o700 });
+  const report = validReport(CATEGORY, {
+    count: 12,
+    run: {
+      modelId: "gpt-5.6-sol",
+      modelDisplayName: "GPT-5.6-Sol",
+      reasoningEffort: "high",
+      modelSelectionVerified: true,
+      runId: RUN_ID,
+    },
+  });
+  const snapshot = fixtureSnapshot(report);
+  snapshot.categories[CATEGORY].newCount = report.papers.length;
+  snapshot.categories[CATEGORY].newIds = report.papers.map(({ arxivId }) => arxivId);
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: report.papers[11].arxivId,
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: report.papers.map(({ arxivId }) => arxivId),
+  };
+  const job = openCheckpointJob({
+    controlRoot,
+    snapshot,
+    snapshotFingerprint: fingerprintSnapshot(snapshot),
+    runtimeFingerprint: RUNTIME,
+    evaluationRunId: RUN_ID,
+  });
+  startCategoryAttempt(job, RUN_ID);
+  preserveCheckpointCategorySourceDraft({
+    job,
+    category: CATEGORY,
+    sourcePath: writeSource(root, "source-tail-crash.json", `${JSON.stringify(report)}\n`),
+    sourceReceipt: receipt,
+    attemptId: RUN_ID,
+    validateDraft: (candidate, context) => validateCategorySourceResumeDraft({
+      report: candidate,
+      receipt,
+      date: context.reportDate,
+      slug: context.category,
+      policy: validPolicy(),
+      evaluationRunId: context.evaluationRunId,
+      snapshot: context.snapshot,
+      candidateOrderRequired: true,
+    }),
+  });
+
+  const staging = join(root, "source-tail-crash-staging");
+  mkdirSync(staging, { mode: 0o700 });
+  const execution = prepareCategoryExecution({
+    job,
+    slug: CATEGORY,
+    staging,
+    snapshot,
+    policy: validPolicy(),
+  });
+  assert.equal(execution.mode, "source_resume");
+  assert.throws(() => validateCategorySourceResumeMutation({
+    source: execution.draft.report,
+    resumed: execution.draft.report,
+    receipt: execution.sourceReceipt,
+    requireComplete: true,
+  }), /complete full-text review for the exact fixed candidate set/u);
+});
+
+test("partial full-text rescoring may move a fixed candidate below provisional top N", () => {
+  const report = validReport(CATEGORY, { count: 13 });
+  const initialCandidateIds = report.papers.slice(0, 12).map(({ arxivId }) => arxivId);
+  report.papers[0].scores = {
+    broadImpact: 0,
+    categoryImpact: 0,
+    originality: 0,
+    technicalStrength: 0,
+  };
+  report.papers[0].totalScore = 0;
+  const ranked = [...report.papers].sort((left, right) => (
+    right.totalScore - left.totalScore
+    || right.scores.broadImpact - left.scores.broadImpact
+    || right.scores.originality - left.scores.originality
+    || right.scores.technicalStrength - left.scores.technicalStrength
+    || right.scores.categoryImpact - left.scores.categoryImpact
+    || left.arxivId.localeCompare(right.arxivId)
+  ));
+  ranked.forEach((paper, index) => {
+    paper.rank = index + 1;
+  });
+  const snapshot = fixtureSnapshot(report);
+  snapshot.categories[CATEGORY].newCount = report.papers.length;
+  snapshot.categories[CATEGORY].newIds = report.papers.map(({ arxivId }) => arxivId);
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: initialCandidateIds[1],
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: initialCandidateIds,
+  };
+  assert.equal(report.papers[0].rank, 13);
+  assert.equal(validateCategorySourceResumeDraft({
+    report,
+    receipt,
+    date: DATE,
+    slug: CATEGORY,
+    policy: validPolicy(),
+    evaluationRunId: report.evaluationRun.runId,
+    snapshot,
+    candidateOrderRequired: false,
+  }), true);
+  assert.throws(() => validateCategorySourceResumeDraft({
+    report,
+    receipt,
+    date: DATE,
+    slug: CATEGORY,
+    policy: validPolicy(),
+    evaluationRunId: report.evaluationRun.runId,
+    snapshot,
+    candidateOrderRequired: true,
+  }), /initial deterministic provisional top-12 candidate order/u);
+});
+
 test("repair may change prose and deterministic identity keys but cannot change protected research judgments", () => {
   const source = fixtureReport();
   const repaired = structuredClone(source);
@@ -390,7 +748,7 @@ test("truncated, wrong-run, wrong-snapshot, and out-of-bounds drafts are rejecte
   assert.deepEqual(readdirSync(job.paths.drafts), []);
 });
 
-test("two failed repairs from one unchanged protected digest stop before a third model attempt", async () => {
+test("four terminally failed repairs retain the draft and fall back through capped generation backoff", async () => {
   const { root, report, snapshot, job, policy } = await fixtureJob();
   startCategoryAttempt(job, RUN_ID);
   const draft = preserveCheckpointCategoryDraft({
@@ -419,6 +777,212 @@ test("two failed repairs from one unchanged protected digest stop before a third
   }
   const staging = join(root, "bounded-retry-staging");
   mkdirSync(staging, { mode: 0o700 });
-  assert.throws(() => prepareCategoryExecution({ job, slug: CATEGORY, staging, snapshot, policy }), /stopped after 2 unchanged attempts/);
-  assert.deepEqual(readdirSync(staging), [], "the protected draft is not materialized after the retry bound");
+  const execution = prepareCategoryExecution({ job, slug: CATEGORY, staging, snapshot, policy });
+  assert.equal(execution.mode, "generation");
+  assert.equal(execution.stage, "category_generation");
+  assert.equal(execution.draft, null);
+  assert.equal(execution.regenerationFallback.repairFailureCount, MAX_UNCHANGED_DRAFT_REPAIR_FAILURES);
+  assert.equal(execution.regenerationFallback.protectedDraft.sha256, draft.sha256);
+  assert.equal(execution.regenerationFallback.announcementNeeded, true);
+  assert.match(execution.prompt, /one resumable category stage/u);
+  assert.deepEqual(
+    readdirSync(staging),
+    [],
+    "full-regeneration fallback must not overwrite or materialize the protected draft",
+  );
+  assert.equal(existsSync(draft.path), true, "the previous protected draft remains immutable checkpoint evidence");
+
+  const retry = computeCategoryRetryState({
+    execution,
+    attempts: loadCheckpointJob({
+      controlRoot: job.controlRoot,
+      reportDate: DATE,
+      snapshotFingerprint: fingerprintSnapshot(snapshot),
+      runtimeFingerprint: RUNTIME,
+      evaluationRunId: RUN_ID,
+    }).attempts,
+    category: CATEGORY,
+    now: new Date(),
+  });
+  assert.equal(retry.active, true);
+  assert.equal(retry.shouldDefer, true);
+  assert.equal(retry.failureCount, MAX_UNCHANGED_DRAFT_REPAIR_FAILURES);
+  assert.equal(retry.delayHours, 72);
+
+  appendCheckpointAttempt({
+    job,
+    attemptId: "run-20990105T180000Z-123456abcdef",
+    stage: "category_regeneration_fallback",
+    status: "deferred",
+    category: CATEGORY,
+    message: `REPAIR_REGENERATION_FALLBACK_DRAFT_SHA256=${draft.sha256}; Protected draft retained; bounded regeneration backoff remains active.`,
+  });
+  const secondStaging = join(root, "bounded-retry-second-staging");
+  mkdirSync(secondStaging, { mode: 0o700 });
+  const announced = prepareCategoryExecution({
+    job,
+    slug: CATEGORY,
+    staging: secondStaging,
+    snapshot,
+    policy,
+  });
+  assert.equal(announced.regenerationFallback.announcementNeeded, false);
+  assert.equal(existsSync(draft.path), true);
+});
+
+test("repair exhaustion follows the checkpoint lineage even when every failed repair preserves a new draft digest", async () => {
+  const { root, report, snapshot, job, policy } = await fixtureJob();
+  appendCheckpointAttempt({
+    job,
+    attemptId: RUN_ID,
+    stage: "category_generation",
+    status: "started",
+    category: CATEGORY,
+    message: "Started initial generation.",
+    at: new Date("2099-01-05T12:01:00.000Z"),
+  });
+  let latestReport = report;
+  let latestDraft = preserveCheckpointCategoryDraft({
+    job,
+    category: CATEGORY,
+    sourcePath: writeSource(root, "lineage-initial.json", `${JSON.stringify(latestReport)}\n`),
+    validateDraft: validateFixtureDraft(policy),
+    attemptId: RUN_ID,
+    now: new Date("2099-01-05T12:02:00.000Z"),
+  });
+  const draftDigests = new Set([latestDraft.sha256]);
+
+  for (let index = 0; index < MAX_UNCHANGED_DRAFT_REPAIR_FAILURES; index += 1) {
+    const hour = 13 + index;
+    const attemptId = `run-20990105T${String(hour).padStart(2, "0")}0000Z-123456abcde${index}`;
+    appendCheckpointAttempt({
+      job,
+      attemptId,
+      stage: "category_repair",
+      status: "started",
+      category: CATEGORY,
+      message: `REPAIR_SOURCE_DRAFT_SHA256=${latestDraft.sha256}; Started bounded repair.`,
+      at: new Date(`2099-01-05T${String(hour).padStart(2, "0")}:00:00.000Z`),
+    });
+    const successor = structuredClone(latestReport);
+    successor.papers[0].assessment = `既存判断を変えずに日本語表現だけを整えた修復稿 ${index + 1}。`;
+    assert.equal(validateCategoryRepairMutation({ source: latestReport, repaired: successor }), true);
+    latestDraft = preserveCheckpointCategoryDraft({
+      job,
+      category: CATEGORY,
+      sourcePath: writeSource(root, `lineage-successor-${index}.json`, `${JSON.stringify(successor)}\n`),
+      validateDraft: (candidate, context) => {
+        validateFixtureDraft(policy)(candidate, context);
+        return validateCategoryRepairMutation({ source: latestReport, repaired: candidate });
+      },
+      attemptId,
+      now: new Date(`2099-01-05T${String(hour).padStart(2, "0")}:10:00.000Z`),
+    });
+    draftDigests.add(latestDraft.sha256);
+    appendCheckpointAttempt({
+      job,
+      attemptId,
+      stage: "category_repair",
+      status: "failed",
+      category: CATEGORY,
+      message: `REPAIR_SOURCE_DRAFT_SHA256=${latestDraft.sha256}; repaired draft was preserved before a terminal transport failure.`,
+      at: new Date(`2099-01-05T${String(hour).padStart(2, "0")}:20:00.000Z`),
+    });
+    latestReport = successor;
+  }
+  assert.equal(
+    draftDigests.size,
+    MAX_UNCHANGED_DRAFT_REPAIR_FAILURES + 1,
+    "each repair must exercise a distinct protected successor digest",
+  );
+
+  const staging = join(root, "lineage-retry-staging");
+  mkdirSync(staging, { mode: 0o700 });
+  const exhausted = prepareCategoryExecution({ job, slug: CATEGORY, staging, snapshot, policy });
+  assert.equal(exhausted.mode, "generation");
+  assert.equal(exhausted.regenerationFallback.repairFailureCount, MAX_UNCHANGED_DRAFT_REPAIR_FAILURES);
+  assert.equal(exhausted.regenerationFallback.protectedDraft.sha256, latestDraft.sha256);
+  assert.equal(exhausted.regenerationFallback.announcementNeeded, true);
+
+  appendCheckpointAttempt({
+    job,
+    attemptId: "run-20990105T180000Z-123456abcdef",
+    stage: "category_regeneration_fallback",
+    status: "deferred",
+    category: CATEGORY,
+    message: `REPAIR_REGENERATION_FALLBACK_DRAFT_SHA256=${latestDraft.sha256}; Protected draft retained.`,
+    at: new Date("2099-01-05T18:00:00.000Z"),
+  });
+  const generationAttempt = "run-20990105T190000Z-123456abcdef";
+  appendCheckpointAttempt({
+    job,
+    attemptId: generationAttempt,
+    stage: "category_generation",
+    status: "started",
+    category: CATEGORY,
+    message: "Started bounded regeneration after cooldown.",
+    at: new Date("2099-01-05T19:00:00.000Z"),
+  });
+  const regenerated = structuredClone(latestReport);
+  regenerated.papers[0].assessment = "再生成中に保護された新しい有効ドラフト。";
+  const regeneratedDraft = preserveCheckpointCategoryDraft({
+    job,
+    category: CATEGORY,
+    sourcePath: writeSource(root, "lineage-regenerated.json", `${JSON.stringify(regenerated)}\n`),
+    validateDraft: validateFixtureDraft(policy),
+    attemptId: generationAttempt,
+    now: new Date("2099-01-05T19:10:00.000Z"),
+  });
+  appendCheckpointAttempt({
+    job,
+    attemptId: generationAttempt,
+    stage: "category_generation",
+    status: "failed",
+    category: CATEGORY,
+    message: "Regeneration transport failed after preserving its valid draft.",
+    at: new Date("2099-01-05T19:20:00.000Z"),
+  });
+
+  const secondStaging = join(root, "lineage-retry-second-staging");
+  mkdirSync(secondStaging, { mode: 0o700 });
+  const continued = prepareCategoryExecution({
+    job,
+    slug: CATEGORY,
+    staging: secondStaging,
+    snapshot,
+    policy,
+  });
+  assert.equal(continued.mode, "generation");
+  assert.equal(continued.regenerationFallback.repairFailureCount, MAX_UNCHANGED_DRAFT_REPAIR_FAILURES);
+  assert.equal(continued.regenerationFallback.protectedDraft.sha256, regeneratedDraft.sha256);
+  assert.equal(
+    continued.regenerationFallback.announcementNeeded,
+    false,
+    "a changed successor digest must not repeat the one-shot fallback notification",
+  );
+});
+
+test("repair starts without terminal failures do not exhaust the unchanged-draft retry budget", async () => {
+  const { root, report, snapshot, job, policy } = await fixtureJob();
+  startCategoryAttempt(job, RUN_ID);
+  const draft = preserveCheckpointCategoryDraft({
+    job,
+    category: CATEGORY,
+    sourcePath: writeSource(root, "started-only.json", `${JSON.stringify(report)}\n`),
+    validateDraft: validateFixtureDraft(policy),
+    attemptId: RUN_ID,
+  });
+  for (let index = 0; index < MAX_UNCHANGED_DRAFT_REPAIR_FAILURES + 2; index += 1) {
+    startCategoryAttempt(
+      job,
+      `run-20990105T${String(17 + index).padStart(2, "0")}0000Z-123456abcde${index}`,
+      "category_repair",
+      `REPAIR_SOURCE_DRAFT_SHA256=${draft.sha256}; Started bounded repair.`,
+    );
+  }
+  const staging = join(root, "started-only-staging");
+  mkdirSync(staging, { mode: 0o700 });
+  const execution = prepareCategoryExecution({ job, slug: CATEGORY, staging, snapshot, policy });
+  assert.equal(execution.mode, "repair");
+  assert.equal(execution.unchangedFailures, 0);
 });

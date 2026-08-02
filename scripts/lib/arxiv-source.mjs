@@ -975,16 +975,17 @@ function assertPastweekWindow(window) {
   return window;
 }
 
-export function selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latestDate, now = new Date() } = {}) {
+function classifyOfficialCurrentSnapshot(currentSnapshot, { latestDate, now }) {
   assertSnapshot(currentSnapshot);
   for (const slug of ARXIV_CATEGORIES) {
     if (currentSnapshot.categories[slug].sourceUrl !== ARXIV_LISTING_URLS[slug]) {
       fail("SOURCE_INVALID", "currentSnapshot must come from the hardcoded official /new listings.");
     }
   }
-  const classification = classifySnapshotDate(currentSnapshot, { latestDate, now });
-  if (classification === "current") return null;
+  return classifySnapshotDate(currentSnapshot, { latestDate, now });
+}
 
+function assertPastweekHeadMatchesCurrent(currentSnapshot, pastweekWindow) {
   assertPastweekWindow(pastweekWindow);
   if (pastweekWindow.announcementDates[0] !== currentSnapshot.announcementDate) {
     fail("SOURCE_CONTENT_MISMATCH", "The newest pastweek date does not match the current /new announcement date.");
@@ -997,6 +998,22 @@ export function selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latest
   ) {
     fail("SOURCE_CONTENT_MISMATCH", "The newest pastweek content does not exactly match the current /new listings.");
   }
+  return pastweekWindow;
+}
+
+function immediateWeekdaySuccessor(date) {
+  validateDate(date, "latestDate");
+  const cursor = new Date(`${date}T00:00:00Z`);
+  do {
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  } while (cursor.getUTCDay() === 0 || cursor.getUTCDay() === 6);
+  return cursor.toISOString().slice(0, 10);
+}
+
+export function selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latestDate, now = new Date() } = {}) {
+  const classification = classifyOfficialCurrentSnapshot(currentSnapshot, { latestDate, now });
+  if (classification === "current") return null;
+  assertPastweekHeadMatchesCurrent(currentSnapshot, pastweekWindow);
 
   const anchorIndex = pastweekWindow.announcementDates.indexOf(latestDate);
   if (anchorIndex === -1) {
@@ -1023,6 +1040,327 @@ export function selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latest
   return Object.freeze({
     snapshot: snapshotsByDate.get(oldestPendingDate),
     pendingCount: eligiblePendingDates.length,
+    pendingSnapshots: Object.freeze(
+      [...eligiblePendingDates].reverse().map((date) => snapshotsByDate.get(date)),
+    ),
+  });
+}
+
+export function selectCheckpointRecoverySnapshot({
+  storedSnapshot,
+  currentSnapshot,
+  pastweekWindow,
+  latestDate,
+  expectedDate,
+  expectedSnapshotFingerprint,
+  now = new Date(),
+} = {}) {
+  validateDate(latestDate, "latestDate");
+  validateDate(expectedDate, "expectedDate");
+  if (typeof expectedSnapshotFingerprint !== "string" || !/^[a-f0-9]{64}$/.test(expectedSnapshotFingerprint)) {
+    fail("SOURCE_INVALID", "expectedSnapshotFingerprint must be a lowercase SHA-256 digest.");
+  }
+
+  const classification = classifyOfficialCurrentSnapshot(currentSnapshot, { latestDate, now });
+  if (classification === "current") {
+    fail("SOURCE_BACKFILL_WINDOW", "Checkpoint recovery requires an unpublished official announcement.");
+  }
+  assertPastweekHeadMatchesCurrent(currentSnapshot, pastweekWindow);
+
+  assertSnapshot(storedSnapshot);
+  for (const slug of ARXIV_CATEGORIES) {
+    if (storedSnapshot.categories[slug].sourceUrl !== ARXIV_PASTWEEK_LISTING_URLS[slug]) {
+      fail("SOURCE_INVALID", "The stored recovery snapshot must come from the official pastweek listings.");
+    }
+  }
+  if (storedSnapshot.announcementDate !== expectedDate) {
+    fail("SOURCE_CONTENT_MISMATCH", "The stored recovery snapshot does not match expectedDate.");
+  }
+  if (fingerprintSnapshot(storedSnapshot) !== expectedSnapshotFingerprint) {
+    fail("SOURCE_CONTENT_MISMATCH", "The stored recovery snapshot does not match expectedSnapshotFingerprint.");
+  }
+  if (expectedDate <= latestDate) {
+    fail("SOURCE_BACKFILL_WINDOW", "Checkpoint recovery target must be newer than latestDate.");
+  }
+  const interveningAnnouncementDates = pastweekWindow.announcementDates.filter(
+    (date) => date > latestDate && date < expectedDate,
+  );
+  const latestIsLive = pastweekWindow.announcementDates.includes(latestDate);
+  if (
+    interveningAnnouncementDates.length !== 0
+    || (!latestIsLive && immediateWeekdaySuccessor(latestDate) !== expectedDate)
+  ) {
+    fail(
+      "SOURCE_BACKFILL_WINDOW",
+      latestIsLive
+        ? "Checkpoint recovery target must not skip an official announcement present in the validated pastweek window."
+        : "Checkpoint recovery target must be the immediate weekday successor when latestDate is outside pastweek.",
+    );
+  }
+
+  const freshSnapshot = revalidatePastweekSnapshot(storedSnapshot, pastweekWindow);
+  const oldestComplete = pastweekWindow.snapshots.at(-1);
+  if (oldestComplete === undefined || oldestComplete.announcementDate !== expectedDate) {
+    fail(
+      "SOURCE_BACKFILL_WINDOW",
+      "Checkpoint recovery target must be the oldest complete official pastweek snapshot.",
+    );
+  }
+  if (fingerprintSnapshot(freshSnapshot) !== expectedSnapshotFingerprint) {
+    fail("SOURCE_CONTENT_MISMATCH", "Fresh recovery snapshot does not match expectedSnapshotFingerprint.");
+  }
+
+  const eligiblePendingCount = pastweekWindow.snapshots.filter((snapshot) => (
+    snapshot.announcementDate >= expectedDate
+    && ARXIV_CATEGORIES.some((slug) => snapshot.categories[slug].newCount > 0)
+  )).length;
+  if (eligiblePendingCount === 0) {
+    fail("SOURCE_INCOMPLETE", "Checkpoint recovery target contains no eligible primary-new papers.");
+  }
+  const pendingSnapshots = pastweekWindow.snapshots.filter((snapshot) => (
+    snapshot.announcementDate >= expectedDate
+    && ARXIV_CATEGORIES.some((slug) => snapshot.categories[slug].newCount > 0)
+  )).reverse();
+  return Object.freeze({
+    snapshot: freshSnapshot,
+    pendingCount: eligiblePendingCount,
+    pendingSnapshots: Object.freeze(pendingSnapshots),
+  });
+}
+
+const DURABLE_SELECTION_EVIDENCE_KEYS = Object.freeze([
+  "schemaVersion",
+  "selectionMode",
+  "expectedLatestDate",
+  "targetDate",
+  "targetSnapshotFingerprint",
+  "officialHeadDate",
+  "officialHeadFingerprint",
+  "pastweekAnnouncementDates",
+  "completeSnapshotDates",
+]);
+
+function exactObjectKeys(value, expected, label) {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    fail("SOURCE_INVALID", `${label} must be a JSON object.`);
+  }
+  const actual = Object.keys(value).sort();
+  const wanted = [...expected].sort();
+  if (actual.join("\0") !== wanted.join("\0")) {
+    fail("SOURCE_INVALID", `${label} must contain exactly: ${wanted.join(", ")}.`);
+  }
+}
+
+function validateDurableSelectionEvidence(evidence, {
+  latestDate,
+  expectedDate,
+  expectedSnapshotFingerprint,
+} = {}) {
+  exactObjectKeys(evidence, DURABLE_SELECTION_EVIDENCE_KEYS, "Durable selection evidence");
+  if (evidence.schemaVersion !== "1.0") {
+    fail("SOURCE_INVALID", "Durable selection evidence schemaVersion must be 1.0.");
+  }
+  if (!["normal", "checkpoint_recovery"].includes(evidence.selectionMode)) {
+    fail("SOURCE_INVALID", "Durable selection evidence selectionMode is invalid.");
+  }
+  for (const [label, date] of [
+    ["expectedLatestDate", evidence.expectedLatestDate],
+    ["targetDate", evidence.targetDate],
+    ["officialHeadDate", evidence.officialHeadDate],
+  ]) validateDate(date, `Durable selection evidence ${label}`);
+  if (
+    typeof evidence.targetSnapshotFingerprint !== "string"
+    || !/^[a-f0-9]{64}$/u.test(evidence.targetSnapshotFingerprint)
+    || typeof evidence.officialHeadFingerprint !== "string"
+    || !/^[a-f0-9]{64}$/u.test(evidence.officialHeadFingerprint)
+  ) {
+    fail("SOURCE_INVALID", "Durable selection evidence fingerprints must be lowercase SHA-256 digests.");
+  }
+  if (
+    evidence.expectedLatestDate !== latestDate
+    || evidence.targetDate !== expectedDate
+    || evidence.targetSnapshotFingerprint !== expectedSnapshotFingerprint
+  ) {
+    fail("SOURCE_CONTENT_MISMATCH", "Durable selection evidence does not match the authorized continuation.");
+  }
+  for (const [label, dates] of [
+    ["pastweekAnnouncementDates", evidence.pastweekAnnouncementDates],
+    ["completeSnapshotDates", evidence.completeSnapshotDates],
+  ]) {
+    if (!Array.isArray(dates) || dates.length === 0 || new Set(dates).size !== dates.length) {
+      fail("SOURCE_INVALID", `Durable selection evidence ${label} must be a non-empty unique date array.`);
+    }
+    dates.forEach((date) => validateDate(date, `Durable selection evidence ${label}`));
+    if (dates.some((date, index) => index > 0 && dates[index - 1] <= date)) {
+      fail("SOURCE_INVALID", `Durable selection evidence ${label} must be newest-to-oldest.`);
+    }
+  }
+  if (
+    evidence.pastweekAnnouncementDates[0] !== evidence.officialHeadDate
+    || !evidence.pastweekAnnouncementDates.includes(evidence.targetDate)
+    || !evidence.completeSnapshotDates.includes(evidence.targetDate)
+    || evidence.officialHeadDate < evidence.targetDate
+  ) {
+    fail("SOURCE_INVALID", "Durable selection evidence has inconsistent official announcement dates.");
+  }
+  if (evidence.selectionMode === "normal") {
+    if (!evidence.pastweekAnnouncementDates.includes(evidence.expectedLatestDate)) {
+      fail("SOURCE_INVALID", "Normal durable selection evidence must include its public latestDate anchor.");
+    }
+  } else {
+    const intervening = evidence.pastweekAnnouncementDates.filter(
+      (date) => date > evidence.expectedLatestDate && date < evidence.targetDate,
+    );
+    if (
+      intervening.length !== 0
+      || (
+        !evidence.pastweekAnnouncementDates.includes(evidence.expectedLatestDate)
+        && immediateWeekdaySuccessor(evidence.expectedLatestDate) !== evidence.targetDate
+      )
+    ) {
+      fail("SOURCE_INVALID", "Checkpoint-recovery evidence may not skip a listed official announcement.");
+    }
+  }
+  return evidence;
+}
+
+export function buildDurableSelectionEvidence({
+  selectionMode,
+  snapshot,
+  currentSnapshot,
+  pastweekWindow,
+  latestDate,
+  now = new Date(),
+} = {}) {
+  if (!["normal", "checkpoint_recovery"].includes(selectionMode)) {
+    fail("SOURCE_INVALID", "Durable selection mode must be normal or checkpoint_recovery.");
+  }
+  const snapshotFingerprint = fingerprintSnapshot(snapshot);
+  const selection = selectionMode === "normal"
+    ? selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latestDate, now })
+    : selectCheckpointRecoverySnapshot({
+      storedSnapshot: snapshot,
+      currentSnapshot,
+      pastweekWindow,
+      latestDate,
+      expectedDate: snapshot.announcementDate,
+      expectedSnapshotFingerprint: snapshotFingerprint,
+      now,
+    });
+  if (
+    selection === null
+    || selection.snapshot.announcementDate !== snapshot.announcementDate
+    || fingerprintSnapshot(selection.snapshot) !== snapshotFingerprint
+  ) {
+    fail("SOURCE_CONTENT_MISMATCH", "The durable authorization target is not the exact live selected snapshot.");
+  }
+  const evidence = {
+    schemaVersion: "1.0",
+    selectionMode,
+    expectedLatestDate: latestDate,
+    targetDate: snapshot.announcementDate,
+    targetSnapshotFingerprint: snapshotFingerprint,
+    officialHeadDate: currentSnapshot.announcementDate,
+    officialHeadFingerprint: fingerprintSnapshot(currentSnapshot),
+    pastweekAnnouncementDates: [...pastweekWindow.announcementDates],
+    completeSnapshotDates: pastweekWindow.snapshots.map(({ announcementDate }) => announcementDate),
+  };
+  validateDurableSelectionEvidence(evidence, {
+    latestDate,
+    expectedDate: snapshot.announcementDate,
+    expectedSnapshotFingerprint: snapshotFingerprint,
+  });
+  return Object.freeze({
+    ...evidence,
+    pastweekAnnouncementDates: Object.freeze(evidence.pastweekAnnouncementDates),
+    completeSnapshotDates: Object.freeze(evidence.completeSnapshotDates),
+  });
+}
+
+export function selectAuthorizedContinuationSnapshot({
+  storedSnapshot,
+  currentSnapshot,
+  pastweekWindow,
+  latestDate,
+  expectedDate,
+  expectedSnapshotFingerprint,
+  evidence,
+  now = new Date(),
+} = {}) {
+  validateDate(latestDate, "latestDate");
+  validateDate(expectedDate, "expectedDate");
+  if (typeof expectedSnapshotFingerprint !== "string" || !/^[a-f0-9]{64}$/u.test(expectedSnapshotFingerprint)) {
+    fail("SOURCE_INVALID", "expectedSnapshotFingerprint must be a lowercase SHA-256 digest.");
+  }
+  validateDurableSelectionEvidence(evidence, {
+    latestDate,
+    expectedDate,
+    expectedSnapshotFingerprint,
+  });
+  const classification = classifyOfficialCurrentSnapshot(currentSnapshot, { latestDate, now });
+  if (classification === "current") {
+    fail("SOURCE_BACKFILL_WINDOW", "An active durable continuation requires an unpublished official announcement.");
+  }
+  assertPastweekHeadMatchesCurrent(currentSnapshot, pastweekWindow);
+  assertSnapshot(storedSnapshot);
+  for (const slug of ARXIV_CATEGORIES) {
+    if (storedSnapshot.categories[slug].sourceUrl !== ARXIV_PASTWEEK_LISTING_URLS[slug]) {
+      fail("SOURCE_INVALID", "The durable continuation snapshot must come from official pastweek listings.");
+    }
+  }
+  if (
+    storedSnapshot.announcementDate !== expectedDate
+    || fingerprintSnapshot(storedSnapshot) !== expectedSnapshotFingerprint
+  ) {
+    fail("SOURCE_CONTENT_MISMATCH", "The stored durable continuation snapshot changed.");
+  }
+  if (expectedDate <= latestDate) {
+    fail("SOURCE_BACKFILL_WINDOW", "The durable continuation target must remain newer than public latestDate.");
+  }
+  if (
+    currentSnapshot.announcementDate < evidence.officialHeadDate
+    || currentSnapshot.announcementDate < expectedDate
+  ) {
+    fail("SOURCE_CONTENT_MISMATCH", "The official announcement head moved behind the durable validation evidence.");
+  }
+  if (
+    currentSnapshot.announcementDate === evidence.officialHeadDate
+    && fingerprintSnapshot(currentSnapshot) !== evidence.officialHeadFingerprint
+  ) {
+    fail("SOURCE_CONTENT_MISMATCH", "The unchanged official head no longer matches durable validation evidence.");
+  }
+
+  const freshSnapshot = pastweekWindow.snapshots.find(
+    ({ announcementDate }) => announcementDate === expectedDate,
+  );
+  if (freshSnapshot !== undefined) {
+    if (fingerprintSnapshot(freshSnapshot) !== expectedSnapshotFingerprint) {
+      fail("SOURCE_CONTENT_MISMATCH", "The live durable continuation snapshot changed.");
+    }
+  } else {
+    if (
+      currentSnapshot.announcementDate <= expectedDate
+      || pastweekWindow.announcementDates.some((date) => date <= expectedDate)
+    ) {
+      fail(
+        "SOURCE_BACKFILL_WINDOW",
+        "The durable target is absent without having safely aged behind the complete official pastweek window.",
+      );
+    }
+  }
+  const newerEligibleSnapshots = pastweekWindow.snapshots.filter((candidate) => (
+    candidate.announcementDate > expectedDate
+    && ARXIV_CATEGORIES.some((slug) => candidate.categories[slug].newCount > 0)
+  )).reverse();
+  return Object.freeze({
+    snapshot: freshSnapshot ?? storedSnapshot,
+    pendingCount: 1 + newerEligibleSnapshots.length,
+    pendingSnapshots: Object.freeze([
+      freshSnapshot ?? storedSnapshot,
+      ...newerEligibleSnapshots,
+    ]),
+    durable: true,
+    targetStillLive: freshSnapshot !== undefined,
   });
 }
 

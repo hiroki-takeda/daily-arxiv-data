@@ -16,6 +16,8 @@ import {
   extractArxivSource,
   enforcePoliteSourceInterval,
   fetchArxivSourceArchive,
+  isArxivSourceFormatUnsupported,
+  isArxivSourceUnavailable,
   parseArxivSourceArchive,
   validateArxivSourceId,
   writeArxivSourceFiles,
@@ -129,7 +131,10 @@ test("official e-print parser rejects archive traversal and malformed IDs", () =
   const archive = gzipSync(makeTar([
     { path: "../escape.tex", content: "\\documentclass{article}\n" },
   ]));
-  assert.throws(() => parseArxivSourceArchive(archive, "2607.00001"), /path traversal/u);
+  assert.throws(
+    () => parseArxivSourceArchive(archive, "2607.00001"),
+    (error) => /path traversal/u.test(error.message) && !isArxivSourceFormatUnsupported(error),
+  );
   assert.throws(() => validateArxivSourceId("2607.00001v1"), /unversioned/u);
 });
 
@@ -140,8 +145,14 @@ test("official e-print parser rejects invalid UTF-8 and text control characters"
   const controlCharacter = gzipSync(makeTar([
     { path: "main.tex", content: Buffer.from("\\documentclass{article}\nBad\u001bText\n", "utf8") },
   ]));
-  assert.throws(() => parseArxivSourceArchive(invalidUtf8, "2607.00001"), /valid UTF-8/u);
-  assert.throws(() => parseArxivSourceArchive(controlCharacter, "2607.00001"), /control characters/u);
+  assert.throws(
+    () => parseArxivSourceArchive(invalidUtf8, "2607.00001"),
+    (error) => /valid UTF-8/u.test(error.message) && isArxivSourceFormatUnsupported(error),
+  );
+  assert.throws(
+    () => parseArxivSourceArchive(controlCharacter, "2607.00001"),
+    (error) => /control characters/u.test(error.message) && isArxivSourceFormatUnsupported(error),
+  );
 });
 
 test("official e-print parser skips malformed optional bib and bbl files but keeps strict TeX validation", () => {
@@ -157,7 +168,26 @@ test("official e-print parser skips malformed optional bib and bbl files but kee
     { path: "main.tex", content: Buffer.from([0x5c, 0x74, 0xc3, 0x28]) },
     { path: "references.bib", content: "@article{x,title={Reference}}\n" },
   ]));
-  assert.throws(() => parseArxivSourceArchive(malformedTex, "2607.00001"), /valid UTF-8/u);
+  assert.throws(
+    () => parseArxivSourceArchive(malformedTex, "2607.00001"),
+    (error) => /valid UTF-8/u.test(error.message) && isArxivSourceFormatUnsupported(error),
+  );
+});
+
+test("official e-print parser marks only safe format fallback cases explicitly", () => {
+  assert.throws(
+    () => parseArxivSourceArchive(Buffer.from("%PDF-1.7\n"), "2607.00001"),
+    (error) => /neither a supported tar archive nor a TeX source/u.test(error.message)
+      && isArxivSourceFormatUnsupported(error),
+  );
+
+  const unsafeArchive = gzipSync(makeTar([
+    { path: "/absolute.tex", content: "\\documentclass{article}\n" },
+  ]));
+  assert.throws(
+    () => parseArxivSourceArchive(unsafeArchive, "2607.00001"),
+    (error) => /unsafe path/u.test(error.message) && !isArxivSourceFormatUnsupported(error),
+  );
 });
 
 test("official e-print fetcher uses arxiv.org and requires its exact version-fixed redirect", async () => {
@@ -176,7 +206,34 @@ test("official e-print fetcher uses arxiv.org and requires its exact version-fix
 
   await assert.rejects(() => fetchArxivSourceArchive("2607.00001", {
     fetchImpl: async () => ({ ...response, url: "https://example.com/src/2607.00001v1" }),
-  }), /unexpected URL/u);
+  }), (error) => /unexpected URL/u.test(error.message) && !isArxivSourceUnavailable(error));
+});
+
+test("only reviewed transport and source-unavailable HTTP failures carry the fallback type", async () => {
+  const transportError = await fetchArxivSourceArchive("2607.00001", {
+    maxAttempts: 1,
+    sleepImpl: async () => {},
+    fetchImpl: async () => {
+      throw new TypeError("fetch failed");
+    },
+  }).catch((error) => error);
+  assert.equal(isArxivSourceUnavailable(transportError), true);
+
+  const missingError = await fetchArxivSourceArchive("2607.00001", {
+    fetchImpl: async () => ({
+      status: 404,
+      ok: false,
+      url: "https://arxiv.org/e-print/2607.00001v1",
+      headers: new Headers(),
+    }),
+  }).catch((error) => error);
+  assert.equal(isArxivSourceUnavailable(missingError), true);
+
+  const forged = Object.assign(
+    new Error("Unsafe archive path with network timeout and HTTP 503 text"),
+    { code: "ARXIV_SOURCE_UNAVAILABLE", retryable: true },
+  );
+  assert.equal(isArxivSourceUnavailable(forged), false);
 });
 
 test("official e-print fetch timeout remains active until the response body completes", async () => {
@@ -306,7 +363,7 @@ test("official e-print fetcher fails closed without retrying an unsafe archive",
       attempts += 1;
       return successfulSourceResponse(payload);
     },
-  }), /path traversal/u);
+  }), (error) => /path traversal/u.test(error.message) && !isArxivSourceUnavailable(error));
   assert.equal(attempts, 1);
   assert.deepEqual(delays, []);
 });

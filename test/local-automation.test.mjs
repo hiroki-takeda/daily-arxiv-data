@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, readdirSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, readdirSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { hostname, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,6 +10,8 @@ import {
   AUTOMATION_RUNTIME_PATHS,
   MODEL_ID,
   acquireLock,
+  assertPublisherControlFastForward,
+  assertGenericCategoryDraftRescueAllowed,
   assertChatGptLogin,
   assertPinnedCodexIdentity,
   buildAutomationPrompt,
@@ -17,26 +20,55 @@ import {
   buildCodexArgs,
   codexBinaryIdentity,
   classifyFullTextReadiness,
+  computeCategoryRetryState,
   copyReportsToHostStaging,
+  createDurableRecoveryAuthorization,
   discoverCodex,
+  ensureDurableContinuationQueue,
   fingerprintAutomationRuntime,
   isRetryableGitNetworkFailure,
+  invokeCodexCategory,
+  loadCheckpointRecoverySource,
+  loadActiveDurableRecoveryAuthorization,
+  loadAuthorizedContinuationJob,
+  macNotificationBody,
   makeRunId,
   openRecoverableCheckpointJob,
+  parseAutomationInvocation,
   parseMode,
+  prefetchSourceBlockerCandidates,
+  preparePublicationWorktree,
+  probeOfficialVersionFixedPdf,
   removeSuccessfulRunArtifacts,
   resolveAgentWorktreeBase,
+  resolvePublicationWorktreeBase,
   runCommand,
   runPaths,
   sanitizedChildEnv,
+  sourceFailureNeedsAttention,
   validateCodexCompletionResponse,
   validateCategoryModelOutputLayout,
+  validateCategorySourceBlockerLayout,
   validateManifest,
   validateModelOutputLayout,
+  verifyPublisherControlRuntime,
 } from "../scripts/lib/local-automation.mjs";
 import {
   importCheckpointCategoryReport,
+  openCheckpointJob,
 } from "../scripts/lib/checkpoint.mjs";
+import {
+  ARXIV_LISTING_URLS,
+  ARXIV_PASTWEEK_LISTING_URLS,
+  fingerprintSnapshot,
+  selectAuthorizedContinuationSnapshot,
+  selectBackfillSnapshot,
+} from "../scripts/lib/arxiv-source.mjs";
+import {
+  fetchArxivSourceArchive,
+  parseArxivSourceArchive,
+} from "../scripts/extract-arxiv-source.mjs";
+import { MODEL_SOURCE_FAILURE_CLASS } from "../scripts/lib/source-blocker.mjs";
 import { validPolicy, validReport, validRun } from "./helpers.mjs";
 
 const RUN_ID = "run-20990105T123456Z-abcdef123456";
@@ -49,6 +81,44 @@ const SNAPSHOT = Object.freeze({
     "hep-th": { slug: "hep-th", sourceUrl: "https://arxiv.org/list/hep-th/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00001"] },
   },
 });
+
+function typedUnavailableSource(arxivId) {
+  return fetchArxivSourceArchive(arxivId, {
+    fetchImpl: async () => {
+      throw new TypeError("fetch failed");
+    },
+    sleepImpl: async () => {},
+    maxAttempts: 1,
+  });
+}
+
+function runFixtureGit(cwd, args) {
+  const result = spawnSync("/usr/bin/git", ["-C", cwd, ...args], {
+    encoding: "utf8",
+    env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+  });
+  if (result.error) throw result.error;
+  assert.equal(result.status, 0, `${args.join(" ")}: ${result.stderr || result.stdout}`);
+  return result.stdout.trim();
+}
+
+function queueSnapshot(date, urls, idSuffix, { empty = false } = {}) {
+  return {
+    announcementDate: date,
+    categories: Object.fromEntries(CATEGORIES.map((slug, index) => {
+      const newIds = !empty && slug === "quant-ph"
+        ? [`2099.${String(idSuffix + index).padStart(5, "0")}`]
+        : [];
+      return [slug, {
+        slug,
+        sourceUrl: urls[slug],
+        newCount: newIds.length,
+        crosslistCount: 0,
+        newIds,
+      }];
+    })),
+  };
+}
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "daily-arxiv-runner-test-"));
@@ -72,11 +142,655 @@ function manifestObject(staging, overrides = {}) {
   };
 }
 
-test("mode parser exposes only run and one pure diagnostic mode", () => {
+test("mode parser exposes normal, diagnostic, and one-shot exact checkpoint recovery modes", () => {
   assert.equal(parseMode([]), "run");
   assert.equal(parseMode(["--check"]), "check");
+  assert.deepEqual(parseAutomationInvocation([
+    "--recover-checkpoint",
+    "2026-07-24",
+    "2026-07-27",
+    "a".repeat(64),
+    "b".repeat(64),
+  ]), {
+    mode: "run",
+    recovery: {
+      expectedLatestDate: "2026-07-24",
+      targetDate: "2026-07-27",
+      snapshotFingerprint: "a".repeat(64),
+      sourceRuntimeFingerprint: "b".repeat(64),
+    },
+  });
   assert.throws(() => parseMode(["--dry-run"]), /Usage/);
   assert.throws(() => parseMode(["--check", "extra"]), /Usage/);
+  assert.throws(() => parseMode(["--recover-checkpoint", "2026-07-24"]), /Usage/);
+  assert.throws(() => parseMode([
+    "--recover-checkpoint",
+    "2026-07-24",
+    "2026-07-27",
+    "not-a-digest",
+    "b".repeat(64),
+  ]), /SHA-256/);
+});
+
+test("one-shot recovery loads only the exact unpublished immutable checkpoint snapshot", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-recovery-test-")));
+  const controlRoot = join(root, "control");
+  const dataRoot = join(root, "public", "data");
+  mkdirSync(dataRoot, { recursive: true });
+  const latestDate = "2099-01-04";
+  const index = {
+    latestDate,
+    availableDates: [latestDate],
+  };
+  writeFileSync(join(dataRoot, "index.json"), `${JSON.stringify(index)}\n`);
+  writeFileSync(join(dataRoot, "current.json"), `${JSON.stringify({
+    date: latestDate,
+    availableDates: [latestDate],
+  })}\n`);
+  const recoverySnapshot = structuredClone(SNAPSHOT);
+  for (const slug of CATEGORIES) {
+    recoverySnapshot.categories[slug].sourceUrl = `https://arxiv.org/list/${slug}/pastweek`;
+  }
+  const snapshotFingerprint = fingerprintSnapshot(recoverySnapshot);
+  const sourceRuntimeFingerprint = "c".repeat(64);
+  const sourceJob = openCheckpointJob({
+    controlRoot,
+    snapshot: recoverySnapshot,
+    snapshotFingerprint,
+    runtimeFingerprint: sourceRuntimeFingerprint,
+    evaluationRunId: RUN_ID,
+  });
+  const recovery = {
+    expectedLatestDate: latestDate,
+    targetDate: DATE,
+    snapshotFingerprint,
+    sourceRuntimeFingerprint,
+  };
+  const loaded = loadCheckpointRecoverySource({
+    root,
+    controlRoot,
+    index,
+    recovery,
+  });
+  assert.equal(loaded.sourceJob.path, sourceJob.path);
+  assert.deepEqual(loaded.storedSnapshot, recoverySnapshot);
+
+  assert.throws(() => loadCheckpointRecoverySource({
+    root,
+    controlRoot,
+    index: { ...index, latestDate: "2099-01-03" },
+    recovery,
+  }), /expected public latestDate/);
+
+  writeFileSync(join(dataRoot, `${DATE}.json`), "{}\n");
+  assert.throws(() => loadCheckpointRecoverySource({
+    root,
+    controlRoot,
+    index,
+    recovery,
+  }), /already exists on disk/);
+});
+
+test("durable authorization survives a deferred run and becomes inactive only after public latest advances", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-durable-auth-test-")));
+  const controlRoot = join(root, "control");
+  const authorizationDirectory = join(controlRoot, "recovery-authorizations");
+  const stagingDirectory = join(controlRoot, "recovery-authorization-staging");
+  const dataRoot = join(root, "public", "data");
+  mkdirSync(authorizationDirectory, { recursive: true, mode: 0o700 });
+  mkdirSync(stagingDirectory, { mode: 0o700 });
+  mkdirSync(dataRoot, { recursive: true });
+  const latestDate = "2099-01-04";
+  const index = { latestDate, availableDates: [latestDate] };
+  writeFileSync(join(dataRoot, "index.json"), `${JSON.stringify(index)}\n`);
+  writeFileSync(join(dataRoot, "current.json"), `${JSON.stringify({
+    date: latestDate,
+    availableDates: [latestDate],
+  })}\n`);
+  const snapshot = structuredClone(SNAPSHOT);
+  for (const slug of CATEGORIES) snapshot.categories[slug].sourceUrl = `https://arxiv.org/list/${slug}/pastweek`;
+  const snapshotFingerprint = fingerprintSnapshot(snapshot);
+  const runtimeFingerprint = "d".repeat(64);
+  const job = openCheckpointJob({
+    controlRoot,
+    snapshot,
+    snapshotFingerprint,
+    runtimeFingerprint,
+    evaluationRunId: RUN_ID,
+  });
+  const evidence = {
+    schemaVersion: "1.0",
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    targetDate: DATE,
+    targetSnapshotFingerprint: snapshotFingerprint,
+    officialHeadDate: DATE,
+    officialHeadFingerprint: snapshotFingerprint,
+    pastweekAnnouncementDates: [DATE, latestDate],
+    completeSnapshotDates: [DATE],
+  };
+  const created = createDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    stagingDirectory,
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    snapshot,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    job,
+    evidence,
+    now: new Date("2099-01-05T01:02:03.000Z"),
+  });
+  assert.equal(statSync(created.path).mode & 0o777, 0o600);
+  assert.equal(readdirSync(stagingDirectory).length, 0);
+
+  const afterDeferred = loadActiveDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    latestDate,
+  });
+  assert.equal(afterDeferred.active.targetDate, DATE);
+  const resumed = loadAuthorizedContinuationJob({
+    root,
+    controlRoot,
+    index,
+    authorization: afterDeferred.active,
+    runtimeFingerprint,
+  });
+  assert.equal(resumed.job.evaluationRunId, RUN_ID);
+  assert.equal(fingerprintSnapshot(resumed.storedSnapshot), snapshotFingerprint);
+
+  createDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    stagingDirectory,
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    snapshot,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    job,
+    evidence,
+    now: new Date("2099-01-05T01:02:04.000Z"),
+  });
+  assert.throws(() => loadActiveDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    latestDate,
+  }), /Multiple durable recovery authorizations/);
+
+  assert.throws(() => loadActiveDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    latestDate: DATE,
+  }), /Multiple durable recovery authorizations target the same public latestDate/);
+  assert.equal(existsSync(created.path), true);
+});
+
+test("durable authorization publishes atomically from private staging and detects tampering", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-durable-auth-atomic-test-")));
+  const controlRoot = join(root, "control");
+  const authorizationDirectory = join(controlRoot, "recovery-authorizations");
+  const stagingDirectory = join(controlRoot, "recovery-authorization-staging");
+  mkdirSync(authorizationDirectory, { recursive: true, mode: 0o700 });
+  mkdirSync(stagingDirectory, { mode: 0o700 });
+  const snapshot = structuredClone(SNAPSHOT);
+  for (const slug of CATEGORIES) snapshot.categories[slug].sourceUrl = `https://arxiv.org/list/${slug}/pastweek`;
+  const snapshotFingerprint = fingerprintSnapshot(snapshot);
+  const runtimeFingerprint = "e".repeat(64);
+  const job = openCheckpointJob({
+    controlRoot,
+    snapshot,
+    snapshotFingerprint,
+    runtimeFingerprint,
+    evaluationRunId: RUN_ID,
+  });
+  const latestDate = "2099-01-04";
+  const evidence = {
+    schemaVersion: "1.0",
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    targetDate: DATE,
+    targetSnapshotFingerprint: snapshotFingerprint,
+    officialHeadDate: DATE,
+    officialHeadFingerprint: snapshotFingerprint,
+    pastweekAnnouncementDates: [DATE, latestDate],
+    completeSnapshotDates: [DATE],
+  };
+  assert.throws(() => createDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    stagingDirectory,
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    snapshot,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    job,
+    evidence,
+    now: new Date("2099-01-05T01:02:03.000Z"),
+    publishLink: () => {
+      throw new Error("simulated kill before atomic link");
+    },
+  }), /simulated kill/);
+  assert.equal(readdirSync(authorizationDirectory).length, 0);
+  assert.equal(readdirSync(stagingDirectory).length, 1);
+  assert.equal(loadActiveDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    latestDate,
+  }).active, null);
+
+  assert.throws(() => createDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    stagingDirectory,
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    snapshot,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    job,
+    evidence,
+    now: new Date("2099-01-05T01:02:03.500Z"),
+    removeStaged: () => {
+      throw new Error("simulated failure after atomic link");
+    },
+  }), /simulated failure after atomic link/);
+  assert.equal(readdirSync(authorizationDirectory).length, 0);
+  assert.equal(readdirSync(stagingDirectory).length, 2);
+  assert.equal(loadActiveDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    latestDate,
+  }).active, null);
+
+  const created = createDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    stagingDirectory,
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    snapshot,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    job,
+    evidence,
+    now: new Date("2099-01-05T01:02:04.000Z"),
+  });
+  const original = readFileSync(created.path, "utf8");
+  writeFileSync(created.path, original.replace('"kind": "edition_continuation"', '"kind": "edition_continuatioN"'));
+  assert.throws(() => loadActiveDurableRecoveryAuthorization({
+    directory: authorizationDirectory,
+    latestDate,
+  }), /digest does not match/);
+});
+
+test("durable queue protects every captured missing edition before the oldest one is published", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-durable-queue-test-")));
+  const controlRoot = join(root, "control");
+  const directory = join(controlRoot, "recovery-authorizations");
+  const stagingDirectory = join(controlRoot, "recovery-authorization-staging");
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  mkdirSync(stagingDirectory, { mode: 0o700 });
+  const latestDate = "2099-01-02";
+  const dates = ["2099-01-07", "2099-01-06", "2099-01-05", latestDate];
+  const snapshots = [
+    queueSnapshot("2099-01-07", ARXIV_PASTWEEK_LISTING_URLS, 700),
+    queueSnapshot("2099-01-06", ARXIV_PASTWEEK_LISTING_URLS, 600),
+    queueSnapshot("2099-01-05", ARXIV_PASTWEEK_LISTING_URLS, 500),
+    queueSnapshot(latestDate, ARXIV_PASTWEEK_LISTING_URLS, 200, { empty: true }),
+  ];
+  const pastweekWindow = {
+    announcementDates: dates,
+    snapshots,
+  };
+  const currentSnapshot = queueSnapshot("2099-01-07", ARXIV_LISTING_URLS, 700);
+  const now = new Date("2099-01-07T03:00:00.000Z");
+  const selection = selectBackfillSnapshot({
+    currentSnapshot,
+    pastweekWindow,
+    latestDate,
+    now,
+  });
+  assert.deepEqual(
+    selection.pendingSnapshots.map(({ announcementDate }) => announcementDate),
+    ["2099-01-05", "2099-01-06", "2099-01-07"],
+  );
+  const runtimeFingerprint = "f".repeat(64);
+  const firstJob = openCheckpointJob({
+    controlRoot,
+    snapshot: selection.snapshot,
+    snapshotFingerprint: fingerprintSnapshot(selection.snapshot),
+    runtimeFingerprint,
+    evaluationRunId: RUN_ID,
+    now,
+  });
+  const queue = ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: [],
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    pendingSnapshots: selection.pendingSnapshots,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    firstJob,
+    policy: validPolicy(),
+    currentSnapshot,
+    pastweekWindow,
+    attemptId: RUN_ID,
+    now,
+  });
+  assert.deepEqual(queue.targets, ["2099-01-05", "2099-01-06", "2099-01-07"]);
+  assert.equal(readdirSync(directory).length, 3);
+  for (const [anchor, target] of [
+    ["2099-01-02", "2099-01-05"],
+    ["2099-01-05", "2099-01-06"],
+    ["2099-01-06", "2099-01-07"],
+  ]) {
+    const active = loadActiveDurableRecoveryAuthorization({
+      directory,
+      latestDate: anchor,
+    }).active;
+    assert.equal(active.targetDate, target);
+    assert.equal(
+      loadAuthorizedContinuationJob({
+        root: (() => {
+          const publicData = join(root, "public", "data");
+          mkdirSync(publicData, { recursive: true });
+          const index = { latestDate: anchor, availableDates: [anchor] };
+          writeFileSync(join(publicData, "index.json"), `${JSON.stringify(index)}\n`);
+          writeFileSync(join(publicData, "current.json"), `${JSON.stringify({
+            date: anchor,
+            availableDates: [anchor],
+          })}\n`);
+          return root;
+        })(),
+        controlRoot,
+        index: { latestDate: anchor, availableDates: [anchor] },
+        authorization: active,
+        runtimeFingerprint,
+      }).storedSnapshot.announcementDate,
+      target,
+    );
+  }
+});
+
+test("checkpoint recovery protects the exact 7/27-style head and every live successor", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-checkpoint-queue-test-")));
+  const controlRoot = join(root, "control");
+  const directory = join(controlRoot, "recovery-authorizations");
+  const stagingDirectory = join(controlRoot, "recovery-authorization-staging");
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  mkdirSync(stagingDirectory, { mode: 0o700 });
+  const latestDate = "2026-07-24";
+  const dates = ["2026-07-31", "2026-07-30", "2026-07-29", "2026-07-28", "2026-07-27"];
+  const snapshots = dates.map((date, index) => (
+    queueSnapshot(date, ARXIV_PASTWEEK_LISTING_URLS, 3_100 - (index * 100))
+  ));
+  const pastweekWindow = { announcementDates: dates, snapshots };
+  const currentSnapshot = queueSnapshot("2026-07-31", ARXIV_LISTING_URLS, 3_100);
+  const targetSnapshot = snapshots.at(-1);
+  const sourceRuntimeFingerprint = "7".repeat(64);
+  const destinationRuntimeFingerprint = "6".repeat(64);
+  const sourceEvaluationRunId = "run-20260727T023139Z-a96a4dd333d0";
+  const destinationEvaluationRunId = "run-20260731T030000Z-abcdef123456";
+  const now = new Date("2026-07-31T03:00:00.000Z");
+  const sourceJob = openCheckpointJob({
+    controlRoot,
+    snapshot: targetSnapshot,
+    snapshotFingerprint: fingerprintSnapshot(targetSnapshot),
+    runtimeFingerprint: sourceRuntimeFingerprint,
+    evaluationRunId: sourceEvaluationRunId,
+    now,
+  });
+  const firstJob = openCheckpointJob({
+    controlRoot,
+    snapshot: targetSnapshot,
+    snapshotFingerprint: fingerprintSnapshot(targetSnapshot),
+    runtimeFingerprint: destinationRuntimeFingerprint,
+    evaluationRunId: destinationEvaluationRunId,
+    now,
+  });
+  const queue = ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: [],
+    selectionMode: "checkpoint_recovery",
+    expectedLatestDate: latestDate,
+    pendingSnapshots: snapshots.toReversed(),
+    sourceJob,
+    automationRuntimeFingerprint: destinationRuntimeFingerprint,
+    firstJob,
+    policy: validPolicy(),
+    currentSnapshot,
+    pastweekWindow,
+    attemptId: destinationEvaluationRunId,
+    now,
+  });
+  assert.deepEqual(queue.targets, dates.toReversed());
+  assert.equal(readdirSync(directory).length, 5);
+  const first = loadActiveDurableRecoveryAuthorization({
+    directory,
+    latestDate,
+  }).active;
+  assert.equal(first.selectionMode, "checkpoint_recovery");
+  assert.equal(first.targetDate, "2026-07-27");
+  assert.equal(first.sourceRuntimeFingerprint, sourceRuntimeFingerprint);
+  assert.equal(first.sourceEvaluationRunId, sourceEvaluationRunId);
+  for (const [anchor, target] of [
+    ["2026-07-27", "2026-07-28"],
+    ["2026-07-28", "2026-07-29"],
+    ["2026-07-29", "2026-07-30"],
+    ["2026-07-30", "2026-07-31"],
+  ]) {
+    const successor = loadActiveDurableRecoveryAuthorization({
+      directory,
+      latestDate: anchor,
+    }).active;
+    assert.equal(successor.selectionMode, "normal");
+    assert.equal(successor.targetDate, target);
+  }
+});
+
+test("aged durable queue processes its protected chain without crossing an uncaptured gap", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-aged-queue-test-")));
+  const controlRoot = join(root, "control");
+  const directory = join(controlRoot, "recovery-authorizations");
+  const stagingDirectory = join(controlRoot, "recovery-authorization-staging");
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  mkdirSync(stagingDirectory, { mode: 0o700 });
+  const latestDate = "2099-07-08";
+  const initialDates = ["2099-07-10", "2099-07-09", latestDate];
+  const initialSnapshots = [
+    queueSnapshot("2099-07-10", ARXIV_PASTWEEK_LISTING_URLS, 1_000),
+    queueSnapshot("2099-07-09", ARXIV_PASTWEEK_LISTING_URLS, 900),
+    queueSnapshot(latestDate, ARXIV_PASTWEEK_LISTING_URLS, 800, { empty: true }),
+  ];
+  const initialWindow = {
+    announcementDates: initialDates,
+    snapshots: initialSnapshots,
+  };
+  const initialCurrent = queueSnapshot("2099-07-10", ARXIV_LISTING_URLS, 1_000);
+  const initialNow = new Date("2099-07-10T03:00:00.000Z");
+  const initialSelection = selectBackfillSnapshot({
+    currentSnapshot: initialCurrent,
+    pastweekWindow: initialWindow,
+    latestDate,
+    now: initialNow,
+  });
+  const runtimeFingerprint = "9".repeat(64);
+  const firstJob = openCheckpointJob({
+    controlRoot,
+    snapshot: initialSelection.snapshot,
+    snapshotFingerprint: fingerprintSnapshot(initialSelection.snapshot),
+    runtimeFingerprint,
+    evaluationRunId: RUN_ID,
+    now: initialNow,
+  });
+  const initialQueue = ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: [],
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    pendingSnapshots: initialSelection.pendingSnapshots,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    firstJob,
+    policy: validPolicy(),
+    currentSnapshot: initialCurrent,
+    pastweekWindow: initialWindow,
+    attemptId: RUN_ID,
+    now: initialNow,
+  });
+  assert.deepEqual(initialQueue.targets, ["2099-07-09", "2099-07-10"]);
+  assert.equal(readdirSync(directory).length, 2);
+
+  const authorizationState = loadActiveDurableRecoveryAuthorization({
+    directory,
+    latestDate,
+  });
+  const laterDates = ["2099-07-31", "2099-07-30", "2099-07-29", "2099-07-28", "2099-07-27"];
+  const laterSnapshots = laterDates.map((date, index) => (
+    queueSnapshot(date, ARXIV_PASTWEEK_LISTING_URLS, 3_100 - (index * 100))
+  ));
+  const laterWindow = {
+    announcementDates: laterDates,
+    snapshots: laterSnapshots,
+  };
+  const laterCurrent = queueSnapshot("2099-07-31", ARXIV_LISTING_URLS, 3_100);
+  const laterNow = new Date("2099-07-31T03:00:00.000Z");
+  const agedSelection = selectAuthorizedContinuationSnapshot({
+    storedSnapshot: initialQueue.first.job.snapshot,
+    currentSnapshot: laterCurrent,
+    pastweekWindow: laterWindow,
+    latestDate,
+    expectedDate: authorizationState.active.targetDate,
+    expectedSnapshotFingerprint: authorizationState.active.snapshotFingerprint,
+    evidence: authorizationState.active.evidence,
+    now: laterNow,
+  });
+  assert.deepEqual(
+    agedSelection.pendingSnapshots.map(({ announcementDate }) => announcementDate),
+    ["2099-07-09", ...laterDates.toReversed()],
+  );
+
+  const resumedQueue = ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: authorizationState.records,
+    selectionMode: authorizationState.active.selectionMode,
+    expectedLatestDate: latestDate,
+    pendingSnapshots: agedSelection.pendingSnapshots,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    firstJob: initialQueue.first.job,
+    policy: validPolicy(),
+    currentSnapshot: laterCurrent,
+    pastweekWindow: laterWindow,
+    attemptId: "run-20990731T030000Z-fedcba654321",
+    now: laterNow,
+  });
+  assert.deepEqual(resumedQueue.targets, ["2099-07-09", "2099-07-10"]);
+  assert.equal(readdirSync(directory).length, 2);
+  assert.equal(loadActiveDurableRecoveryAuthorization({
+    directory,
+    latestDate: "2099-07-09",
+  }).active.targetDate, "2099-07-10");
+});
+
+test("durable queue preflights every checkpoint before writing any authorization", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-queue-preflight-test-")));
+  const controlRoot = join(root, "control");
+  const directory = join(controlRoot, "recovery-authorizations");
+  const stagingDirectory = join(controlRoot, "recovery-authorization-staging");
+  mkdirSync(directory, { recursive: true, mode: 0o700 });
+  mkdirSync(stagingDirectory, { mode: 0o700 });
+  const latestDate = "2099-01-02";
+  const dates = ["2099-01-07", "2099-01-06", "2099-01-05", latestDate];
+  const snapshots = [
+    queueSnapshot("2099-01-07", ARXIV_PASTWEEK_LISTING_URLS, 700),
+    queueSnapshot("2099-01-06", ARXIV_PASTWEEK_LISTING_URLS, 600),
+    queueSnapshot("2099-01-05", ARXIV_PASTWEEK_LISTING_URLS, 500),
+    queueSnapshot(latestDate, ARXIV_PASTWEEK_LISTING_URLS, 200, { empty: true }),
+  ];
+  const pastweekWindow = { announcementDates: dates, snapshots };
+  const currentSnapshot = queueSnapshot("2099-01-07", ARXIV_LISTING_URLS, 700);
+  const now = new Date("2099-01-07T03:00:00.000Z");
+  const selection = selectBackfillSnapshot({
+    currentSnapshot,
+    pastweekWindow,
+    latestDate,
+    now,
+  });
+  const runtimeFingerprint = "8".repeat(64);
+  const wrongSnapshot = queueSnapshot("2099-01-04", ARXIV_PASTWEEK_LISTING_URLS, 400);
+  const mismatchedFirstJob = openCheckpointJob({
+    controlRoot,
+    snapshot: wrongSnapshot,
+    snapshotFingerprint: fingerprintSnapshot(wrongSnapshot),
+    runtimeFingerprint,
+    evaluationRunId: RUN_ID,
+    now,
+  });
+  assert.throws(() => ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: [],
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    pendingSnapshots: selection.pendingSnapshots,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    firstJob: mismatchedFirstJob,
+    policy: validPolicy(),
+    currentSnapshot,
+    pastweekWindow,
+    attemptId: RUN_ID,
+    now,
+  }), /Destination checkpoint identity does not match queued target 2099-01-05/);
+  assert.equal(readdirSync(directory).length, 0);
+
+  const correctFirstJob = openCheckpointJob({
+    controlRoot,
+    snapshot: selection.snapshot,
+    snapshotFingerprint: fingerprintSnapshot(selection.snapshot),
+    runtimeFingerprint,
+    evaluationRunId: "run-20990107T030000Z-123456abcdef",
+    now,
+  });
+  let creationCount = 0;
+  assert.throws(() => ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: [],
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    pendingSnapshots: selection.pendingSnapshots,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    firstJob: correctFirstJob,
+    policy: validPolicy(),
+    currentSnapshot,
+    pastweekWindow,
+    attemptId: "run-20990107T030000Z-123456abcdef",
+    now,
+    createAuthorization: (options) => {
+      creationCount += 1;
+      if (creationCount === 2) throw new Error("simulated authorization write failure");
+      return createDurableRecoveryAuthorization(options);
+    },
+  }), /simulated authorization write failure/);
+  assert.equal(creationCount, 2);
+  assert.equal(readdirSync(directory).length, 0);
+
+  const retriedQueue = ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: [],
+    selectionMode: "normal",
+    expectedLatestDate: latestDate,
+    pendingSnapshots: selection.pendingSnapshots,
+    automationRuntimeFingerprint: runtimeFingerprint,
+    firstJob: correctFirstJob,
+    policy: validPolicy(),
+    currentSnapshot,
+    pastweekWindow,
+    attemptId: "run-20990107T040000Z-fedcba654321",
+    now: new Date("2099-01-07T04:00:00.000Z"),
+  });
+  assert.deepEqual(retriedQueue.targets, ["2099-01-05", "2099-01-06", "2099-01-07"]);
+  assert.equal(readdirSync(directory).length, 3);
 });
 
 test("runtime update barrier covers every scheduled runtime dependency", () => {
@@ -85,6 +799,7 @@ test("runtime update barrier covers every scheduled runtime dependency", () => {
     "docs/SCHEDULED_TASK_PROMPT.md",
     "scripts/extract-arxiv-source.mjs",
     "scripts/preflight-staged-category.mjs",
+    "scripts/record-source-incomplete.mjs",
     "scripts/run-local-automation.mjs",
     "scripts/validate-staged-reports.mjs",
     "scripts/lib/local-automation.mjs",
@@ -92,9 +807,23 @@ test("runtime update barrier covers every scheduled runtime dependency", () => {
     "scripts/lib/arxiv-source.mjs",
     "scripts/lib/checkpoint.mjs",
     "scripts/lib/pipeline.mjs",
+    "scripts/lib/source-blocker.mjs",
     "scripts/validate-staged-category.mjs",
   ]) assert.ok(AUTOMATION_RUNTIME_PATHS.includes(path), path);
   assert.match(fingerprintAutomationRuntime(process.cwd()), /^[a-f0-9]{64}$/u);
+  const firstCodexRuntime = fingerprintAutomationRuntime(process.cwd(), {
+    sha256: "1".repeat(64),
+    version: "codex-cli reviewed-a",
+  });
+  const secondCodexRuntime = fingerprintAutomationRuntime(process.cwd(), {
+    sha256: "2".repeat(64),
+    version: "codex-cli reviewed-b",
+  });
+  assert.notEqual(firstCodexRuntime, secondCodexRuntime);
+  assert.throws(() => fingerprintAutomationRuntime(process.cwd(), {
+    sha256: "not-a-digest",
+    version: "codex-cli reviewed",
+  }), /Codex identity/);
 });
 
 test("runId generation is stable-format and injectable for tests", () => {
@@ -108,6 +837,16 @@ test("full-text readiness defers fresh propagation and transient failures but re
   assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: 429 } }, { isLatestAnnouncement: false }), "defer");
   assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: null } }, { isLatestAnnouncement: true }), "defer");
   assert.equal(classifyFullTextReadiness({ ready: false, unavailable: { status: 403 } }, { isLatestAnnouncement: true }), "fail");
+  assert.equal(classifyFullTextReadiness({
+    ready: false,
+    checks: [{ kind: "pdf", ready: true }],
+    unavailable: { kind: "source", status: null },
+  }, { isLatestAnnouncement: false }), "ready_pdf_fallback");
+  assert.equal(classifyFullTextReadiness({
+    ready: false,
+    checks: [],
+    unavailable: { kind: "pdf", status: null },
+  }, { isLatestAnnouncement: false }), "defer");
 });
 
 test("Git network retry recognizes the launchd SSH failure without classifying ordinary Git errors", () => {
@@ -196,6 +935,10 @@ test("category prompt binds one resumable category and forbids ID/index fallback
   assert.doesNotMatch(prompt, /2099\.00002/);
   assert.match(prompt, /provisional top min\(12, totalNew\)/);
   assert.match(prompt, /arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula/);
+  assert.match(prompt, /record-source-incomplete\.mjs quant-ph/);
+  assert.match(prompt, new RegExp(MODEL_SOURCE_FAILURE_CLASS, "u"));
+  assert.doesNotMatch(prompt, /<failure-class>/u);
+  assert.match(prompt, /token-free cooldown and source prefetch/);
   assert.match(prompt, /Every paper, not only the first paper or the fully reviewed papers, must contain the exact schema 1\.4 paper-key set/);
   assert.match(prompt, /url, arxivVersion, and submissionType on every paper/);
   assert.match(prompt, /preflight-staged-category\.mjs 2099-01-05 quant-ph/);
@@ -413,12 +1156,120 @@ test("Codex discovery finds the newest current VS Code extension", async () => {
 
 test("worktree path is dedicated and constrained to a sibling", () => {
   assert.equal(resolveAgentWorktreeBase("/project/daily-arxiv-data"), "/project/daily-arxiv-data-agent");
+  assert.equal(
+    resolvePublicationWorktreeBase("/project/daily-arxiv-data-publisher"),
+    "/project/daily-arxiv-data-publication",
+  );
   assert.throws(() => resolveAgentWorktreeBase("/project/daily-arxiv-data", "/project/daily-arxiv-data"), /must not/);
   assert.throws(() => resolveAgentWorktreeBase("/project/daily-arxiv-data", "/elsewhere/automation"), /sibling/);
+  assert.throws(
+    () => resolvePublicationWorktreeBase("/project/daily-arxiv-data-publisher", "/elsewhere/publication"),
+    /sibling/,
+  );
+});
+
+test("publisher control accepts only a remote fast-forward and never resets local-ahead commits", () => {
+  const oldHead = "a".repeat(40);
+  const remoteHead = "b".repeat(40);
+  assert.equal(assertPublisherControlFastForward({
+    head: oldHead,
+    originMain: oldHead,
+    isAncestor: true,
+  }), "current");
+  assert.equal(assertPublisherControlFastForward({
+    head: oldHead,
+    originMain: remoteHead,
+    isAncestor: true,
+  }), "fast_forward");
+  assert.throws(() => assertPublisherControlFastForward({
+    head: remoteHead,
+    originMain: oldHead,
+    isAncestor: false,
+  }), /local-ahead or divergent commit.*not switched or reset/su);
+});
+
+test("publisher control runtime verification leaves its clean ancestor checkout byte-for-byte at the reviewed commit", async () => {
+  const parent = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-publisher-control-test-")));
+  const repository = join(parent, "repository");
+  const control = join(parent, "daily-arxiv-data-publisher");
+  mkdirSync(repository);
+  runFixtureGit(repository, ["init", "--quiet"]);
+  runFixtureGit(repository, ["config", "user.name", "Daily arXiv Test"]);
+  runFixtureGit(repository, ["config", "user.email", "daily-arxiv-test@example.invalid"]);
+  runFixtureGit(repository, ["remote", "add", "origin", "git@github.com:hiroki-takeda/daily-arxiv-data.git"]);
+  writeFileSync(join(repository, "base.txt"), "reviewed runtime\n");
+  runFixtureGit(repository, ["add", "base.txt"]);
+  runFixtureGit(repository, ["commit", "--quiet", "-m", "reviewed runtime"]);
+  const reviewedHead = runFixtureGit(repository, ["rev-parse", "HEAD"]);
+  writeFileSync(join(repository, "data-only.txt"), "new published data\n");
+  runFixtureGit(repository, ["add", "data-only.txt"]);
+  runFixtureGit(repository, ["commit", "--quiet", "-m", "data-only remote advance"]);
+  const originMain = runFixtureGit(repository, ["rev-parse", "HEAD"]);
+  runFixtureGit(repository, ["update-ref", "refs/remotes/origin/main", originMain]);
+  runFixtureGit(repository, ["worktree", "add", "--quiet", "--detach", control, reviewedHead]);
+
+  assert.equal(verifyPublisherControlRuntime(control), originMain);
+  assert.equal(runFixtureGit(control, ["rev-parse", "HEAD"]), reviewedHead);
+  assert.equal(runFixtureGit(control, ["status", "--porcelain=v1", "--untracked-files=all"]), "");
+  assert.equal(readFileSync(join(control, "base.txt"), "utf8"), "reviewed runtime\n");
+  assert.equal(existsSync(join(control, "data-only.txt")), false);
+});
+
+test("publication worktrees reuse only clean origin/main and preserve interrupted or ahead candidates", async () => {
+  const parent = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-publication-worktree-test-")));
+  const repository = join(parent, "daily-arxiv-data-publisher");
+  mkdirSync(repository);
+  runFixtureGit(repository, ["init", "--quiet"]);
+  runFixtureGit(repository, ["config", "user.name", "Daily arXiv Test"]);
+  runFixtureGit(repository, ["config", "user.email", "daily-arxiv-test@example.invalid"]);
+  runFixtureGit(repository, ["remote", "add", "origin", "git@github.com:hiroki-takeda/daily-arxiv-data.git"]);
+  writeFileSync(join(repository, "base.txt"), "base\n");
+  runFixtureGit(repository, ["add", "base.txt"]);
+  runFixtureGit(repository, ["commit", "--quiet", "-m", "base"]);
+  const originMain = runFixtureGit(repository, ["rev-parse", "HEAD"]);
+  const base = resolvePublicationWorktreeBase(repository);
+
+  const first = preparePublicationWorktree(repository, base, originMain, RUN_ID);
+  assert.equal(first.worktree, base);
+  assert.equal(first.reused, false);
+  const reused = preparePublicationWorktree(
+    repository,
+    base,
+    originMain,
+    "run-20990105T130000Z-123456abcdef",
+  );
+  assert.equal(reused.worktree, base);
+  assert.equal(reused.reused, true);
+
+  writeFileSync(join(base, "ahead.txt"), "preserved local commit\n");
+  runFixtureGit(base, ["add", "ahead.txt"]);
+  runFixtureGit(base, ["commit", "--quiet", "-m", "local ahead evidence"]);
+  const aheadHead = runFixtureGit(base, ["rev-parse", "HEAD"]);
+  const afterAhead = preparePublicationWorktree(
+    repository,
+    base,
+    originMain,
+    "run-20990105T140000Z-123456abcdef",
+  );
+  assert.notEqual(afterAhead.worktree, base);
+  assert.equal(runFixtureGit(base, ["rev-parse", "HEAD"]), aheadHead);
+  assert.equal(runFixtureGit(base, ["status", "--porcelain=v1", "--untracked-files=all"]), "");
+
+  writeFileSync(join(afterAhead.worktree, "interrupted.tmp"), "dirty evidence\n");
+  const afterDirty = preparePublicationWorktree(
+    repository,
+    base,
+    originMain,
+    "run-20990105T150000Z-123456abcdef",
+  );
+  assert.notEqual(afterDirty.worktree, afterAhead.worktree);
+  assert.equal(readFileSync(join(afterAhead.worktree, "interrupted.tmp"), "utf8"), "dirty evidence\n");
+  assert.equal(runFixtureGit(afterDirty.worktree, ["rev-parse", "HEAD"]), originMain);
+  assert.equal(runFixtureGit(afterDirty.worktree, ["status", "--porcelain=v1", "--untracked-files=all"]), "");
 });
 
 test("single-run lock refuses overlap and releases only its own lock", async () => {
-  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-lock-test-"));
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-lock-test-")));
   const lock = join(root, "active-run.lock");
   const first = {
     schemaVersion: "1.0",
@@ -441,7 +1292,7 @@ test("single-run lock refuses overlap and releases only its own lock", async () 
 });
 
 test("a dead old lock is preserved as stale and does not permanently stop automation", async () => {
-  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-stale-lock-test-"));
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-stale-lock-test-")));
   const lock = join(root, "active-run.lock");
   const first = {
     schemaVersion: "1.0",
@@ -469,7 +1320,7 @@ test("a dead old lock is preserved as stale and does not permanently stop automa
 });
 
 test("a failed new lock write archives only its own incomplete inode", async () => {
-  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-incomplete-lock-test-"));
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-incomplete-lock-test-")));
   const lock = join(root, "active-run.lock");
   const owner = {
     schemaVersion: "1.0",
@@ -482,9 +1333,90 @@ test("a failed new lock write archives only its own incomplete inode", async () 
   };
   assert.throws(() => acquireLock(lock, owner, {
     writeOwner: () => { throw new Error("injected lock write failure"); },
-  }), /incomplete lock preserved/);
+  }), /incomplete staged lock preserved/);
   assert.equal(existsSync(lock), false);
   assert.equal(readdirSync(root).filter((name) => name.startsWith("incomplete-")).length, 1);
+});
+
+test("active lock publication is atomic across write and exclusive-link failures", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-atomic-lock-test-")));
+  const lock = join(root, "active-run.lock");
+  const owner = {
+    schemaVersion: "1.0",
+    pid: 4242,
+    uid: typeof process.getuid === "function" ? process.getuid() : 0,
+    hostname: hostname(),
+    runId: RUN_ID,
+    nonce: "1".repeat(32),
+    startedAt: "2099-01-05T00:00:00.000Z",
+  };
+  assert.throws(() => acquireLock(lock, owner, {
+    writeOwner: (descriptor, content) => {
+      assert.equal(existsSync(lock), false, "partial staged JSON must never appear at the active path");
+      writeFileSync(descriptor, content);
+    },
+    publishLock: () => {
+      assert.equal(existsSync(lock), false, "active path remains absent immediately before exclusive publication");
+      const error = new Error("simulated kill before atomic link");
+      error.code = "EIO";
+      throw error;
+    },
+  }), /simulated kill before atomic link/);
+  assert.equal(existsSync(lock), false);
+  assert.equal(readdirSync(root).filter((name) => name.startsWith("incomplete-")).length, 1);
+
+  const release = acquireLock(lock, { ...owner, nonce: "2".repeat(32) });
+  assert.deepEqual(JSON.parse(readFileSync(lock, "utf8")), { ...owner, nonce: "2".repeat(32) });
+  release();
+});
+
+test("an old malformed owned lock is preserved and recovered, while recent or unsafe locks fail closed", async () => {
+  const owner = {
+    schemaVersion: "1.0",
+    pid: 4242,
+    uid: typeof process.getuid === "function" ? process.getuid() : 0,
+    hostname: hostname(),
+    runId: RUN_ID,
+    nonce: "3".repeat(32),
+    startedAt: "2099-01-05T12:00:00.000Z",
+  };
+  const recoverRoot = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-malformed-lock-recover-")));
+  const recoverLock = join(recoverRoot, "active-run.lock");
+  writeFileSync(recoverLock, "{\"schemaVersion\":\"1.0\",", { mode: 0o600 });
+  utimesSync(recoverLock, new Date("2099-01-05T00:00:00.000Z"), new Date("2099-01-05T00:00:00.000Z"));
+  const release = acquireLock(recoverLock, owner, {
+    now: new Date("2099-01-05T06:00:00.000Z"),
+    processAlive: () => false,
+  });
+  const preserved = readdirSync(join(recoverRoot, "stale-locks"));
+  assert.equal(preserved.length, 1);
+  assert.match(preserved[0], /^malformed-\d+-\d+-[a-f0-9]{64}\.lock$/u);
+  assert.equal(readFileSync(join(recoverRoot, "stale-locks", preserved[0]), "utf8"), "{\"schemaVersion\":\"1.0\",");
+  release();
+
+  const recentRoot = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-malformed-lock-recent-")));
+  const recentLock = join(recentRoot, "active-run.lock");
+  writeFileSync(recentLock, "{", { mode: 0o600 });
+  assert.throws(() => acquireLock(recentLock, owner, {
+    now: new Date(),
+    processAlive: () => false,
+  }), /recently interrupted malformed run lock/);
+  assert.equal(readFileSync(recentLock, "utf8"), "{");
+
+  const broadRoot = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-malformed-lock-broad-")));
+  const broadLock = join(broadRoot, "active-run.lock");
+  writeFileSync(broadLock, "{", { mode: 0o600 });
+  chmodSync(broadLock, 0o644);
+  assert.throws(() => acquireLock(broadLock, owner), /owner-only mode 0600/);
+  assert.equal(readFileSync(broadLock, "utf8"), "{");
+
+  const linkedRoot = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-malformed-lock-link-")));
+  const target = join(linkedRoot, "target.lock");
+  const linkedLock = join(linkedRoot, "active-run.lock");
+  writeFileSync(target, "{", { mode: 0o600 });
+  symlinkSync(target, linkedLock);
+  assert.throws(() => acquireLock(linkedLock, owner), /not a safe real regular file/);
+  assert.equal(readFileSync(target, "utf8"), "{");
 });
 
 test("lock/control state and host staging stay outside model-writable system temp", () => {
@@ -588,6 +1520,297 @@ test("category output layout accepts exactly one assigned regular report", async
     date: DATE,
     slug: "quant-ph",
   }), /exactly/);
+});
+
+test("source-incomplete layout accepts only one snapshot-bound receipt and no staged report", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-source-blocker-layout-test-"));
+  const blockers = join(root, "blockers");
+  const staging = join(root, "staging");
+  const outbox = join(root, "outbox");
+  mkdirSync(blockers);
+  mkdirSync(staging);
+  mkdirSync(outbox);
+  const blockerPath = join(blockers, "quant-ph.json");
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: "2099.00003",
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: ["2099.00003"],
+  };
+  writeFileSync(blockerPath, `${JSON.stringify(receipt)}\n`, { mode: 0o600 });
+  assert.deepEqual(validateCategorySourceBlockerLayout({
+    blockerDirectory: blockers,
+    blockerPath,
+    stagingDirectory: staging,
+    outboxDirectory: outbox,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+  }), receipt);
+
+  writeFileSync(join(staging, `${DATE}-quant-ph.json`), "{}\n");
+  assert.deepEqual(validateCategorySourceBlockerLayout({
+    blockerDirectory: blockers,
+    blockerPath,
+    stagingDirectory: staging,
+    outboxDirectory: outbox,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+    allowProvisionalReport: true,
+  }), receipt);
+  assert.throws(() => validateCategorySourceBlockerLayout({
+    blockerDirectory: blockers,
+    blockerPath,
+    stagingDirectory: staging,
+    outboxDirectory: outbox,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+  }), /staging must remain empty/);
+  assert.throws(
+    () => assertGenericCategoryDraftRescueAllowed(realpathSync(blockerPath)),
+    /not eligible for generic draft rescue/,
+  );
+  assert.equal(
+    assertGenericCategoryDraftRescueAllowed(join(root, "absent-source-blocker.json")),
+    true,
+  );
+});
+
+test("elapsed source blocker prefetch checks fixed candidates without model tokens", async () => {
+  const runRoot = await mkdtemp(join(tmpdir(), "daily-arxiv-prefetch-test-"));
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: "2099.00003",
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: ["2099.00003"],
+  };
+  const calls = [];
+  const ready = await prefetchSourceBlockerCandidates({
+    receipt,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+    paths: { runRoot },
+    extractor: async (arxivId, options) => {
+      calls.push({ arxivId, options });
+    },
+  });
+  assert.equal(ready.ready, true);
+  assert.equal(ready.prefetchedCount, 1);
+  assert.deepEqual(calls.map(({ arxivId }) => arxivId), ["2099.00003"]);
+  assert.equal(calls[0].options.env.TMPDIR, runRoot);
+  assert.equal(calls[0].options.maxAttempts, 2);
+
+  const unavailable = await prefetchSourceBlockerCandidates({
+    receipt,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+    paths: { runRoot },
+    extractor: typedUnavailableSource,
+    fallbackProbe: async (arxivId) => ({
+      ready: false,
+      arxivId,
+      url: `https://arxiv.org/pdf/${arxivId}v1`,
+      status: null,
+      reason: "fetch_error",
+    }),
+  });
+  assert.equal(unavailable.ready, false);
+  assert.equal(unavailable.arxivId, "2099.00003");
+});
+
+test("source prefetch uses exact-v1 PDF fallback but fails closed for unsafe extractor errors", async () => {
+  const runRoot = await mkdtemp(join(tmpdir(), "daily-arxiv-prefetch-fallback-test-"));
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: "2099.00003",
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: ["2099.00003"],
+  };
+  const pdfFallback = async (arxivId) => ({
+    ready: true,
+    arxivId,
+    url: `https://arxiv.org/pdf/${arxivId}v1`,
+    status: 200,
+    reason: null,
+  });
+
+  const networkFallback = await prefetchSourceBlockerCandidates({
+    receipt,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+    paths: { runRoot },
+    extractor: typedUnavailableSource,
+    fallbackProbe: pdfFallback,
+  });
+  assert.equal(networkFallback.ready, true);
+  assert.equal(networkFallback.prefetchedCount, 0);
+  assert.equal(networkFallback.unsupported[0].kind, "eprint_unavailable");
+  assert.equal(networkFallback.unsupported[0].officialPdfUrl, "https://arxiv.org/pdf/2099.00003v1");
+
+  const formatFallback = await prefetchSourceBlockerCandidates({
+    receipt,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+    paths: { runRoot },
+    extractor: async () => parseArxivSourceArchive(Buffer.from("%PDF-1.7\n"), "2099.00003"),
+    fallbackProbe: pdfFallback,
+  });
+  assert.equal(formatFallback.ready, true);
+  assert.equal(formatFallback.unsupported[0].kind, "source_format_unsupported");
+
+  let fallbackCalled = false;
+  await assert.rejects(() => prefetchSourceBlockerCandidates({
+    receipt,
+    snapshot: SNAPSHOT,
+    slug: "quant-ph",
+    paths: { runRoot },
+    extractor: async () => {
+      throw new TypeError("internal extractor invariant broke on unsafe path traversal");
+    },
+    fallbackProbe: async () => {
+      fallbackCalled = true;
+      return pdfFallback("2099.00003");
+    },
+  }), /path traversal/u);
+  assert.equal(fallbackCalled, false);
+
+  for (const unsafeError of [
+    new Error("Unsafe archive path named network-timeout-HTTP 503.tex escaped extraction root"),
+    Object.assign(new Error("Permission denied after network timeout HTTP 503"), {
+      code: "EACCES",
+      retryable: true,
+    }),
+    new Error("Source redirect validation failed after HTTP 503"),
+    Object.assign(new Error("forged typed source failure"), {
+      code: "ARXIV_SOURCE_UNAVAILABLE",
+    }),
+  ]) {
+    let unsafeFallbackCalled = false;
+    await assert.rejects(() => prefetchSourceBlockerCandidates({
+      receipt,
+      snapshot: SNAPSHOT,
+      slug: "quant-ph",
+      paths: { runRoot },
+      extractor: async () => {
+        throw unsafeError;
+      },
+      fallbackProbe: async () => {
+        unsafeFallbackCalled = true;
+        return pdfFallback("2099.00003");
+      },
+    }), new RegExp(unsafeError.message.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
+    assert.equal(unsafeFallbackCalled, false);
+  }
+});
+
+test("official PDF fallback probe is version-fixed, bounded, and rejects redirects", async () => {
+  let request;
+  const ready = await probeOfficialVersionFixedPdf("2099.00003", {
+    timeoutMs: 100,
+    fetchImpl: async (url, options) => {
+      request = { url, options };
+      return {
+        status: 200,
+        ok: true,
+        url,
+        headers: new Headers({ "content-type": "application/pdf" }),
+      };
+    },
+  });
+  assert.equal(ready.ready, true);
+  assert.equal(request.url, "https://arxiv.org/pdf/2099.00003v1");
+  assert.equal(request.options.method, "HEAD");
+  assert.equal(request.options.redirect, "manual");
+  assert.equal(request.options.credentials, "omit");
+
+  const unavailable = await probeOfficialVersionFixedPdf("2099.00003", {
+    timeoutMs: 100,
+    fetchImpl: async (url) => ({
+      status: 404,
+      ok: false,
+      url,
+      headers: new Headers({ "content-type": "text/html" }),
+    }),
+  });
+  assert.equal(unavailable.ready, false);
+  assert.equal(unavailable.reason, "http_status");
+
+  await assert.rejects(() => probeOfficialVersionFixedPdf("2099.00003", {
+    timeoutMs: 100,
+    fetchImpl: async () => ({
+      status: 200,
+      ok: true,
+      url: "https://example.com/paper.pdf",
+      headers: new Headers({ "content-type": "application/pdf" }),
+    }),
+  }), /unexpected URL/u);
+});
+
+test("protected draft repairs bypass generation backoff and source alerts repeat every third source failure", () => {
+  const attempts = [{
+    at: "2026-07-27T09:00:00.000Z",
+    attemptId: "run-failed",
+    stage: "category_generation",
+    status: "failed",
+    category: "quant-ph",
+    message: "Generation failed without a draft.",
+  }];
+  assert.equal(computeCategoryRetryState({
+    execution: { mode: "repair" },
+    attempts,
+    category: "quant-ph",
+    now: new Date("2026-07-27T10:00:00.000Z"),
+  }), null);
+  assert.equal(computeCategoryRetryState({
+    execution: { mode: "generation" },
+    attempts,
+    category: "quant-ph",
+    now: new Date("2026-07-27T10:00:00.000Z"),
+  }).shouldDefer, true);
+  assert.equal(sourceFailureNeedsAttention(0), false);
+  assert.equal(sourceFailureNeedsAttention(1), false);
+  assert.equal(sourceFailureNeedsAttention(2), true);
+  assert.equal(sourceFailureNeedsAttention(3), false);
+  assert.equal(sourceFailureNeedsAttention(5), true);
+  assert.equal(sourceFailureNeedsAttention(6), false);
+});
+
+test("repair exhaustion notification states retained draft and automatic cooldown recovery", () => {
+  assert.match(macNotificationBody("repair_fallback"), /retained a protected draft/u);
+  assert.match(macNotificationBody("repair_fallback"), /retry automatically after cooldown/u);
+  assert.equal(macNotificationBody("unknown"), null);
+});
+
+test("a source receipt survives a command transport error for host validation", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-receipt-transport-test-"));
+  const blocker = join(root, "quant-ph.json");
+  const commandError = new Error("Codex stream terminated after receipt write");
+  const result = invokeCodexCategory({
+    codexBin: "/usr/bin/false",
+    worktree: root,
+    runRoot: root,
+    logPath: join(root, "codex.log"),
+    prompt: "bounded test",
+    sourceBlockerPath: blocker,
+    commandRunner: () => {
+      writeFileSync(blocker, "{}\n", { mode: 0o600 });
+      throw commandError;
+    },
+  });
+  assert.equal(result, "");
+  assert.throws(() => invokeCodexCategory({
+    codexBin: "/usr/bin/false",
+    worktree: root,
+    runRoot: root,
+    logPath: join(root, "codex-2.log"),
+    prompt: "bounded test",
+    sourceBlockerPath: join(root, "absent.json"),
+    commandRunner: () => {
+      throw commandError;
+    },
+  }), /stream terminated/u);
 });
 
 test("a successful run removes only its own temporary directories and Codex log", async () => {

@@ -6,7 +6,10 @@ import {
   closeSync,
   constants,
   existsSync,
+  fchmodSync,
   fstatSync,
+  fsyncSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   openSync,
@@ -22,13 +25,15 @@ import {
 import { homedir, hostname } from "node:os";
 import { basename, delimiter, dirname, isAbsolute, join, resolve } from "node:path";
 import {
+  buildDurableSelectionEvidence,
   classifySnapshotDate,
   fetchOfficialListingSnapshot,
   fetchOfficialPastweekWindow,
   fingerprintSnapshot,
   probeOfficialFullTextReadiness,
-  revalidatePastweekSnapshot,
+  selectAuthorizedContinuationSnapshot,
   selectBackfillSnapshot,
+  selectCheckpointRecoverySnapshot,
   validateReportAgainstSnapshot,
   validateReportsAgainstSnapshot,
 } from "./arxiv-source.mjs";
@@ -43,8 +48,24 @@ import {
   materializeCheckpointReports,
   openCheckpointJob,
   preserveCheckpointCategoryDraft,
+  preserveCheckpointCategorySourceDraft,
   recoverIncompleteCheckpointReports,
 } from "./checkpoint.mjs";
+import {
+  MODEL_SOURCE_FAILURE_CLASS,
+  ORPHANED_GENERATION_STALE_MS,
+  computeSourceRetryBackoff,
+  createHostSourceProbeFailureReceipt,
+  decodeSourceBlockerEventMessage,
+  encodeSourceBlockerEventMessage,
+  validateCheckpointSourceBlockerReceipt,
+  validateModelSourceIncompleteReceipt,
+} from "./source-blocker.mjs";
+import {
+  extractArxivSource,
+  isArxivSourceFormatUnsupported,
+  isArxivSourceUnavailable,
+} from "../extract-arxiv-source.mjs";
 import {
   CURRENT_QUALITY_GATE_EFFECTIVE_DATE,
   MAX_LANGUAGE_AUDIT_PASSES,
@@ -71,14 +92,46 @@ export const EXPECTED_REMOTE = /^(?:git@github\.com:|https:\/\/github\.com\/|ssh
 
 const RUN_ID_PATTERN = /^run-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{12}$/;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const SHA256_PATTERN = /^[a-f0-9]{64}$/;
 const MAX_MANIFEST_BYTES = 64 * 1024;
+const MAX_AUTHORIZATION_BYTES = 256 * 1024;
 const MAX_REPORT_BYTES = 10 * 1024 * 1024;
 const MAX_LOCK_BYTES = 64 * 1024;
 const MAX_CODEX_LOG_BYTES = 20 * 1024 * 1024;
-const STALE_LOCK_MS = 5 * 60 * 60 * 1000;
+const OFFICIAL_PDF_PROBE_TIMEOUT_MS = 60_000;
+const STALE_LOCK_MS = ORPHANED_GENERATION_STALE_MS;
 const GIT_NETWORK_RETRY_DELAYS_MS = Object.freeze([2_000, 10_000]);
 const REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX = "REPAIR_SOURCE_DRAFT_SHA256=";
-export const MAX_UNCHANGED_DRAFT_REPAIR_FAILURES = 2;
+const REPAIR_REGENERATION_FALLBACK_MESSAGE_PREFIX = "REPAIR_REGENERATION_FALLBACK_DRAFT_SHA256=";
+const SOURCE_RESUME_DRAFT_MESSAGE_PREFIX = "SOURCE_RESUME_DRAFT_SHA256=";
+const DURABLE_AUTHORIZATION_SCHEMA_VERSION = "1.0";
+const DURABLE_AUTHORIZATION_KIND = "edition_continuation";
+const DURABLE_AUTHORIZATION_KEYS = Object.freeze([
+  "schemaVersion",
+  "kind",
+  "selectionMode",
+  "expectedLatestDate",
+  "targetDate",
+  "snapshotFingerprint",
+  "sourceRuntimeFingerprint",
+  "sourceEvaluationRunId",
+  "automationRuntimeFingerprint",
+  "evaluationRunId",
+  "authorizedAt",
+  "evidence",
+]);
+const DURABLE_EVIDENCE_KEYS = Object.freeze([
+  "schemaVersion",
+  "selectionMode",
+  "expectedLatestDate",
+  "targetDate",
+  "targetSnapshotFingerprint",
+  "officialHeadDate",
+  "officialHeadFingerprint",
+  "pastweekAnnouncementDates",
+  "completeSnapshotDates",
+]);
+export const MAX_UNCHANGED_DRAFT_REPAIR_FAILURES = 4;
 export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   ".codex/rules/daily-arxiv.rules",
   "AGENTS.md",
@@ -89,11 +142,13 @@ export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   "scripts/audit-staged-language.mjs",
   "scripts/extract-arxiv-source.mjs",
   "scripts/preflight-staged-category.mjs",
+  "scripts/record-source-incomplete.mjs",
   "scripts/lib/arxiv-source.mjs",
   "scripts/lib/checkpoint.mjs",
   "scripts/lib/local-automation.mjs",
   "scripts/lib/macos-schedule.mjs",
   "scripts/lib/pipeline.mjs",
+  "scripts/lib/source-blocker.mjs",
   "scripts/publish-edition.mjs",
   "scripts/run-local-automation.mjs",
   "scripts/validate-staged-category.mjs",
@@ -105,9 +160,37 @@ function fail(message) {
 }
 
 export function parseMode(argv) {
-  if (argv.length === 0) return "run";
-  if (argv.length === 1 && argv[0] === "--check") return "check";
-  fail("Usage: node scripts/run-local-automation.mjs [--check]");
+  return parseAutomationInvocation(argv).mode;
+}
+
+export function parseAutomationInvocation(argv) {
+  if (!Array.isArray(argv)) fail("Automation arguments must be an array.");
+  if (argv.length === 0) return Object.freeze({ mode: "run", recovery: null });
+  if (argv.length === 1 && argv[0] === "--check") {
+    return Object.freeze({ mode: "check", recovery: null });
+  }
+  if (argv.length === 5 && argv[0] === "--recover-checkpoint") {
+    const [, expectedLatestDate, targetDate, snapshotFingerprint, sourceRuntimeFingerprint] = argv;
+    validateDate(expectedLatestDate);
+    validateDate(targetDate);
+    if (!SHA256_PATTERN.test(snapshotFingerprint) || !SHA256_PATTERN.test(sourceRuntimeFingerprint)) {
+      fail("Checkpoint recovery fingerprints must be lowercase SHA-256 digests.");
+    }
+    return Object.freeze({
+      mode: "run",
+      recovery: Object.freeze({
+        expectedLatestDate,
+        targetDate,
+        snapshotFingerprint,
+        sourceRuntimeFingerprint,
+      }),
+    });
+  }
+  fail(
+    "Usage: node scripts/run-local-automation.mjs [--check | "
+    + "--recover-checkpoint <expected-latest-date> <target-date> "
+    + "<snapshot-fingerprint> <source-runtime-fingerprint>]",
+  );
 }
 
 export function validateRunId(runId) {
@@ -136,6 +219,10 @@ export function classifyFullTextReadiness(readiness, { isLatestAnnouncement }) {
   if (status !== null && !Number.isInteger(status)) {
     fail("Full-text readiness result has an invalid HTTP status.");
   }
+  const pdfCanaryReady = readiness.unavailable?.kind === "source"
+    && Array.isArray(readiness.checks)
+    && readiness.checks.some((check) => check?.kind === "pdf" && check.ready === true);
+  if (pdfCanaryReady) return "ready_pdf_fallback";
   if (status === null || [408, 425, 429, 500, 502, 503, 504].includes(status)) return "defer";
   if (status === 404 && isLatestAnnouncement) return "defer";
   return "fail";
@@ -283,6 +370,16 @@ export function resolveAgentWorktreeBase(root, configuredPath) {
   return resolveSiblingPath(root, configuredPath, `${repositoryName}-agent`, "Agent worktree");
 }
 
+export function resolvePublicationWorktreeBase(root, configuredPath) {
+  const repositoryName = basename(root).replace(/-publisher$/, "");
+  return resolveSiblingPath(
+    root,
+    configuredPath,
+    `${repositoryName}-publication`,
+    "Publication worktree",
+  );
+}
+
 export function resolvePublisherWorktreePath(root, configuredPath) {
   return resolveSiblingPath(root, configuredPath, `${basename(root)}-publisher`, "Publisher worktree");
 }
@@ -315,6 +412,8 @@ export function runPaths(runId, {
     lock: join(controlRoot, "active-run.lock"),
     lockHistory: join(controlRoot, "lock-history"),
     staleLocks: join(controlRoot, "stale-locks"),
+    recoveryAuthorizations: join(controlRoot, "recovery-authorizations"),
+    recoveryAuthorizationStaging: join(controlRoot, "recovery-authorization-staging"),
     logDirectory,
     codexLog: join(logDirectory, `${runId}.codex.log`),
     codexLogs: Object.freeze(Object.fromEntries(
@@ -325,6 +424,10 @@ export function runPaths(runId, {
     categoryStaging: Object.freeze(Object.fromEntries(
       CATEGORIES.map((slug) => [slug, join(staging, slug)]),
     )),
+    blockers: join(runRoot, "blockers"),
+    sourceBlockers: Object.freeze(Object.fromEntries(
+      CATEGORIES.map((slug) => [slug, join(runRoot, "blockers", `${slug}.json`)]),
+    )),
     outbox: join(runRoot, "outbox"),
     manifest: join(runRoot, "outbox", "manifest.json"),
     agentHome: join(runRoot, "home"),
@@ -332,7 +435,7 @@ export function runPaths(runId, {
   });
 }
 
-export function fingerprintAutomationRuntime(root) {
+export function fingerprintAutomationRuntime(root, codexIdentity = null) {
   const hash = createHash("sha256");
   for (const relativePath of [...AUTOMATION_RUNTIME_PATHS].sort()) {
     const absolutePath = resolve(root, relativePath);
@@ -342,7 +445,51 @@ export function fingerprintAutomationRuntime(root) {
     hash.update(`${relativePath}\0${content.length}\0`, "utf8");
     hash.update(content);
   }
+  if (codexIdentity !== null) {
+    if (
+      !codexIdentity
+      || typeof codexIdentity !== "object"
+      || Array.isArray(codexIdentity)
+      || typeof codexIdentity.sha256 !== "string"
+      || !SHA256_PATTERN.test(codexIdentity.sha256)
+      || typeof codexIdentity.version !== "string"
+      || codexIdentity.version.length < 1
+      || codexIdentity.version.length > 256
+      || /[\u0000-\u001f\u007f]/u.test(codexIdentity.version)
+    ) {
+      fail("Automation runtime Codex identity must contain a SHA-256 digest and safe version string.");
+    }
+    hash.update(`\0CODEX_SHA256\0${codexIdentity.sha256}\0CODEX_VERSION\0${codexIdentity.version}`, "utf8");
+  }
   return hash.digest("hex");
+}
+
+function declaredPinnedCodexIdentity(env) {
+  const identity = {
+    sha256: env.DAILY_ARXIV_CODEX_SHA256,
+    version: env.DAILY_ARXIV_CODEX_VERSION,
+  };
+  // Reuse the runtime fingerprint validator so a scheduled run cannot open or
+  // resume a checkpoint before its reviewed Codex identity is bound.
+  fingerprintAutomationRuntimeIdentity(identity);
+  return Object.freeze(identity);
+}
+
+function fingerprintAutomationRuntimeIdentity(identity) {
+  if (
+    !identity
+    || typeof identity !== "object"
+    || Array.isArray(identity)
+    || typeof identity.sha256 !== "string"
+    || !SHA256_PATTERN.test(identity.sha256)
+    || typeof identity.version !== "string"
+    || identity.version.length < 1
+    || identity.version.length > 256
+    || /[\u0000-\u001f\u007f]/u.test(identity.version)
+  ) {
+    fail("Scheduled automation requires the reviewed Codex SHA-256 and version.");
+  }
+  return identity;
 }
 
 function exactKeys(object, expected, label) {
@@ -526,9 +673,15 @@ ${JSON.stringify(categorySnapshot, null, 2)}
 
 Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely and follow rubric 3.0, full-text, natural-Japanese, field-budget, safety, and schema 1.4 requirements. This host prompt intentionally narrows the daily transaction to one resumable category: any wording in the document that says to create or audit all three reports is replaced for this process by the one-category commands below. Do not inspect historical reports, public data, pipeline implementation, or tests as examples, and do not reuse prior rankings or prose.
 
-Screen every assigned abstract. After provisional scoring, inspect official v1 full text for exactly the provisional top min(12, totalNew) papers, then finalize the ranking so every final top min(10, totalNew) paper is fully reviewed. Derive every score and sentence from the assigned paper's title, abstract, and where required full text. Never derive or spread scores from an arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula. If evidence is unavailable, fail instead of fabricating data.
+Screen every assigned abstract. After provisional scoring, fix the provisional top min(12, totalNew) candidate IDs in deterministic rank order. Before the first full-text fetch, write a complete provisional schema 1.4 report to ${reportPath}: it must contain every assigned paper, its abstract-supported prose and scores, the fixed provisional ranking, and truthful fullTextEvaluated/evaluationBasis/sourceUrls values for the evidence actually reviewed so far. Keep this provisional report current after each successful full-text review. Then inspect official v1 full text for exactly the fixed provisional candidates and finalize the ranking so every final top min(10, totalNew) paper is fully reviewed and belongs to that fixed candidate set. Derive every score and sentence from the assigned paper's title, abstract, and where required full text. Never derive or spread scores from an arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula. If evidence is unavailable, fail instead of fabricating data.
 
 Use exactly ${MODEL_ID}, ${MODEL_DISPLAY_NAME}, ${REASONING_EFFORT}, modelSelectionVerified=true, and runId=${evaluationRunId} in evaluationRun. Write only ${reportPath} inside the category staging directory. Do not write another report there. Official source extraction may write only bounded temporary text under $TMPDIR as specified by the helper. Do not modify the Git worktree, use an API key, run npm test, run git, invoke the publisher, or write credentials or PDFs to the repository.
+
+Before fetching a provisional full-text candidate, first check whether the host already materialized bounded official source text at $TMPDIR/sources/<arxivId>. Reuse that text and do not refetch that ID when it exists.
+
+If and only if every assigned abstract has been screened, the exact provisional top min(12, totalNew) candidate IDs have been fixed, a complete current provisional report already exists at ${reportPath}, and one of those candidates still has no usable official v1 full text after the bounded pathways required by docs/SCHEDULED_TASK_PROMPT.md, leave that report in place and run exactly one command of this form, substituting only the failed ID and the comma-separated fixed candidate IDs in the same deterministic order as the report's first min(12, totalNew) ranks:
+node scripts/record-source-incomplete.mjs ${slug} <failed-arxiv-id> ${MODEL_SOURCE_FAILURE_CLASS} <comma-separated-provisional-candidate-ids>
+After it prints SOURCE_INCOMPLETE_RECORDED, stop without another filesystem action and respond exactly SOURCE_INCOMPLETE_RECORDED. The host validates both the receipt and the provisional report against its immutable official snapshot, preserves the report outside the model-write area, and will resume from it after a token-free cooldown and source prefetch. Never create this receipt for a scoring, language, schema, authentication, or non-source problem.
 
 After creating the report, self-check totals, deterministic ranking, full-text flags, evidence-specific scoreReasons, and score distribution once. Every paper, not only the first paper or the fully reviewed papers, must contain the exact schema 1.4 paper-key set. In particular, verify url, arxivVersion, and submissionType on every paper, the exact four keys in both scores and scoreReasons, and the conditional presence of fullTextReviewStatus.
 
@@ -543,7 +696,77 @@ Stop immediately at the first language audit that reports issues=0; do not run o
 Only after an audit reports issues=0, run this read-only validator exactly once as the last command:
 node scripts/validate-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId}
 
-After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. The host ignores success prose and independently validates the sole regular JSON file before importing it into a protected checkpoint. On any uncertainty or failure, exit nonzero and leave the previous public edition unchanged.
+After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. The host ignores success prose and independently validates the sole regular JSON file before importing it into a protected checkpoint. Except for the exact source-incomplete receipt path above, on any uncertainty or failure, exit nonzero and leave the previous public edition unchanged.
+`;
+}
+
+export function buildCategorySourceResumePrompt({
+  evaluationRunId,
+  staging,
+  snapshot,
+  slug,
+  draftSha256,
+  sourceReceipt,
+}) {
+  validateRunId(evaluationRunId);
+  if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
+  if (!snapshot || typeof snapshot !== "object" || snapshot.categories?.[slug] === undefined) {
+    fail("An official arXiv snapshot containing the requested category is required.");
+  }
+  if (typeof draftSha256 !== "string" || !SHA256_PATTERN.test(draftSha256)) {
+    fail("A protected source-resume draft SHA-256 is required.");
+  }
+  const receipt = validateCheckpointSourceBlockerReceipt(sourceReceipt, {
+    snapshot,
+    category: slug,
+  });
+  const date = validateDate(snapshot.announcementDate);
+  const reportPath = join(staging, `${date}-${slug}.json`);
+  const structureCommands = Array.from({ length: MAX_STRUCTURE_AUDIT_PASSES }, (_, index) => {
+    const pass = index + 1;
+    return `${pass}. node scripts/preflight-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId} "$TMPDIR/${slug}-structure-audit-${pass}.json"`;
+  }).join("\n");
+  const auditCommands = Array.from({ length: MAX_LANGUAGE_AUDIT_PASSES }, (_, index) => {
+    const pass = index + 1;
+    return `${pass}. node scripts/audit-staged-language.mjs ${date} ${staging} "$TMPDIR/${slug}-language-audit-${pass}.json" ${slug} ${evaluationRunId}`;
+  }).join("\n");
+  const categorySnapshot = {
+    announcementDate: date,
+    category: structuredClone(snapshot.categories[slug]),
+  };
+  return `You are resuming a host-preserved Daily arXiv category evaluation after an official-full-text interruption. Do not restart abstract screening.
+
+Host-enforced resume identity:
+- modelId: ${MODEL_ID}
+- modelDisplayName: ${MODEL_DISPLAY_NAME}
+- reasoningEffort: ${REASONING_EFFORT}
+- evaluationRunId: ${evaluationRunId}
+- assigned category: ${slug}
+- protected provisional report SHA-256: ${draftSha256}
+- sole in-place report: ${reportPath}
+- fixed provisional full-text candidate IDs, in protected order: ${receipt.provisionalCandidateIds.join(",")}
+
+The host restored a complete provisional schema 1.4 report whose date, category, runId, exact official ID set, abstract-evidence bounds, deterministic provisional ranks, and candidate set were independently checked. The authoritative identity snapshot is:
+${JSON.stringify(categorySnapshot, null, 2)}
+
+Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely for rubric 3.0, full-text, natural-Japanese, field-budget, safety, and schema 1.4 requirements. Preserve the existing abstract screening and every noncandidate paper's evidence claims. Do not repeat the all-paper screening, replace the fixed candidate set, introduce a new paper, or use historical reports. Inspect official v1 full text only for the fixed candidate IDs above, reusing bounded host source text at $TMPDIR/sources/<arxivId> whenever present. Complete or correct candidate-specific scores, reasons, summaries, and ranking from that evidence. The final top min(10, totalNew) must all be fully reviewed and must belong to the fixed candidate set. A noncandidate may not enter the final top min(10, totalNew).
+
+Keep ${reportPath} current after every successful candidate review. If one fixed candidate still has no usable official v1 full text after the bounded official source and exact-v1 PDF pathways, leave the complete current provisional report in place and run exactly:
+node scripts/record-source-incomplete.mjs ${slug} <failed-arxiv-id> ${MODEL_SOURCE_FAILURE_CLASS} ${receipt.provisionalCandidateIds.join(",")}
+After SOURCE_INCOMPLETE_RECORDED, stop without another filesystem action and respond exactly SOURCE_INCOMPLETE_RECORDED. Never use the receipt for a scoring, language, schema, authentication, or non-source problem.
+
+After every fixed candidate is resolved, self-check totals, deterministic ranking, full-text flags, evidence-specific scoreReasons, and score distribution once. Then use these fixed structural audits in order, stopping at the first issues=0 result and making at most one complete batch repair after each nonzero result:
+${structureCommands}
+If structural audit ${MAX_STRUCTURE_AUDIT_PASSES} is nonzero, stop with an error.
+
+Only after structural issues=0, use these fixed language audits in order, stopping at the first issues=0 result and making at most one whole-field batch repair after each nonzero result:
+${auditCommands}
+If language audit ${MAX_LANGUAGE_AUDIT_PASSES} is nonzero, stop with an error.
+
+Only after an audit reports issues=0, run this read-only validator exactly once as the last command:
+node scripts/validate-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId}
+
+After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. On uncertainty, fail closed; the previous public edition and protected provisional draft remain unchanged.
 `;
 }
 
@@ -646,13 +869,20 @@ function hostChildEnv(env = process.env) {
   return clean;
 }
 
+const MAC_NOTIFICATION_BODIES = Object.freeze({
+  published: "Daily arXiv data was pushed. GitHub Pages validation is pending.",
+  failed: "Daily arXiv needs attention; nothing was published.",
+  stalled: "Daily arXiv has repeated source failures. Automatic retries will continue.",
+  repair_fallback: "Daily arXiv retained a protected draft after repeated repair failures. Full regeneration will retry automatically after cooldown.",
+});
+
+export function macNotificationBody(kind) {
+  return MAC_NOTIFICATION_BODIES[kind] ?? null;
+}
+
 export function notifyMac(kind) {
   if (process.platform !== "darwin" || !existsSync("/usr/bin/osascript")) return false;
-  const bodies = {
-    published: "Daily arXiv data was pushed. GitHub Pages validation is pending.",
-    failed: "Daily arXiv needs attention; nothing was published.",
-  };
-  const body = bodies[kind];
+  const body = macNotificationBody(kind);
   if (!body) return false;
   const result = spawnSync("/usr/bin/osascript", [
     "-e",
@@ -854,6 +1084,8 @@ export function prepareControlDirectories(paths) {
   ensureSecureDirectory(paths.logDirectory, "Automation log directory");
   ensureSecureDirectory(paths.lockHistory, "Automation lock history");
   ensureSecureDirectory(paths.staleLocks, "Automation stale-lock directory");
+  ensureSecureDirectory(paths.recoveryAuthorizations, "Automation recovery authorization directory");
+  ensureSecureDirectory(paths.recoveryAuthorizationStaging, "Automation recovery authorization staging directory");
 }
 
 export function prepareRunDirectories(paths) {
@@ -865,12 +1097,14 @@ export function prepareRunDirectories(paths) {
   mkdirSync(paths.runRoot, { mode: 0o700 });
   mkdirSync(paths.staging, { mode: 0o700 });
   for (const slug of CATEGORIES) mkdirSync(paths.categoryStaging[slug], { mode: 0o700 });
+  mkdirSync(paths.blockers, { mode: 0o700 });
   mkdirSync(paths.outbox, { mode: 0o700 });
   mkdirSync(paths.agentHome, { mode: 0o700 });
   mkdirSync(paths.hostStaging, { mode: 0o700 });
   assertPlainDirectory(paths.runRoot, "Run directory");
   assertPlainDirectory(paths.staging, "Staging directory");
   for (const slug of CATEGORIES) assertPlainDirectory(paths.categoryStaging[slug], `${slug} staging directory`);
+  assertPlainDirectory(paths.blockers, "Source blocker directory");
   assertPlainDirectory(paths.outbox, "Outbox directory");
   assertPlainDirectory(paths.agentHome, "Agent home directory");
   assertPlainDirectory(paths.hostStaging, "Host staging directory");
@@ -905,6 +1139,14 @@ export function removeSuccessfulRunArtifacts(paths, {
   removeDirectory(paths.runRoot);
   removeDirectory(paths.hostStaging);
   for (const logPath of logPaths.filter((path) => existsSync(path))) removeFile(logPath);
+}
+
+function removeTokenFreeDeferredRunArtifacts(paths) {
+  try {
+    removeSuccessfulRunArtifacts(paths);
+  } catch (cleanupError) {
+    console.error(`ARTIFACT_CLEANUP_WARNING: ${cleanupError.message}`);
+  }
 }
 
 function lockOwnerIsAlive(pid) {
@@ -942,34 +1184,173 @@ function archiveLock(lockPath, directory, owner, label) {
   return destination;
 }
 
+function assertFixedAutomationLockPath(lockPath) {
+  if (
+    typeof lockPath !== "string"
+    || !isAbsolute(lockPath)
+    || resolve(lockPath) !== lockPath
+    || basename(lockPath) !== "active-run.lock"
+  ) {
+    fail("Automation lock must use the absolute fixed active-run.lock path.");
+  }
+  const parent = dirname(lockPath);
+  const metadata = lstatSync(parent);
+  if (
+    metadata.isSymbolicLink()
+    || !metadata.isDirectory()
+    || realpathSync(parent) !== parent
+    || (typeof process.getuid === "function" && metadata.uid !== process.getuid())
+    || (metadata.mode & 0o077) !== 0
+  ) {
+    fail(`Automation lock parent must be an owned private real directory: ${parent}`);
+  }
+  return parent;
+}
+
+function fsyncDirectory(path) {
+  const descriptor = openSync(path, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0));
+  try {
+    fsyncSync(descriptor);
+  } finally {
+    closeSync(descriptor);
+  }
+}
+
+function stableOwnedLockFile(lockPath, label) {
+  const metadata = lstatSync(lockPath);
+  if (
+    metadata.isSymbolicLink()
+    || !metadata.isFile()
+    || metadata.size > MAX_LOCK_BYTES
+    || realpathSync(lockPath) !== lockPath
+  ) {
+    fail(`${label} is not a safe real regular file: ${lockPath}`);
+  }
+  if (typeof process.getuid === "function" && metadata.uid !== process.getuid()) {
+    fail(`${label} is owned by another user: ${lockPath}`);
+  }
+  if ((metadata.mode & 0o777) !== 0o600) {
+    fail(`${label} must have owner-only mode 0600: ${lockPath}`);
+  }
+  let descriptor;
+  try {
+    descriptor = openSync(lockPath, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+    const before = fstatSync(descriptor);
+    const content = readFileSync(descriptor);
+    const after = fstatSync(descriptor);
+    if (
+      !before.isFile()
+      || before.dev !== metadata.dev
+      || before.ino !== metadata.ino
+      || before.dev !== after.dev
+      || before.ino !== after.ino
+      || before.size !== after.size
+      || before.mtimeMs !== after.mtimeMs
+      || content.length !== after.size
+    ) {
+      fail(`${label} changed while it was being inspected.`);
+    }
+    return Object.freeze({ metadata: before, content });
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+}
+
+function archiveMalformedStaleLock(lockPath, directory, inspected, now, staleAfterMs) {
+  ensureSecureDirectory(directory, "Automation stale-lock directory");
+  const age = now.getTime() - inspected.metadata.mtimeMs;
+  if (!Number.isFinite(age) || age < staleAfterMs) {
+    fail(
+      `A recently interrupted malformed run lock remains; retry after `
+      + `${Math.ceil(staleAfterMs / 3_600_000)} hours or inspect ${lockPath}.`,
+    );
+  }
+  const current = stableOwnedLockFile(lockPath, "Malformed automation lock");
+  if (
+    current.metadata.dev !== inspected.metadata.dev
+    || current.metadata.ino !== inspected.metadata.ino
+    || !current.content.equals(inspected.content)
+  ) {
+    fail("Malformed automation lock changed during stale-lock recovery.");
+  }
+  const digest = createHash("sha256").update(inspected.content).digest("hex");
+  const destination = join(
+    directory,
+    `malformed-${inspected.metadata.dev}-${inspected.metadata.ino}-${digest}.lock`,
+  );
+  if (existsSync(destination)) {
+    fail(`Refusing to overwrite archived malformed automation lock: ${destination}`);
+  }
+  renameSync(lockPath, destination);
+  fsyncDirectory(dirname(lockPath));
+  if (resolve(directory) !== resolve(dirname(lockPath))) fsyncDirectory(directory);
+  return destination;
+}
+
 export function acquireLock(lockPath, owner, {
   now = new Date(),
   staleAfterMs = STALE_LOCK_MS,
   processAlive = lockOwnerIsAlive,
   writeOwner = (descriptor, content) => writeFileSync(descriptor, content, "utf8"),
+  publishLock = linkSync,
+  removeStaged = unlinkSync,
 } = {}) {
   validateLockOwner(owner);
+  const lockParent = assertFixedAutomationLockPath(lockPath);
+  if (!(now instanceof Date) || Number.isNaN(now.getTime())) fail("Automation lock now must be a valid Date.");
+  if (!Number.isSafeInteger(staleAfterMs) || staleAfterMs < 1) fail("Automation stale-lock interval is invalid.");
+  if (
+    typeof processAlive !== "function"
+    || typeof writeOwner !== "function"
+    || typeof publishLock !== "function"
+    || typeof removeStaged !== "function"
+  ) {
+    fail("Automation lock filesystem and process operations must be functions.");
+  }
   const tryCreate = () => {
+    const content = `${JSON.stringify(owner)}\n`;
+    const staged = join(lockParent, `.active-run.lock.${owner.runId}.${owner.nonce}.staged`);
     let descriptor;
-    let created = false;
     try {
-      descriptor = openSync(lockPath, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY, 0o600);
-      created = true;
+      descriptor = openSync(
+        staged,
+        constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0),
+        0o600,
+      );
+      fchmodSync(descriptor, 0o600);
       writeOwner(descriptor, `${JSON.stringify(owner)}\n`);
+      fsyncSync(descriptor);
       closeSync(descriptor);
       descriptor = undefined;
+      const stagedFile = stableOwnedLockFile(staged, "Staged automation lock");
+      if (!stagedFile.content.equals(Buffer.from(content, "utf8"))) {
+        fail("Staged automation lock content does not match its validated owner.");
+      }
+      try {
+        publishLock(staged, lockPath);
+      } catch (error) {
+        if (error.code === "EEXIST") {
+          removeStaged(staged);
+          fsyncDirectory(lockParent);
+          return false;
+        }
+        throw error;
+      }
+      fsyncDirectory(lockParent);
+      removeStaged(staged);
+      fsyncDirectory(lockParent);
       return true;
     } catch (error) {
       if (descriptor !== undefined) closeSync(descriptor);
-      if (error.code === "EEXIST") return false;
-      if (created && existsSync(lockPath)) {
-        const incomplete = join(dirname(lockPath), `incomplete-${owner.runId}-${owner.nonce}.lock`);
+      if (existsSync(staged)) {
+        const incomplete = join(lockParent, `incomplete-${owner.runId}-${owner.nonce}.lock`);
         if (existsSync(incomplete)) fail(`Refusing to overwrite archived incomplete lock: ${incomplete}`);
         try {
-          renameSync(lockPath, incomplete);
-          error.message += `; incomplete lock preserved at ${incomplete}`;
+          renameSync(staged, incomplete);
+          fsyncDirectory(lockParent);
+          error.message += `; incomplete staged lock preserved at ${incomplete}`;
         } catch (archiveError) {
-          error.message += `; could not archive incomplete lock (${archiveError.message})`;
+          error.message += `; could not archive incomplete staged lock (${archiveError.message})`;
         }
       }
       throw error;
@@ -977,34 +1358,55 @@ export function acquireLock(lockPath, owner, {
   };
 
   if (!tryCreate()) {
-    const entry = lstatSync(lockPath);
-    if (entry.isSymbolicLink() || !entry.isFile() || entry.size > MAX_LOCK_BYTES) {
-      fail(`Unsafe automation lock requires manual inspection: ${lockPath}`);
+    const inspected = stableOwnedLockFile(lockPath, "Automation lock");
+    let previous;
+    try {
+      previous = validateLockOwner(JSON.parse(inspected.content.toString("utf8")));
+    } catch (error) {
+      archiveMalformedStaleLock(
+        lockPath,
+        join(lockParent, "stale-locks"),
+        inspected,
+        now,
+        staleAfterMs,
+      );
+      if (!tryCreate()) fail("Automation lock changed during malformed stale-lock recovery.");
+      previous = null;
     }
-    if (typeof process.getuid === "function" && entry.uid !== process.getuid()) {
-      fail(`Automation lock is owned by another user: ${lockPath}`);
+    if (previous === null) {
+      // The malformed stale lock was preserved and this caller now owns a
+      // fully validated atomic lock.
+    } else {
+      const age = now.getTime() - Date.parse(previous.startedAt);
+      if (previous.hostname !== hostname() || previous.uid !== owner.uid) {
+        fail(`Automation lock belongs to another host or user; inspect it manually: ${lockPath}`);
+      }
+      if (processAlive(previous.pid)) {
+        fail(`Another Daily arXiv run is active with pid ${previous.pid}.`);
+      }
+      if (!Number.isFinite(age) || age < staleAfterMs) {
+        fail(`A recently interrupted run lock remains; retry after ${Math.ceil(staleAfterMs / 3_600_000)} hours or inspect ${lockPath}.`);
+      }
+      const staleDirectory = join(lockParent, "stale-locks");
+      archiveLock(lockPath, staleDirectory, previous, "Automation stale-lock directory");
+      fsyncDirectory(lockParent);
+      fsyncDirectory(staleDirectory);
+      if (!tryCreate()) fail("Automation lock changed during stale-lock recovery.");
     }
-    const previous = validateLockOwner(JSON.parse(readFileSync(lockPath, "utf8")));
-    const age = now.getTime() - Date.parse(previous.startedAt);
-    if (previous.hostname !== hostname() || previous.uid !== owner.uid) {
-      fail(`Automation lock belongs to another host or user; inspect it manually: ${lockPath}`);
-    }
-    if (processAlive(previous.pid)) {
-      fail(`Another Daily arXiv run is active with pid ${previous.pid}.`);
-    }
-    if (!Number.isFinite(age) || age < staleAfterMs) {
-      fail(`A recently interrupted run lock remains; retry after ${Math.ceil(staleAfterMs / 3_600_000)} hours or inspect ${lockPath}.`);
-    }
-    archiveLock(lockPath, join(dirname(lockPath), "stale-locks"), previous, "Automation stale-lock directory");
-    if (!tryCreate()) fail("Automation lock changed during stale-lock recovery.");
   }
 
   return () => {
-    const current = validateLockOwner(JSON.parse(readFileSync(lockPath, "utf8")));
+    const current = validateLockOwner(JSON.parse(
+      stableOwnedLockFile(lockPath, "Automation lock").content.toString("utf8"),
+    ));
     if (current.runId !== owner.runId || current.nonce !== owner.nonce) {
       fail("Automation lock ownership changed before release; preserving it for inspection.");
     }
-    return archiveLock(lockPath, join(dirname(lockPath), "lock-history"), owner, "Automation lock history");
+    const historyDirectory = join(lockParent, "lock-history");
+    const archived = archiveLock(lockPath, historyDirectory, owner, "Automation lock history");
+    fsyncDirectory(lockParent);
+    fsyncDirectory(historyDirectory);
+    return archived;
   };
 }
 
@@ -1023,6 +1425,56 @@ function runtimeChangedBetween(root, left, right) {
   return result.status === 1;
 }
 
+export function assertPublisherControlFastForward({ head, originMain, isAncestor }) {
+  for (const [label, value] of [["HEAD", head], ["origin/main", originMain]]) {
+    if (typeof value !== "string" || !/^[a-f0-9]{40,64}$/u.test(value)) {
+      fail(`Publisher control ${label} must be a Git commit ID.`);
+    }
+  }
+  if (typeof isAncestor !== "boolean") {
+    fail("Publisher control ancestry result must be a boolean.");
+  }
+  if (head === originMain) return "current";
+  if (!isAncestor) {
+    fail(
+      "Publisher control worktree contains a local-ahead or divergent commit. "
+      + "It was not switched or reset; inspect it manually.",
+    );
+  }
+  return "fast_forward";
+}
+
+export function verifyPublisherControlRuntime(root) {
+  assertRepository(root);
+  if (!lstatSync(join(root, ".git")).isFile()) {
+    fail("Unattended publication must run from the installed publisher worktree, not the main checkout.");
+  }
+  assertCleanWorktree(root);
+  const originMain = git(root, ["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"]);
+  const head = git(root, ["rev-parse", "HEAD"]);
+  if (head !== originMain) {
+    if (runtimeChangedBetween(root, head, originMain)) {
+      fail("Automation runtime changed on origin/main. Re-run the reviewed scheduler installer before the next unattended run.");
+    }
+    const gitBin = existsSync("/usr/bin/git") ? "/usr/bin/git" : "git";
+    const ancestry = runCommand(
+      gitBin,
+      ["-C", root, "merge-base", "--is-ancestor", head, originMain],
+      { timeout: 120_000, allowFailure: true },
+    );
+    assertPublisherControlFastForward({
+      head,
+      originMain,
+      isAncestor: ancestry.status === 0,
+    });
+  }
+  assertCleanWorktree(root);
+  if (git(root, ["rev-parse", "HEAD"]) !== head) {
+    fail("Publisher control worktree HEAD changed during its read-only runtime check.");
+  }
+  return originMain;
+}
+
 export function preparePublisherRuntime(root) {
   assertRepository(root);
   if (!lstatSync(join(root, ".git")).isFile()) {
@@ -1030,17 +1482,7 @@ export function preparePublisherRuntime(root) {
   }
   assertCleanWorktree(root);
   gitNetwork(root, ["fetch", "--quiet", "origin", "main"], { timeout: 120_000 });
-  const originMain = git(root, ["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"]);
-  const head = git(root, ["rev-parse", "HEAD"]);
-  if (head !== originMain) {
-    if (runtimeChangedBetween(root, head, originMain)) {
-      fail("Automation runtime changed on origin/main. Re-run the reviewed scheduler installer before the next unattended run.");
-    }
-    git(root, ["switch", "--detach", originMain], { timeout: 120_000 });
-  }
-  assertCleanWorktree(root);
-  if (git(root, ["rev-parse", "HEAD"]) !== originMain) fail("Publisher worktree is not exactly at origin/main.");
-  return originMain;
+  return verifyPublisherControlRuntime(root);
 }
 
 export function prepareAgentWorktree(root, worktreeBase, originMain, runId) {
@@ -1070,6 +1512,52 @@ export function prepareAgentWorktree(root, worktreeBase, originMain, runId) {
   git(root, ["worktree", "add", "--detach", candidate, originMain], { timeout: 120_000 });
   const created = inspectExistingWorktree(root, candidate);
   if (!created.exists || created.head !== originMain) fail("Fresh agent worktree is not exactly at origin/main.");
+  return Object.freeze({ worktree: candidate, originMain, reused: false });
+}
+
+export function preparePublicationWorktree(root, worktreeBase, originMain, runId) {
+  assertRepository(root);
+  validateRunId(runId);
+  if (!isAbsolute(worktreeBase) || resolve(worktreeBase) !== worktreeBase) {
+    fail("Publication worktree base must be an absolute normalized path.");
+  }
+  if (dirname(worktreeBase) !== dirname(resolve(root)) || worktreeBase === resolve(root)) {
+    fail("Publication worktree must remain a sibling distinct from the publisher control worktree.");
+  }
+  if (typeof originMain !== "string" || !/^[a-f0-9]{40,64}$/u.test(originMain)) {
+    fail("Publication worktree requires the exact origin/main commit.");
+  }
+  const prefix = `${worktreeBase}-run-`;
+  const registered = listedWorktrees(root);
+  const candidates = registered
+    .filter((path) => path === worktreeBase || path.startsWith(prefix))
+    .sort();
+  for (const candidate of candidates) {
+    let existing;
+    try {
+      existing = inspectExistingWorktree(root, candidate, { requireClean: false });
+    } catch {
+      continue;
+    }
+    if (existing.exists && existing.clean && existing.head === originMain) {
+      return Object.freeze({ worktree: candidate, originMain, reused: true });
+    }
+  }
+
+  // Never switch, reset, clean, or remove a mismatched publication worktree.
+  // It may be evidence of an interrupted commit/push. A new run-specific
+  // worktree keeps the fixed scheduler control checkout clean and makes crash
+  // recovery independent of the abandoned index and working tree.
+  const baseOccupied = existsSync(worktreeBase) || registered.includes(worktreeBase);
+  const candidate = baseOccupied ? `${worktreeBase}-run-${runId}` : worktreeBase;
+  if (existsSync(candidate) || registered.includes(candidate)) {
+    fail(`Fresh publication worktree path is unexpectedly occupied: ${candidate}`);
+  }
+  git(root, ["worktree", "add", "--detach", candidate, originMain], { timeout: 120_000 });
+  const created = inspectExistingWorktree(root, candidate);
+  if (!created.exists || created.head !== originMain) {
+    fail("Fresh publication worktree is not exactly at origin/main.");
+  }
   return Object.freeze({ worktree: candidate, originMain, reused: false });
 }
 
@@ -1218,17 +1706,36 @@ export function invokeCodex({ codexBin, worktree, paths, prompt }) {
   validateCodexCompletionResponse(result.stdout);
 }
 
-export function invokeCodexCategory({ codexBin, worktree, runRoot, logPath, prompt }) {
-  const result = runCommand(codexBin, buildCodexArgs({ worktree, runRoot }), {
-    cwd: worktree,
-    env: sanitizedChildEnv(),
-    input: prompt,
-    outputPath: logPath,
-    timeout: 4 * 60 * 60 * 1000,
-    allowFailure: true,
-    isolatedProcessGroup: true,
-  });
-  if (result.status !== 0) {
+export function invokeCodexCategory({
+  codexBin,
+  worktree,
+  runRoot,
+  logPath,
+  prompt,
+  sourceBlockerPath,
+  commandRunner = runCommand,
+}) {
+  if (typeof commandRunner !== "function") fail("Codex category command runner must be a function.");
+  let result;
+  try {
+    result = commandRunner(codexBin, buildCodexArgs({ worktree, runRoot }), {
+      cwd: worktree,
+      env: sanitizedChildEnv(),
+      input: prompt,
+      outputPath: logPath,
+      timeout: 4 * 60 * 60 * 1000,
+      allowFailure: true,
+      isolatedProcessGroup: true,
+    });
+  } catch (error) {
+    // A bounded model run may finish its exclusive source receipt immediately
+    // before a stream, buffer, or timeout error reaches the host. Defer the
+    // process error only long enough for the caller to verify the unchanged
+    // worktree and the exact snapshot-bound receipt layout.
+    if (!(sourceBlockerPath && existsSync(sourceBlockerPath))) throw error;
+    return "";
+  }
+  if (result.status !== 0 && !(sourceBlockerPath && existsSync(sourceBlockerPath))) {
     fail(`Codex category generation failed (${result.status}); no publication was attempted. Inspect ${logPath}.`);
   }
   return result.stdout?.trim() ?? "";
@@ -1301,6 +1808,56 @@ export function validateCategoryModelOutputLayout({ stagingDirectory, outboxDire
   return Object.freeze({ date, slug, path });
 }
 
+export function validateCategorySourceBlockerLayout({
+  blockerDirectory,
+  blockerPath,
+  stagingDirectory,
+  outboxDirectory,
+  snapshot,
+  slug,
+  allowProvisionalReport = false,
+}) {
+  if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
+  assertPlainDirectory(blockerDirectory, "Model source blocker directory");
+  assertPlainDirectory(stagingDirectory, "Model category staging directory");
+  assertPlainDirectory(outboxDirectory, "Model outbox directory");
+  if (resolve(blockerPath) !== resolve(join(blockerDirectory, `${slug}.json`))) {
+    fail("Model source blocker path does not match the fixed category path.");
+  }
+  const blockerFiles = readdirSync(blockerDirectory).sort();
+  if (blockerFiles.length !== 1 || blockerFiles[0] !== `${slug}.json`) {
+    fail(`Model source blocker directory must contain exactly ${slug}.json.`);
+  }
+  if (!allowProvisionalReport && readdirSync(stagingDirectory).length !== 0) {
+    fail("Model category staging must remain empty for a source-incomplete receipt.");
+  }
+  if (readdirSync(outboxDirectory).length !== 0) {
+    fail("Model outbox must remain empty for a source-incomplete receipt.");
+  }
+  assertPlainFile(blockerPath, `Model source blocker ${slug}`);
+  const content = readStableRegularFile(blockerPath, 64 * 1024);
+  let receipt;
+  try {
+    receipt = JSON.parse(content.toString("utf8"));
+  } catch (error) {
+    fail(`Model source blocker ${slug} is not valid JSON: ${error.message}`);
+  }
+  return validateModelSourceIncompleteReceipt(receipt, { snapshot, category: slug });
+}
+
+export function assertGenericCategoryDraftRescueAllowed(sourceBlockerPath) {
+  if (typeof sourceBlockerPath !== "string" || !isAbsolute(sourceBlockerPath)) {
+    fail("Generic category-draft rescue requires an absolute source-blocker path.");
+  }
+  if (existsSync(sourceBlockerPath)) {
+    fail(
+      "A source-incomplete receipt was present, so an invalid or mixed report "
+      + "is not eligible for generic draft rescue.",
+    );
+  }
+  return true;
+}
+
 export function copyReportsToHostStaging({ sourceDirectory, hostDirectory, date }) {
   assertPlainDirectory(sourceDirectory, "Model staging directory");
   assertPlainDirectory(hostDirectory, "Host staging directory");
@@ -1345,6 +1902,175 @@ function checkpointEventMessage(value) {
     .replace(/\s+/gu, " ")
     .trim()
     .slice(0, 2_000);
+}
+
+export function sourcePrefetchFailureIsUnavailable(error) {
+  return isArxivSourceUnavailable(error);
+}
+
+export function computeCategoryRetryState({ execution, attempts, category, now = new Date() } = {}) {
+  if (!execution || !["generation", "source_resume", "repair"].includes(execution.mode)) {
+    fail("Category retry planning requires a generation, source-resume, or repair execution.");
+  }
+  if (execution.mode === "repair") return null;
+  return computeSourceRetryBackoff({ attempts, category, now });
+}
+
+export function sourceFailureNeedsAttention(previousFailureCount) {
+  if (!Number.isSafeInteger(previousFailureCount) || previousFailureCount < 0) {
+    fail("Previous source failure count must be a non-negative safe integer.");
+  }
+  const nextFailureCount = previousFailureCount + 1;
+  return nextFailureCount >= 3 && (nextFailureCount - 3) % 3 === 0;
+}
+
+export async function probeOfficialVersionFixedPdf(arxivId, {
+  fetchImpl = globalThis.fetch,
+  signal,
+  timeoutMs = OFFICIAL_PDF_PROBE_TIMEOUT_MS,
+} = {}) {
+  if (typeof arxivId !== "string" || !/^\d{4}\.\d{4,5}$/u.test(arxivId)) {
+    fail("Official PDF probe requires an unversioned modern arXiv ID.");
+  }
+  if (typeof fetchImpl !== "function") fail("Official PDF probe requires a fetch implementation.");
+  if (signal !== undefined && !(signal instanceof AbortSignal)) {
+    fail("Official PDF probe signal must be an AbortSignal.");
+  }
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > OFFICIAL_PDF_PROBE_TIMEOUT_MS) {
+    fail(`Official PDF probe timeout must be from 1 through ${OFFICIAL_PDF_PROBE_TIMEOUT_MS} milliseconds.`);
+  }
+  const url = `https://arxiv.org/pdf/${arxivId}v1`;
+  const timeoutController = new AbortController();
+  const timer = setTimeout(
+    () => timeoutController.abort(new Error("Official arXiv PDF probe timed out")),
+    timeoutMs,
+  );
+  timer.unref?.();
+  const combinedSignal = signal === undefined
+    ? timeoutController.signal
+    : AbortSignal.any([signal, timeoutController.signal]);
+  let response;
+  try {
+    response = await fetchImpl(url, {
+      method: "HEAD",
+      headers: {
+        Accept: "application/pdf",
+        "User-Agent": "daily-arxiv-data/1.1 (+https://github.com/hiroki-takeda/daily-arxiv-data)",
+      },
+      redirect: "manual",
+      cache: "no-store",
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+      signal: combinedSignal,
+    });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    return Object.freeze({
+      ready: false,
+      arxivId,
+      url,
+      status: null,
+      reason: "fetch_error",
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+  if (
+    response === null
+    || typeof response !== "object"
+    || !Number.isInteger(response.status)
+    || response.status < 100
+    || response.status > 599
+  ) {
+    fail("Official PDF probe did not return a valid Response.");
+  }
+  if (response.url !== url) {
+    fail(`Official PDF probe redirected to an unexpected URL: ${String(response.url)}.`);
+  }
+  const contentType = response.headers?.get?.("content-type") ?? null;
+  if (
+    response.status !== 200
+    || response.ok !== true
+    || typeof contentType !== "string"
+    || !/^application\/pdf(?:\s*;|$)/iu.test(contentType)
+  ) {
+    return Object.freeze({
+      ready: false,
+      arxivId,
+      url,
+      status: response.status,
+      reason: response.status === 200 ? "invalid_media_type" : "http_status",
+    });
+  }
+  return Object.freeze({
+    ready: true,
+    arxivId,
+    url,
+    status: response.status,
+    reason: null,
+  });
+}
+
+export async function prefetchSourceBlockerCandidates({
+  receipt,
+  snapshot,
+  slug,
+  paths,
+  env = process.env,
+  extractor = extractArxivSource,
+  fallbackProbe = probeOfficialVersionFixedPdf,
+}) {
+  const validated = validateCheckpointSourceBlockerReceipt(receipt, {
+    snapshot,
+    category: slug,
+  });
+  if (typeof extractor !== "function") fail("Source prefetch extractor must be a function.");
+  if (typeof fallbackProbe !== "function") fail("Source fallback probe must be a function.");
+  assertPlainDirectory(paths.runRoot, "Source prefetch run root");
+  const sourceEnvironment = {
+    ...env,
+    TMPDIR: paths.runRoot,
+    TMP: paths.runRoot,
+    TEMP: paths.runRoot,
+  };
+  const unsupported = [];
+  for (const arxivId of validated.provisionalCandidateIds) {
+    try {
+      await extractor(arxivId, {
+        env: sourceEnvironment,
+        maxAttempts: 2,
+        requestTimeoutMs: 60_000,
+      });
+    } catch (error) {
+      const unavailable = sourcePrefetchFailureIsUnavailable(error);
+      const formatUnsupported = isArxivSourceFormatUnsupported(error);
+      if (!unavailable && !formatUnsupported) throw error;
+      const fallback = await fallbackProbe(arxivId);
+      if (!fallback?.ready) {
+        return Object.freeze({
+          ready: false,
+          arxivId,
+          error: checkpointEventMessage(error.message),
+          prefetchedCount: validated.provisionalCandidateIds.indexOf(arxivId),
+          unsupported: Object.freeze(unsupported),
+          fallback,
+        });
+      }
+      // The host never lets the model interpret the rejected source archive.
+      // It may proceed only after an independent exact-v1 official PDF probe.
+      unsupported.push(Object.freeze({
+        arxivId,
+        error: checkpointEventMessage(error.message),
+        kind: formatUnsupported ? "source_format_unsupported" : "eprint_unavailable",
+        officialPdfUrl: fallback.url,
+      }));
+    }
+  }
+  return Object.freeze({
+    ready: true,
+    prefetchedCount: validated.provisionalCandidateIds.length - unsupported.length,
+    unsupported: Object.freeze(unsupported),
+  });
 }
 
 function requireNonEmptyString(value, label) {
@@ -1424,6 +2150,7 @@ export function validateCategoryDraftAssociation({
   evaluationRunId,
   snapshot,
   path = "categoryDraft",
+  allowIncompleteFullText = false,
 }) {
   validateDate(date);
   if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
@@ -1578,7 +2305,7 @@ export function validateCategoryDraftAssociation({
     if (paper.rank !== index + 1) fail(`${path}.papers have inconsistent deterministic ranks.`);
   });
   const topCount = Math.min(10, report.totalNew);
-  if (ranked.slice(0, topCount).some((paper) => !paper.fullTextEvaluated)) {
+  if (!allowIncompleteFullText && ranked.slice(0, topCount).some((paper) => !paper.fullTextEvaluated)) {
     fail(`${path}.papers omit full-text review from a protected top-${topCount} paper.`);
   }
   if (date >= CURRENT_QUALITY_GATE_EFFECTIVE_DATE && findProductionScoreDistributionIssues(report).length > 0) {
@@ -1630,19 +2357,251 @@ export function validateCategoryDraftAssociation({
   return true;
 }
 
+export function validateCategorySourceResumeDraft({
+  report,
+  receipt,
+  date,
+  slug,
+  policy,
+  evaluationRunId,
+  snapshot,
+  candidateOrderRequired = false,
+  path = "categorySourceResumeDraft",
+}) {
+  const normalizedReceipt = validateCheckpointSourceBlockerReceipt(receipt, {
+    snapshot,
+    category: slug,
+  });
+  validateCategoryDraftAssociation({
+    report,
+    date,
+    slug,
+    policy,
+    evaluationRunId,
+    snapshot,
+    path,
+    allowIncompleteFullText: true,
+  });
+  if (candidateOrderRequired) {
+    const rankedCandidateIds = [...report.papers]
+      .sort(comparePapers)
+      .slice(0, normalizedReceipt.provisionalCandidateIds.length)
+      .map(({ arxivId }) => arxivId);
+    if (rankedCandidateIds.join("\0") !== normalizedReceipt.provisionalCandidateIds.join("\0")) {
+      fail(
+        `${path} does not bind the receipt to the initial deterministic provisional top-`
+        + `${normalizedReceipt.provisionalCandidateIds.length} candidate order.`,
+      );
+    }
+  }
+  const candidateSet = new Set(normalizedReceipt.provisionalCandidateIds);
+  if (report.papers.some((paper) => paper.fullTextEvaluated && !candidateSet.has(paper.arxivId))) {
+    fail(`${path} marks a paper outside the fixed provisional candidate set as full-text evaluated.`);
+  }
+  return true;
+}
+
+function sourceResumeImmutablePaperProjection(paper) {
+  return {
+    arxivId: paper.arxivId,
+    title: paper.title,
+    authors: paper.authors,
+    primaryCategory: paper.primaryCategory,
+  };
+}
+
+function sourceResumeNonCandidateProjection(paper) {
+  return {
+    ...sourceResumeImmutablePaperProjection(paper),
+    scores: paper.scores,
+    totalScore: paper.totalScore,
+    evaluationBasis: paper.evaluationBasis,
+    fullTextEvaluated: paper.fullTextEvaluated,
+    sourceUrls: paper.sourceUrls,
+  };
+}
+
+export function validateCategorySourceResumeMutation({
+  source,
+  resumed,
+  receipt,
+  requireComplete = true,
+  path = "categorySourceResume",
+}) {
+  if (
+    !source || typeof source !== "object" || Array.isArray(source)
+    || !resumed || typeof resumed !== "object" || Array.isArray(resumed)
+    || !Array.isArray(source.papers) || !Array.isArray(resumed.papers)
+  ) {
+    fail(`${path} requires two category report objects.`);
+  }
+  const candidateIds = receipt?.provisionalCandidateIds;
+  if (!Array.isArray(candidateIds) || candidateIds.length < 1) {
+    fail(`${path} requires a validated source receipt candidate set.`);
+  }
+  const candidateSet = new Set(candidateIds);
+  const sourceById = new Map(source.papers.map((paper) => [paper.arxivId, paper]));
+  const resumedById = new Map(resumed.papers.map((paper) => [paper.arxivId, paper]));
+  if (
+    sourceById.size !== source.papers.length
+    || resumedById.size !== resumed.papers.length
+    || [...sourceById.keys()].sort().join("\0") !== [...resumedById.keys()].sort().join("\0")
+  ) {
+    fail(`${path} changed the protected paper ID set.`);
+  }
+  for (const [arxivId, before] of sourceById) {
+    const after = resumedById.get(arxivId);
+    const beforeProjection = candidateSet.has(arxivId)
+      ? sourceResumeImmutablePaperProjection(before)
+      : sourceResumeNonCandidateProjection(before);
+    const afterProjection = candidateSet.has(arxivId)
+      ? sourceResumeImmutablePaperProjection(after)
+      : sourceResumeNonCandidateProjection(after);
+    if (
+      JSON.stringify(canonicalJsonValue(beforeProjection))
+      !== JSON.stringify(canonicalJsonValue(afterProjection))
+    ) {
+      fail(
+        candidateSet.has(arxivId)
+          ? `${path} changed immutable metadata for fixed candidate ${arxivId}.`
+          : `${path} changed protected abstract-screening content for noncandidate ${arxivId}.`,
+      );
+    }
+  }
+  const fullTextIds = resumed.papers
+    .filter(({ fullTextEvaluated }) => fullTextEvaluated)
+    .map(({ arxivId }) => arxivId)
+    .sort();
+  if (fullTextIds.some((arxivId) => !candidateSet.has(arxivId))) {
+    fail(`${path} marks a paper outside the fixed candidate set as full-text evaluated.`);
+  }
+  if (requireComplete && fullTextIds.join("\0") !== [...candidateSet].sort().join("\0")) {
+    fail(`${path} must complete full-text review for the exact fixed candidate set.`);
+  }
+  return true;
+}
+
 export function countUnchangedCategoryDraftRepairFailures({ job, slug, draftSha256 }) {
   if (!job || !Array.isArray(job.attempts)) fail("A loaded checkpoint job is required for repair accounting.");
   if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
   if (typeof draftSha256 !== "string" || !/^[a-f0-9]{64}$/u.test(draftSha256)) {
     fail("A category-draft SHA-256 is required for repair accounting.");
   }
-  const marker = `${REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX}${draftSha256}`;
+  // A failed repair may validly preserve a prose-edited successor draft with a
+  // different digest. Counting only failures that name the latest digest would
+  // let every such successor reset the retry budget forever. The checkpoint job
+  // already fixes date, snapshot, runtime, evaluation run, and category, so it
+  // is the durable repair lineage boundary. Starts without a terminal failure
+  // remain excluded.
   return new Set(job.attempts.filter((event) => (
     event.category === slug
     && event.stage === "category_repair"
-    && event.status === "started"
-    && (event.message === marker || event.message.startsWith(`${marker};`))
+    && event.status === "failed"
   )).map((event) => event.attemptId)).size;
+}
+
+function regenerationFallbackAlreadyAnnounced({ job, slug, draftSha256 }) {
+  if (!job || !Array.isArray(job.attempts)) fail("A loaded checkpoint job is required for fallback accounting.");
+  if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
+  if (typeof draftSha256 !== "string" || !SHA256_PATTERN.test(draftSha256)) {
+    fail("A category-draft SHA-256 is required for fallback accounting.");
+  }
+  return job.attempts.some((event) => (
+    event.category === slug
+    && event.stage === "category_regeneration_fallback"
+    && ["deferred", "resumed"].includes(event.status)
+  ));
+}
+
+function sourceBlockerEventsForAttempt(job, { slug, attemptId } = {}) {
+  return job.attempts.filter((event) => (
+    event.category === slug
+    && event.attemptId === attemptId
+    && event.status === "failed"
+  )).map((event) => ({
+    event,
+    decoded: decodeSourceBlockerEventMessage(event.message),
+  })).filter(({ decoded }) => decoded !== null);
+}
+
+function sameSourceReceipt(left, right) {
+  return JSON.stringify(canonicalJsonValue(left)) === JSON.stringify(canonicalJsonValue(right));
+}
+
+function sourceBlockerForAttempt(job, { slug, attemptId, draft = null } = {}) {
+  const blockers = sourceBlockerEventsForAttempt(job, { slug, attemptId });
+  if (blockers.length > 1) {
+    fail(`Protected source-resume draft ${attemptId} ${slug} has multiple source receipts.`);
+  }
+  const eventReceipt = blockers.length === 0
+    ? null
+    : validateCheckpointSourceBlockerReceipt(blockers[0].decoded.receipt, {
+      snapshot: job.snapshot,
+      category: slug,
+    });
+  const embeddedReceipt = draft?.sourceReceipt === null || draft?.sourceReceipt === undefined
+    ? null
+    : validateCheckpointSourceBlockerReceipt(draft.sourceReceipt, {
+      snapshot: job.snapshot,
+      category: slug,
+    });
+  if (
+    blockers.length === 1
+    && draft?.attemptStage !== undefined
+    && blockers[0].event.stage !== draft.attemptStage
+  ) {
+    fail(`Protected source-resume draft ${attemptId} ${slug} receipt stage does not match its draft.`);
+  }
+  if (
+    embeddedReceipt !== null
+    && eventReceipt !== null
+    && !sameSourceReceipt(embeddedReceipt, eventReceipt)
+  ) {
+    fail(`Protected source-resume draft ${attemptId} ${slug} has conflicting embedded and event receipts.`);
+  }
+  return embeddedReceipt ?? eventReceipt;
+}
+
+function recoverMissingSourceDraftFailureEvent(job, { slug, draft } = {}) {
+  if (draft?.sourceReceipt === null || draft?.sourceReceipt === undefined) return job;
+  const blockers = sourceBlockerEventsForAttempt(job, {
+    slug,
+    attemptId: draft.attemptId,
+  });
+  if (blockers.length > 1) {
+    fail(`Protected source-resume draft ${draft.attemptId} ${slug} has multiple source receipts.`);
+  }
+  const receipt = sourceBlockerForAttempt(job, {
+    slug,
+    attemptId: draft.attemptId,
+    draft,
+  });
+  if (blockers.length === 1) return job;
+  appendCheckpointAttempt({
+    job,
+    attemptId: draft.attemptId,
+    stage: draft.attemptStage,
+    status: "failed",
+    category: slug,
+    message: encodeSourceBlockerEventMessage(receipt, {
+      observedAt: new Date(draft.preservedAt),
+    }),
+  });
+  return loadCheckpointJob({
+    controlRoot: job.controlRoot,
+    reportDate: job.manifest.reportDate,
+    snapshotFingerprint: job.manifest.snapshotFingerprint,
+    runtimeFingerprint: job.manifest.runtimeFingerprint,
+    evaluationRunId: job.evaluationRunId,
+  });
+}
+
+function validatedEmbeddedSourceReceipt(sourceReceipt, job, slug) {
+  if (sourceReceipt === null || sourceReceipt === undefined) return null;
+  return validateCheckpointSourceBlockerReceipt(sourceReceipt, {
+    snapshot: job.snapshot,
+    category: slug,
+  });
 }
 
 export function prepareCategoryExecution({ job, slug, staging, snapshot, policy }) {
@@ -1651,7 +2610,7 @@ export function prepareCategoryExecution({ job, slug, staging, snapshot, policy 
   assertPlainDirectory(staging, "Category staging directory");
   if (readdirSync(staging).length !== 0) fail("Category staging directory must start empty.");
   const expectedSnapshotFingerprint = fingerprintSnapshot(snapshot);
-  const currentJob = loadCheckpointJob({
+  let currentJob = loadCheckpointJob({
     controlRoot: job.controlRoot,
     reportDate: job.manifest?.reportDate,
     snapshotFingerprint: job.manifest?.snapshotFingerprint,
@@ -1662,15 +2621,37 @@ export function prepareCategoryExecution({ job, slug, staging, snapshot, policy 
     || currentJob.evaluationRunId !== currentJob.manifest.evaluationRunId) {
     fail("Checkpoint job identity does not match the supplied runtime snapshot.");
   }
-  const validateDraft = (candidate, context) => validateCategoryDraftAssociation({
-    report: candidate,
-    date: context.reportDate,
-    slug: context.category,
-    policy,
-    evaluationRunId: context.evaluationRunId,
-    snapshot: context.snapshot,
-    path: `checkpointDraft.${context.category}`,
-  });
+  const validateDraft = (candidate, context) => {
+    const sourceReceipt = validatedEmbeddedSourceReceipt(
+      context.sourceReceipt,
+      currentJob,
+      context.category,
+    ) ?? sourceBlockerForAttempt(currentJob, {
+      slug: context.category,
+      attemptId: context.attemptId,
+    });
+    if (sourceReceipt !== null) {
+      return validateCategorySourceResumeDraft({
+        report: candidate,
+        receipt: sourceReceipt,
+        date: context.reportDate,
+        slug: context.category,
+        policy,
+        evaluationRunId: context.evaluationRunId,
+        snapshot: context.snapshot,
+        path: `checkpointSourceResumeDraft.${context.category}`,
+      });
+    }
+    return validateCategoryDraftAssociation({
+      report: candidate,
+      date: context.reportDate,
+      slug: context.category,
+      policy,
+      evaluationRunId: context.evaluationRunId,
+      snapshot: context.snapshot,
+      path: `checkpointDraft.${context.category}`,
+    });
+  };
   const draft = latestCheckpointCategoryDraft({ job: currentJob, category: slug, validateDraft });
   if (draft === null) {
     return Object.freeze({
@@ -1685,18 +2666,57 @@ export function prepareCategoryExecution({ job, slug, staging, snapshot, policy 
       }),
     });
   }
+  currentJob = recoverMissingSourceDraftFailureEvent(currentJob, { slug, draft });
+  const sourceReceipt = sourceBlockerForAttempt(currentJob, {
+    slug,
+    attemptId: draft.attemptId,
+    draft,
+  });
+  const materializedPath = join(realpathSync(staging), `${snapshot.announcementDate}-${slug}.json`);
+  if (sourceReceipt !== null) {
+    materializeCheckpointCategoryDraft({ job: currentJob, draft, destination: materializedPath });
+    return Object.freeze({
+      mode: "source_resume",
+      stage: "category_source_resume",
+      draft,
+      sourceReceipt,
+      prompt: buildCategorySourceResumePrompt({
+        evaluationRunId: currentJob.evaluationRunId,
+        staging,
+        snapshot,
+        slug,
+        draftSha256: draft.sha256,
+        sourceReceipt,
+      }),
+    });
+  }
   const unchangedFailures = countUnchangedCategoryDraftRepairFailures({
     job: currentJob,
     slug,
     draftSha256: draft.sha256,
   });
   if (unchangedFailures >= MAX_UNCHANGED_DRAFT_REPAIR_FAILURES) {
-    fail(
-      `Category repair stopped after ${MAX_UNCHANGED_DRAFT_REPAIR_FAILURES} unchanged attempts for `
-      + `${snapshot.announcementDate} ${slug} draft ${draft.sha256}; manual inspection is required.`,
-    );
+    return Object.freeze({
+      mode: "generation",
+      stage: "category_generation",
+      draft: null,
+      regenerationFallback: Object.freeze({
+        protectedDraft: draft,
+        repairFailureCount: unchangedFailures,
+        announcementNeeded: !regenerationFallbackAlreadyAnnounced({
+          job: currentJob,
+          slug,
+          draftSha256: draft.sha256,
+        }),
+      }),
+      prompt: buildCategoryAutomationPrompt({
+        evaluationRunId: currentJob.evaluationRunId,
+        staging,
+        snapshot,
+        slug,
+      }),
+    });
   }
-  const materializedPath = join(realpathSync(staging), `${snapshot.announcementDate}-${slug}.json`);
   materializeCheckpointCategoryDraft({ job: currentJob, draft, destination: materializedPath });
   return Object.freeze({
     mode: "repair",
@@ -1829,11 +2849,685 @@ export function openRecoverableCheckpointJob({
   });
 }
 
-export async function runAutomation({ root, env = process.env, fetchImpl = globalThis.fetch, now = new Date() }) {
+export function loadCheckpointRecoverySource({
+  root,
+  controlRoot,
+  index,
+  recovery,
+}) {
+  if (!recovery || typeof recovery !== "object" || Array.isArray(recovery)) {
+    fail("Checkpoint recovery requires its exact one-shot invocation.");
+  }
+  const expectedKeys = [
+    "expectedLatestDate",
+    "targetDate",
+    "snapshotFingerprint",
+    "sourceRuntimeFingerprint",
+  ];
+  if (Object.keys(recovery).sort().join("\0") !== expectedKeys.sort().join("\0")) {
+    fail("Checkpoint recovery invocation has unexpected or missing fields.");
+  }
+  validateDate(recovery.expectedLatestDate);
+  validateDate(recovery.targetDate);
+  if (!SHA256_PATTERN.test(recovery.snapshotFingerprint)
+    || !SHA256_PATTERN.test(recovery.sourceRuntimeFingerprint)) {
+    fail("Checkpoint recovery fingerprints must be lowercase SHA-256 digests.");
+  }
+  if (!index || typeof index !== "object" || Array.isArray(index)) {
+    fail("Checkpoint recovery requires the public data index.");
+  }
+  if (index.latestDate !== recovery.expectedLatestDate) {
+    fail(
+      `Checkpoint recovery expected public latestDate ${recovery.expectedLatestDate}, `
+      + `but the repository contains ${String(index.latestDate)}.`,
+    );
+  }
+  if (!Array.isArray(index.availableDates) || !index.availableDates.includes(index.latestDate)) {
+    fail("Public data index has an invalid availableDates anchor.");
+  }
+  if (index.availableDates.includes(recovery.targetDate)) {
+    fail(`Checkpoint recovery target ${recovery.targetDate} is already listed as public.`);
+  }
+  const current = parseJsonFile(join(root, "public", "data", "current.json"));
+  if (current.date !== index.latestDate
+    || !Array.isArray(current.availableDates)
+    || current.availableDates.join("\0") !== index.availableDates.join("\0")) {
+    fail("Public current.json and index.json disagree before checkpoint recovery.");
+  }
+  const datedTarget = join(root, "public", "data", `${recovery.targetDate}.json`);
+  if (existsSync(datedTarget)) {
+    fail(`Checkpoint recovery target already exists on disk: ${datedTarget}`);
+  }
+
+  const sourceJob = loadCheckpointJob({
+    controlRoot,
+    reportDate: recovery.targetDate,
+    snapshotFingerprint: recovery.snapshotFingerprint,
+    runtimeFingerprint: recovery.sourceRuntimeFingerprint,
+  });
+  if (sourceJob.publishedCommit !== null || sourceJob.publicationStatus === "published") {
+    fail(`Checkpoint recovery source was already published at ${sourceJob.publishedCommit}.`);
+  }
+  if (
+    sourceJob.completeCategories.length !== 0
+    || sourceJob.incompleteReports.length !== 0
+    || sourceJob.incompleteDrafts.length !== 0
+    || CATEGORIES.some((slug) => sourceJob.drafts[slug].length !== 0)
+  ) {
+    fail(
+      "Checkpoint recovery may reuse only an immutable source snapshot; "
+      + "the selected source job contains a report or draft that requires separate review.",
+    );
+  }
+  return Object.freeze({ sourceJob, storedSnapshot: sourceJob.snapshot });
+}
+
+function serializeCanonicalJson(value) {
+  return `${JSON.stringify(canonicalJsonValue(value), null, 2)}\n`;
+}
+
+function validateCanonicalTimestamp(value, label) {
+  if (typeof value !== "string" || Number.isNaN(Date.parse(value)) || new Date(value).toISOString() !== value) {
+    fail(`${label} must be a canonical UTC ISO timestamp.`);
+  }
+  return value;
+}
+
+function validateDurableRecoveryAuthorization(record) {
+  exactKeys(record, DURABLE_AUTHORIZATION_KEYS, "Durable recovery authorization");
+  if (
+    record.schemaVersion !== DURABLE_AUTHORIZATION_SCHEMA_VERSION
+    || record.kind !== DURABLE_AUTHORIZATION_KIND
+  ) {
+    fail("Durable recovery authorization has an invalid schema or kind.");
+  }
+  if (!["normal", "checkpoint_recovery"].includes(record.selectionMode)) {
+    fail("Durable recovery authorization selectionMode is invalid.");
+  }
+  validateDate(record.expectedLatestDate);
+  validateDate(record.targetDate);
+  if (record.targetDate <= record.expectedLatestDate) {
+    fail("Durable recovery authorization targetDate must be newer than expectedLatestDate.");
+  }
+  for (const [label, value] of [
+    ["snapshotFingerprint", record.snapshotFingerprint],
+    ["automationRuntimeFingerprint", record.automationRuntimeFingerprint],
+  ]) {
+    if (typeof value !== "string" || !SHA256_PATTERN.test(value)) {
+      fail(`Durable recovery authorization ${label} must be a lowercase SHA-256 digest.`);
+    }
+  }
+  validateRunId(record.evaluationRunId);
+  validateCanonicalTimestamp(record.authorizedAt, "Durable recovery authorization authorizedAt");
+  if (record.selectionMode === "normal") {
+    if (record.sourceRuntimeFingerprint !== null || record.sourceEvaluationRunId !== null) {
+      fail("Normal durable recovery authorization may not contain a source checkpoint identity.");
+    }
+  } else {
+    if (
+      typeof record.sourceRuntimeFingerprint !== "string"
+      || !SHA256_PATTERN.test(record.sourceRuntimeFingerprint)
+    ) {
+      fail("Checkpoint-recovery authorization requires sourceRuntimeFingerprint.");
+    }
+    validateRunId(record.sourceEvaluationRunId);
+  }
+  exactKeys(record.evidence, DURABLE_EVIDENCE_KEYS, "Durable recovery authorization evidence");
+  if (
+    record.evidence.schemaVersion !== DURABLE_AUTHORIZATION_SCHEMA_VERSION
+    || record.evidence.selectionMode !== record.selectionMode
+    || record.evidence.expectedLatestDate !== record.expectedLatestDate
+    || record.evidence.targetDate !== record.targetDate
+    || record.evidence.targetSnapshotFingerprint !== record.snapshotFingerprint
+  ) {
+    fail("Durable recovery authorization evidence does not match its fixed identity.");
+  }
+  for (const key of ["pastweekAnnouncementDates", "completeSnapshotDates"]) {
+    if (!Array.isArray(record.evidence[key]) || record.evidence[key].length === 0) {
+      fail(`Durable recovery authorization evidence.${key} must be a non-empty array.`);
+    }
+  }
+  return Object.freeze({
+    ...record,
+    evidence: Object.freeze({
+      ...record.evidence,
+      pastweekAnnouncementDates: Object.freeze([...record.evidence.pastweekAnnouncementDates]),
+      completeSnapshotDates: Object.freeze([...record.evidence.completeSnapshotDates]),
+    }),
+  });
+}
+
+function readDurableAuthorizationFile(path, expectedDigest) {
+  assertPlainFile(path, "Durable recovery authorization");
+  const metadata = lstatSync(path);
+  if (
+    (typeof process.getuid === "function" && metadata.uid !== process.getuid())
+    || (metadata.mode & 0o777) !== 0o600
+    || realpathSync(path) !== resolve(path)
+  ) {
+    fail(`Durable recovery authorization must be an owned 0600 real file: ${path}`);
+  }
+  const content = readStableRegularFile(path, MAX_AUTHORIZATION_BYTES);
+  const actualDigest = createHash("sha256").update(content).digest("hex");
+  if (actualDigest !== expectedDigest) {
+    fail(`Durable recovery authorization digest does not match its filename: ${path}`);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(content.toString("utf8"));
+  } catch (error) {
+    fail(`Durable recovery authorization is not valid JSON: ${error.message}`);
+  }
+  const record = validateDurableRecoveryAuthorization(parsed);
+  if (!content.equals(Buffer.from(serializeCanonicalJson(record), "utf8"))) {
+    fail(`Durable recovery authorization is not canonical immutable content: ${path}`);
+  }
+  return record;
+}
+
+export function loadActiveDurableRecoveryAuthorization({
+  directory,
+  latestDate,
+} = {}) {
+  validateDate(latestDate);
+  ensureSecureDirectory(directory, "Durable recovery authorization directory");
+  const records = [];
+  for (const name of readdirSync(directory).sort()) {
+    const match = /^([a-f0-9]{64})\.json$/u.exec(name);
+    if (!match) fail(`Unexpected durable recovery authorization entry: ${name}`);
+    records.push(readDurableAuthorizationFile(join(directory, name), match[1]));
+  }
+  const recordsByExpectedLatest = new Map();
+  for (const record of records) {
+    const previous = recordsByExpectedLatest.get(record.expectedLatestDate);
+    if (previous !== undefined) {
+      fail(
+        `Multiple durable recovery authorizations target the same public latestDate `
+        + `${record.expectedLatestDate}.`,
+      );
+    }
+    recordsByExpectedLatest.set(record.expectedLatestDate, record);
+  }
+  const active = records.filter(({ expectedLatestDate }) => expectedLatestDate === latestDate);
+  return Object.freeze({
+    active: active[0] ?? null,
+    records: Object.freeze(records),
+  });
+}
+
+export function createDurableRecoveryAuthorization({
+  directory,
+  stagingDirectory = join(dirname(directory), "recovery-authorization-staging"),
+  selectionMode,
+  expectedLatestDate,
+  snapshot,
+  sourceJob = null,
+  automationRuntimeFingerprint,
+  job,
+  evidence,
+  now = new Date(),
+  publishLink = linkSync,
+  removeStaged = unlinkSync,
+} = {}) {
+  ensureSecureDirectory(directory, "Durable recovery authorization directory");
+  ensureSecureDirectory(stagingDirectory, "Durable recovery authorization staging directory");
+  if (statSync(directory).dev !== statSync(stagingDirectory).dev) {
+    fail("Durable recovery authorization staging must be on the same filesystem as its active directory.");
+  }
+  if (typeof publishLink !== "function" || typeof removeStaged !== "function") {
+    fail("Durable recovery authorization filesystem operations must be functions.");
+  }
+  if (!job || typeof job !== "object" || !job.manifest) {
+    fail("A loaded destination checkpoint job is required for durable authorization.");
+  }
+  const snapshotFingerprint = fingerprintSnapshot(snapshot);
+  const record = validateDurableRecoveryAuthorization({
+    schemaVersion: DURABLE_AUTHORIZATION_SCHEMA_VERSION,
+    kind: DURABLE_AUTHORIZATION_KIND,
+    selectionMode,
+    expectedLatestDate,
+    targetDate: snapshot.announcementDate,
+    snapshotFingerprint,
+    sourceRuntimeFingerprint: sourceJob?.manifest?.runtimeFingerprint ?? null,
+    sourceEvaluationRunId: sourceJob?.evaluationRunId ?? null,
+    automationRuntimeFingerprint,
+    evaluationRunId: job.evaluationRunId,
+    authorizedAt: new Date(now).toISOString(),
+    evidence,
+  });
+  if (
+    job.manifest.reportDate !== record.targetDate
+    || job.manifest.snapshotFingerprint !== record.snapshotFingerprint
+    || job.manifest.runtimeFingerprint !== record.automationRuntimeFingerprint
+  ) {
+    fail("Destination checkpoint identity does not match the durable recovery authorization.");
+  }
+  const content = Buffer.from(serializeCanonicalJson(record), "utf8");
+  const digest = createHash("sha256").update(content).digest("hex");
+  const destination = join(directory, `${digest}.json`);
+  const temporary = join(
+    stagingDirectory,
+    `${digest}.${process.pid}.${randomBytes(16).toString("hex")}.staged`,
+  );
+  let descriptor;
+  try {
+    descriptor = openSync(
+      temporary,
+      constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | (constants.O_NOFOLLOW ?? 0),
+      0o600,
+    );
+    fchmodSync(descriptor, 0o600);
+    writeFileSync(descriptor, content);
+    fsyncSync(descriptor);
+  } finally {
+    if (descriptor !== undefined) closeSync(descriptor);
+  }
+  let destinationPublished = false;
+  try {
+    publishLink(temporary, destination);
+    destinationPublished = true;
+    const directoryDescriptor = openSync(directory, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0));
+    try {
+      fsyncSync(directoryDescriptor);
+    } finally {
+      closeSync(directoryDescriptor);
+    }
+    removeStaged(temporary);
+    const stagingDescriptor = openSync(stagingDirectory, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0));
+    try {
+      fsyncSync(stagingDescriptor);
+    } finally {
+      closeSync(stagingDescriptor);
+    }
+    const stored = readDurableAuthorizationFile(destination, digest);
+    return Object.freeze({ path: destination, sha256: digest, record: stored });
+  } catch (error) {
+    if (destinationPublished) {
+      try {
+        unlinkSync(destination);
+        const directoryDescriptor = openSync(
+          directory,
+          constants.O_RDONLY | (constants.O_DIRECTORY ?? 0),
+        );
+        try {
+          fsyncSync(directoryDescriptor);
+        } finally {
+          closeSync(directoryDescriptor);
+        }
+      } catch (rollbackError) {
+        error.message += `; newly published authorization rollback failed (${rollbackError.message})`;
+      }
+    }
+    throw error;
+  }
+}
+
+function loadAuthorizationCheckpoint({ controlRoot, record }) {
+  return loadCheckpointJob({
+    controlRoot,
+    reportDate: record.targetDate,
+    snapshotFingerprint: record.snapshotFingerprint,
+    runtimeFingerprint: record.automationRuntimeFingerprint,
+    evaluationRunId: record.evaluationRunId,
+  });
+}
+
+export function ensureDurableContinuationQueue({
+  directory,
+  stagingDirectory,
+  controlRoot,
+  records = [],
+  selectionMode,
+  expectedLatestDate,
+  pendingSnapshots,
+  sourceJob = null,
+  automationRuntimeFingerprint,
+  firstJob,
+  policy,
+  currentSnapshot,
+  pastweekWindow,
+  attemptId,
+  now = new Date(),
+  createAuthorization = createDurableRecoveryAuthorization,
+} = {}) {
+  if (!["normal", "checkpoint_recovery"].includes(selectionMode)) {
+    fail("Durable continuation queue requires a normal or checkpoint-recovery first selection.");
+  }
+  validateDate(expectedLatestDate);
+  validateRunId(attemptId);
+  if (!Array.isArray(records) || !Array.isArray(pendingSnapshots) || pendingSnapshots.length < 1) {
+    fail("Durable continuation queue requires existing records and at least one pending snapshot.");
+  }
+  if (typeof automationRuntimeFingerprint !== "string" || !SHA256_PATTERN.test(automationRuntimeFingerprint)) {
+    fail("Durable continuation queue requires the automation runtime fingerprint.");
+  }
+  if (!firstJob || typeof firstJob !== "object") {
+    fail("Durable continuation queue requires the opened first checkpoint job.");
+  }
+  if (typeof createAuthorization !== "function") {
+    fail("Durable continuation queue authorization creator must be a function.");
+  }
+  const recordsByAnchor = new Map();
+  for (const record of records) {
+    const validated = validateDurableRecoveryAuthorization(record);
+    if (recordsByAnchor.has(validated.expectedLatestDate)) {
+      fail(`Durable continuation queue repeats anchor ${validated.expectedLatestDate}.`);
+    }
+    recordsByAnchor.set(validated.expectedLatestDate, validated);
+  }
+
+  const pendingSnapshotsByDate = new Map();
+  let previousPendingDate = null;
+  for (const snapshot of pendingSnapshots) {
+    const fingerprint = fingerprintSnapshot(snapshot);
+    const date = validateDate(snapshot.announcementDate);
+    if (previousPendingDate !== null && previousPendingDate >= date) {
+      fail("Durable continuation pending snapshots must be in strict oldest-to-newest order.");
+    }
+    previousPendingDate = date;
+    const previous = pendingSnapshotsByDate.get(date);
+    if (previous !== undefined && fingerprintSnapshot(previous) !== fingerprint) {
+      fail(`Durable continuation queue has conflicting snapshots for ${date}.`);
+    }
+    pendingSnapshotsByDate.set(date, snapshot);
+  }
+
+  // Include every already-authorized successor even after it ages out of the
+  // live pastweek window. This lets a long-running first edition retain the
+  // complete chain captured on earlier scheduled invocations.
+  const authorizedChain = [];
+  const authorizedSnapshotsByDate = new Map();
+  const seenAnchors = new Set();
+  let cursor = expectedLatestDate;
+  while (recordsByAnchor.has(cursor)) {
+    if (seenAnchors.has(cursor)) fail("Durable continuation authorization chain contains a cycle.");
+    seenAnchors.add(cursor);
+    const record = recordsByAnchor.get(cursor);
+    const job = loadAuthorizationCheckpoint({ controlRoot, record });
+    if (fingerprintSnapshot(job.snapshot) !== record.snapshotFingerprint) {
+      fail(`Durable continuation checkpoint snapshot changed for ${record.targetDate}.`);
+    }
+    const live = pendingSnapshotsByDate.get(record.targetDate);
+    if (live !== undefined && fingerprintSnapshot(live) !== record.snapshotFingerprint) {
+      fail(`Live and queued snapshots disagree for ${record.targetDate}.`);
+    }
+    authorizedChain.push(Object.freeze({ record, job, snapshot: job.snapshot }));
+    authorizedSnapshotsByDate.set(record.targetDate, job.snapshot);
+    cursor = record.targetDate;
+  }
+
+  for (const snapshot of pendingSnapshots) {
+    if (snapshot.announcementDate > cursor) continue;
+    const authorizedSnapshot = authorizedSnapshotsByDate.get(snapshot.announcementDate);
+    if (
+      authorizedSnapshot === undefined
+      || fingerprintSnapshot(authorizedSnapshot) !== fingerprintSnapshot(snapshot)
+    ) {
+      fail(
+        `Durable continuation pending snapshot ${snapshot.announcementDate} is not in the `
+        + "existing contiguous authorization chain.",
+      );
+    }
+  }
+
+  const extensionSnapshots = [...pendingSnapshotsByDate.values()]
+    .filter(({ announcementDate }) => announcementDate > cursor)
+    .sort((left, right) => left.announcementDate.localeCompare(right.announcementDate));
+  const mayExtendBeyondAuthorizedChain = (
+    authorizedChain.length === 0
+    || pastweekWindow.announcementDates.includes(cursor)
+  );
+  const orderedSnapshots = [
+    ...authorizedChain.map(({ snapshot }) => snapshot),
+    ...(mayExtendBeyondAuthorizedChain ? extensionSnapshots : []),
+  ];
+  if (
+    orderedSnapshots.length < 1
+    || orderedSnapshots[0].announcementDate !== pendingSnapshots[0].announcementDate
+  ) {
+    fail("Durable continuation queue does not begin with the selected oldest unpublished snapshot.");
+  }
+
+  const plans = [];
+  let anchor = expectedLatestDate;
+  for (const [index, snapshot] of orderedSnapshots.entries()) {
+    plans.push(Object.freeze({
+      index,
+      mode: index === 0 ? selectionMode : "normal",
+      expectedLatestDate: anchor,
+      snapshot,
+      sourceJob: index === 0 ? sourceJob : null,
+    }));
+    anchor = snapshot.announcementDate;
+  }
+
+  const preflightedPlans = [];
+  // Validate the entire logical queue before creating any authorization. In
+  // particular, never create future entries and only then discover that an
+  // aged-out anchor cannot safely bridge an uncaptured official-date gap.
+  for (const plan of plans) {
+    const snapshotFingerprint = fingerprintSnapshot(plan.snapshot);
+    const existing = recordsByAnchor.get(plan.expectedLatestDate) ?? null;
+    if (existing !== null) {
+      if (
+        existing.selectionMode !== plan.mode
+        || existing.targetDate !== plan.snapshot.announcementDate
+        || existing.snapshotFingerprint !== snapshotFingerprint
+        || existing.automationRuntimeFingerprint !== automationRuntimeFingerprint
+      ) {
+        fail(`Existing durable continuation conflicts at anchor ${plan.expectedLatestDate}.`);
+      }
+      if (plan.mode === "normal") {
+        if (existing.sourceRuntimeFingerprint !== null || existing.sourceEvaluationRunId !== null) {
+          fail(`Normal queued continuation ${existing.targetDate} has an unexpected source checkpoint.`);
+        }
+      } else if (
+        plan.sourceJob === null
+        || existing.sourceRuntimeFingerprint !== plan.sourceJob.manifest.runtimeFingerprint
+        || existing.sourceEvaluationRunId !== plan.sourceJob.evaluationRunId
+      ) {
+        fail(`Checkpoint-recovery queue head ${existing.targetDate} changed source identity.`);
+      }
+      const job = loadAuthorizationCheckpoint({ controlRoot, record: existing });
+      selectAuthorizedContinuationSnapshot({
+        storedSnapshot: job.snapshot,
+        currentSnapshot,
+        pastweekWindow,
+        latestDate: existing.expectedLatestDate,
+        expectedDate: existing.targetDate,
+        expectedSnapshotFingerprint: existing.snapshotFingerprint,
+        evidence: existing.evidence,
+        now,
+      });
+      preflightedPlans.push(Object.freeze({
+        plan,
+        existing,
+        job,
+        evidence: existing.evidence,
+      }));
+      continue;
+    }
+
+    const evidence = buildDurableSelectionEvidence({
+      selectionMode: plan.mode,
+      snapshot: plan.snapshot,
+      currentSnapshot,
+      pastweekWindow,
+      latestDate: plan.expectedLatestDate,
+      now,
+    });
+    if (plan.mode === "checkpoint_recovery" && (
+      plan.sourceJob === null
+      || typeof plan.sourceJob !== "object"
+      || !plan.sourceJob.manifest
+    )) {
+      fail("Checkpoint-recovery queue head requires its exact source checkpoint job.");
+    }
+    preflightedPlans.push(Object.freeze({
+      plan,
+      existing: null,
+      job: plan.index === 0 ? firstJob : null,
+      evidence,
+    }));
+  }
+
+  const preparedPlans = preflightedPlans.map((preflighted) => {
+    if (preflighted.existing !== null) return preflighted;
+    const { plan } = preflighted;
+    const snapshotFingerprint = fingerprintSnapshot(plan.snapshot);
+    const job = preflighted.job ?? openRecoverableCheckpointJob({
+      controlRoot,
+      snapshot: plan.snapshot,
+      runtimeFingerprint: automationRuntimeFingerprint,
+      attemptId: makeRunId(),
+      policy,
+      now,
+    }).job;
+    if (
+      !job?.manifest
+      || job.manifest.reportDate !== plan.snapshot.announcementDate
+      || job.manifest.snapshotFingerprint !== snapshotFingerprint
+      || job.manifest.runtimeFingerprint !== automationRuntimeFingerprint
+    ) {
+      fail(`Destination checkpoint identity does not match queued target ${plan.snapshot.announcementDate}.`);
+    }
+    return Object.freeze({ ...preflighted, job });
+  });
+
+  const ensuredByTarget = new Map();
+  const createdAuthorizationPaths = [];
+  // Publish the current anchor last. A crash can therefore leave only harmless
+  // future entries; the next live selection can reuse them without activating
+  // an incomplete queue head.
+  try {
+    for (const prepared of [...preparedPlans].reverse()) {
+      const {
+        plan,
+        existing,
+        job,
+        evidence,
+      } = prepared;
+      if (existing !== null) {
+        ensuredByTarget.set(existing.targetDate, Object.freeze({ record: existing, job }));
+        continue;
+      }
+      const created = createAuthorization({
+        directory,
+        stagingDirectory,
+        selectionMode: plan.mode,
+        expectedLatestDate: plan.expectedLatestDate,
+        snapshot: plan.snapshot,
+        sourceJob: plan.sourceJob,
+        automationRuntimeFingerprint,
+        job,
+        evidence,
+        now,
+      });
+      createdAuthorizationPaths.push(created.path);
+      recordsByAnchor.set(plan.expectedLatestDate, created.record);
+      ensuredByTarget.set(created.record.targetDate, Object.freeze({
+        record: created.record,
+        job,
+      }));
+    }
+  } catch (error) {
+    const rollbackErrors = [];
+    for (const path of createdAuthorizationPaths.reverse()) {
+      try {
+        unlinkSync(path);
+      } catch (rollbackError) {
+        rollbackErrors.push(`${path}: ${rollbackError.message}`);
+      }
+    }
+    try {
+      const directoryDescriptor = openSync(
+        directory,
+        constants.O_RDONLY | (constants.O_DIRECTORY ?? 0),
+      );
+      try {
+        fsyncSync(directoryDescriptor);
+      } finally {
+        closeSync(directoryDescriptor);
+      }
+    } catch (rollbackError) {
+      rollbackErrors.push(`authorization directory fsync: ${rollbackError.message}`);
+    }
+    if (rollbackErrors.length > 0) {
+      error.message += `; queue authorization rollback was incomplete (${rollbackErrors.join("; ")})`;
+    }
+    throw error;
+  }
+
+  const first = ensuredByTarget.get(orderedSnapshots[0].announcementDate);
+  if (first === undefined) fail("Durable continuation queue did not preserve its selected head.");
+  return Object.freeze({
+    first,
+    targets: Object.freeze(orderedSnapshots.map(({ announcementDate }) => announcementDate)),
+    entries: Object.freeze(orderedSnapshots.map(({ announcementDate }) => ensuredByTarget.get(announcementDate))),
+  });
+}
+
+export function loadAuthorizedContinuationJob({
+  root,
+  controlRoot,
+  index,
+  authorization,
+  runtimeFingerprint,
+} = {}) {
+  const record = validateDurableRecoveryAuthorization(authorization);
+  if (!index || typeof index !== "object" || Array.isArray(index)) {
+    fail("Durable continuation requires the public data index.");
+  }
+  if (
+    index.latestDate !== record.expectedLatestDate
+    || !Array.isArray(index.availableDates)
+    || !index.availableDates.includes(index.latestDate)
+    || index.availableDates.includes(record.targetDate)
+  ) {
+    fail("Public data index does not match the active durable continuation authorization.");
+  }
+  const current = parseJsonFile(join(root, "public", "data", "current.json"));
+  if (
+    current.date !== index.latestDate
+    || !Array.isArray(current.availableDates)
+    || current.availableDates.join("\0") !== index.availableDates.join("\0")
+  ) {
+    fail("Public current.json and index.json disagree during durable continuation.");
+  }
+  if (existsSync(join(root, "public", "data", `${record.targetDate}.json`))) {
+    fail(`Durable continuation target ${record.targetDate} already exists in public data.`);
+  }
+  if (record.automationRuntimeFingerprint !== runtimeFingerprint) {
+    fail(
+      "Automation runtime changed while a durable recovery authorization is active; "
+      + "the authorized checkpoint must be reviewed before continuing.",
+    );
+  }
+  const job = loadCheckpointJob({
+    controlRoot,
+    reportDate: record.targetDate,
+    snapshotFingerprint: record.snapshotFingerprint,
+    runtimeFingerprint: record.automationRuntimeFingerprint,
+    evaluationRunId: record.evaluationRunId,
+  });
+  if (job.publishedCommit !== null || job.publicationStatus === "published") {
+    fail(`Durable continuation checkpoint was already published at ${job.publishedCommit}.`);
+  }
+  return Object.freeze({ authorization: record, job, storedSnapshot: job.snapshot });
+}
+
+export async function runAutomation({
+  root,
+  env = process.env,
+  fetchImpl = globalThis.fetch,
+  now = new Date(),
+  recovery = null,
+}) {
   const agentWorktreeBase = resolveAgentWorktreeBase(
     root,
     env.DAILY_ARXIV_AGENT_WORKTREE_BASE,
   );
+  const publicationWorktreeBase = resolvePublicationWorktreeBase(root);
   const runId = makeRunId();
   const controlRoot = automationControlRoot(env.HOME ?? homedir(), env.DAILY_ARXIV_CONTROL_ROOT);
   const paths = runPaths(runId, { controlRoot });
@@ -1851,29 +3545,119 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
   let runError;
   try {
     const originMain = preparePublisherRuntime(root);
-    const index = parseJsonFile(join(root, "public", "data", "index.json"));
+    const publisherControlHead = git(root, ["rev-parse", "HEAD"]);
+    const publication = preparePublicationWorktree(
+      root,
+      publicationWorktreeBase,
+      originMain,
+      runId,
+    );
+    const publishedRoot = publication.worktree;
+    const index = parseJsonFile(join(publishedRoot, "public", "data", "index.json"));
     const latestDate = validateDate(index.latestDate);
     const currentSnapshot = await fetchOfficialListingSnapshot({ fetchImpl });
-    const classification = classifySnapshotDate(currentSnapshot, { latestDate, now });
-    if (classification === "current") {
-      console.log(`NO_CHANGE: official arXiv announcement ${currentSnapshot.announcementDate} is already public (runId ${runId}).`);
-      return Object.freeze({ status: "no_change", runId, date: currentSnapshot.announcementDate });
+    const runtimeFingerprint = fingerprintAutomationRuntime(
+      root,
+      declaredPinnedCodexIdentity(env),
+    );
+    const authorizationState = loadActiveDurableRecoveryAuthorization({
+      directory: paths.recoveryAuthorizations,
+      latestDate,
+    });
+    let authorization = authorizationState.active;
+    let selection;
+    let selectionMode;
+    let sourceJob = null;
+    let pastweekWindow;
+    if (authorization !== null) {
+      if (recovery !== null) {
+        if (
+          authorization.selectionMode !== "checkpoint_recovery"
+          || authorization.expectedLatestDate !== recovery.expectedLatestDate
+          || authorization.targetDate !== recovery.targetDate
+          || authorization.snapshotFingerprint !== recovery.snapshotFingerprint
+          || authorization.sourceRuntimeFingerprint !== recovery.sourceRuntimeFingerprint
+        ) {
+          fail("The explicit checkpoint recovery does not match the already-active durable authorization.");
+        }
+      }
+      const authorized = loadAuthorizedContinuationJob({
+        root: publishedRoot,
+        controlRoot,
+        index,
+        authorization,
+        runtimeFingerprint,
+      });
+      pastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
+      selection = selectAuthorizedContinuationSnapshot({
+        storedSnapshot: authorized.storedSnapshot,
+        currentSnapshot,
+        pastweekWindow,
+        latestDate,
+        expectedDate: authorization.targetDate,
+        expectedSnapshotFingerprint: authorization.snapshotFingerprint,
+        evidence: authorization.evidence,
+        now,
+      });
+      selectionMode = authorization.selectionMode;
+    } else {
+      if (recovery === null) {
+        const classification = classifySnapshotDate(currentSnapshot, { latestDate, now });
+        if (classification === "current") {
+          console.log(`NO_CHANGE: official arXiv announcement ${currentSnapshot.announcementDate} is already public (runId ${runId}).`);
+          return Object.freeze({ status: "no_change", runId, date: currentSnapshot.announcementDate });
+        }
+        pastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
+        selection = selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latestDate, now });
+        selectionMode = "normal";
+      } else {
+        const source = loadCheckpointRecoverySource({
+          root: publishedRoot,
+          controlRoot,
+          index,
+          recovery,
+        });
+        sourceJob = source.sourceJob;
+        pastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
+        selection = selectCheckpointRecoverySnapshot({
+          storedSnapshot: source.storedSnapshot,
+          currentSnapshot,
+          pastweekWindow,
+          latestDate,
+          expectedDate: recovery.targetDate,
+          expectedSnapshotFingerprint: recovery.snapshotFingerprint,
+          now,
+        });
+        selectionMode = "checkpoint_recovery";
+      }
     }
-    const pastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
-    const selection = selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latestDate, now });
     if (selection === null) {
       console.log(`NO_CHANGE: every unpublished announcement through ${currentSnapshot.announcementDate} has zero eligible primary-new papers (runId ${runId}).`);
       return Object.freeze({ status: "no_change", runId, date: currentSnapshot.announcementDate });
     }
-    const { snapshot, pendingCount } = selection;
-    console.log(`BACKFILL_SELECTED: ${snapshot.announcementDate} is the oldest of ${pendingCount} unpublished non-empty edition(s) (runId ${runId}).`);
+    const { snapshot, pendingCount, pendingSnapshots } = selection;
+    if (
+      !Array.isArray(pendingSnapshots)
+      || pendingSnapshots.length !== pendingCount
+      || pendingSnapshots[0]?.announcementDate !== snapshot.announcementDate
+    ) {
+      fail("Backfill selection did not provide a complete oldest-to-newest pending snapshot queue.");
+    }
+    console.log(
+      `${authorization !== null
+        ? "DURABLE_CONTINUATION_SELECTED"
+        : selectionMode === "normal"
+          ? "BACKFILL_SELECTED"
+          : "CHECKPOINT_RECOVERY_SELECTED"}: `
+      + `${snapshot.announcementDate} is the oldest of ${pendingCount} unpublished non-empty edition(s) `
+      + `(runId ${runId}).`,
+    );
     const totalNew = CATEGORIES.reduce((sum, slug) => sum + snapshot.categories[slug].newCount, 0);
     if (totalNew === 0) {
       fail("Backfill selector returned an empty publication snapshot.");
     }
 
     const policy = parseJsonFile(join(root, "data", "model-policy.json"));
-    const runtimeFingerprint = fingerprintAutomationRuntime(root);
     const checkpoint = openRecoverableCheckpointJob({
       controlRoot,
       snapshot,
@@ -1884,6 +3668,57 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
     });
     const { checkpointExisted, snapshotFingerprint } = checkpoint;
     let { job } = checkpoint;
+    const authorizationWasActive = authorization !== null;
+    if (
+      authorizationWasActive
+      && authorization.selectionMode === "checkpoint_recovery"
+      && sourceJob === null
+    ) {
+      sourceJob = loadCheckpointJob({
+        controlRoot,
+        reportDate: authorization.targetDate,
+        snapshotFingerprint: authorization.snapshotFingerprint,
+        runtimeFingerprint: authorization.sourceRuntimeFingerprint,
+        evaluationRunId: authorization.sourceEvaluationRunId,
+      });
+    }
+    const queue = ensureDurableContinuationQueue({
+      directory: paths.recoveryAuthorizations,
+      stagingDirectory: paths.recoveryAuthorizationStaging,
+      controlRoot,
+      records: authorizationState.records,
+      selectionMode,
+      expectedLatestDate: latestDate,
+      pendingSnapshots,
+      sourceJob,
+      automationRuntimeFingerprint: runtimeFingerprint,
+      firstJob: job,
+      policy,
+      currentSnapshot,
+      pastweekWindow,
+      attemptId: runId,
+      now,
+    });
+    authorization = queue.first.record;
+    job = queue.first.job;
+    if (!authorizationWasActive) {
+      console.log(
+        `DURABLE_CONTINUATION_AUTHORIZED: ${queue.targets.join(",")} beginning with `
+        + `${snapshot.announcementDate} ${selectionMode}; future no-argument runs will resume the exact `
+        + "oldest checkpoint and then activate each queued successor.",
+      );
+    } else {
+      console.log(
+        `DURABLE_CONTINUATION_QUEUE_VERIFIED: ${queue.targets.join(",")}; `
+        + "the selected checkpoint and every captured successor remain protected.",
+      );
+    }
+    if (
+      authorization.snapshotFingerprint !== snapshotFingerprint
+      || authorization.evaluationRunId !== job.evaluationRunId
+    ) {
+      fail("Active durable authorization does not match the opened destination checkpoint.");
+    }
     for (const slug of checkpoint.recoveredCategories) {
       console.log(`CATEGORY_CHECKPOINT_RECOVERED: ${snapshot.announcementDate} ${slug}; model will not regenerate it.`);
     }
@@ -1893,20 +3728,39 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
       const readinessDisposition = classifyFullTextReadiness(readiness, {
         isLatestAnnouncement: snapshot.announcementDate === currentSnapshot.announcementDate,
       });
-      if (readinessDisposition !== "ready") {
+      if (!["ready", "ready_pdf_fallback"].includes(readinessDisposition)) {
         const unavailable = readiness.unavailable;
         const status = unavailable.status === null ? "network error" : `HTTP ${unavailable.status}`;
         if (readinessDisposition === "defer") {
+          const previousReadinessDefers = new Set(job.attempts.filter((event) => (
+            event.stage === "full_text_readiness"
+            && event.status === "deferred"
+          )).map(({ attemptId }) => attemptId)).size;
+          appendCheckpointAttempt({
+            job,
+            attemptId: runId,
+            stage: "full_text_readiness",
+            status: "deferred",
+            message: `Official ${unavailable.kind} for ${readiness.arxivId}v1 was not ready (${status}).`,
+          });
+          const attentionRequired = sourceFailureNeedsAttention(previousReadinessDefers);
           console.log(
             `AUTOMATION_DEFERRED: official ${unavailable.kind} for ${readiness.arxivId}v1 is not ready (${status}); `
             + `Codex was not started (runId ${runId}).`,
           );
+          if (attentionRequired) {
+            console.error(
+              `ATTENTION_REQUIRED: ${snapshot.announcementDate} has reached `
+              + `${previousReadinessDefers + 1} full-text readiness deferrals; automatic retries remain enabled.`,
+            );
+          }
           return Object.freeze({
             status: "deferred",
             runId,
             date: snapshot.announcementDate,
             reason: "full_text_not_ready",
             arxivId: readiness.arxivId,
+            attentionRequired,
           });
         }
         fail(
@@ -1914,7 +3768,14 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
           + `after its announcement propagation window.`,
         );
       }
-      console.log(`FULL_TEXT_READY: official v1 PDF and e-print canary ${readiness.arxivId} passed before Codex start (runId ${runId}).`);
+      if (readinessDisposition === "ready_pdf_fallback") {
+        console.log(
+          `FULL_TEXT_PDF_FALLBACK_READY: official v1 PDF canary ${readiness.arxivId} passed while e-print `
+          + `was unavailable; candidate-level exact-v1 PDF fallback remains enabled (runId ${runId}).`,
+        );
+      } else {
+        console.log(`FULL_TEXT_READY: official v1 PDF and e-print canary ${readiness.arxivId} passed before Codex start (runId ${runId}).`);
+      }
     } else {
       console.log(`PUBLISH_RETRY: ${snapshot.announcementDate}; complete checkpoints bypass full-text readiness and model generation.`);
     }
@@ -1947,6 +3808,144 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
         snapshot,
         policy,
       });
+      let retryState = null;
+      if (execution.mode !== "repair") {
+        retryState = computeCategoryRetryState({
+          execution,
+          attempts: job.attempts,
+          category: slug,
+          now: new Date(),
+        });
+        if (execution.regenerationFallback !== undefined) {
+          const fallback = execution.regenerationFallback;
+          const marker = `${REPAIR_REGENERATION_FALLBACK_MESSAGE_PREFIX}${fallback.protectedDraft.sha256}`;
+          const cooldown = retryState.shouldDefer
+            ? `bounded regeneration backoff remains active until ${retryState.retryAt}`
+            : "bounded regeneration backoff is satisfied";
+          console.log(
+            `CATEGORY_REGENERATION_FALLBACK: ${snapshot.announcementDate} ${slug} retained protected draft `
+            + `${fallback.protectedDraft.sha256} after ${fallback.repairFailureCount} terminal repair failures; `
+            + `${cooldown} (runId ${runId}).`,
+          );
+          if (fallback.announcementNeeded) {
+            appendCheckpointAttempt({
+              job,
+              attemptId: runId,
+              stage: "category_regeneration_fallback",
+              status: retryState.shouldDefer ? "deferred" : "resumed",
+              category: slug,
+              message: `${marker}; Protected draft retained after ${fallback.repairFailureCount} terminal `
+                + `repair failures; ${cooldown}.`,
+            });
+            console.error(
+              `AUTOMATIC_RECOVERY_NOTICE: ${snapshot.announcementDate} ${slug} exhausted bounded repair for `
+              + `draft ${fallback.protectedDraft.sha256}; the draft remains protected and a full regeneration `
+              + `${retryState.shouldDefer ? `is scheduled after ${retryState.retryAt}` : "is starting now"}.`,
+            );
+            notifyMac("repair_fallback");
+          }
+        }
+        if (retryState.shouldDefer) {
+          appendCheckpointAttempt({
+            job,
+            attemptId: runId,
+            stage: "category_retry_backoff",
+            status: "deferred",
+            category: slug,
+            message: execution.regenerationFallback === undefined
+              ? `Token-saving retry backoff remains active until ${retryState.retryAt} after ${retryState.failureCount} failed attempt(s).`
+              : `${REPAIR_REGENERATION_FALLBACK_MESSAGE_PREFIX}${execution.regenerationFallback.protectedDraft.sha256}; `
+                + `Protected draft retained; token-saving full-regeneration backoff remains active until `
+                + `${retryState.retryAt} after ${retryState.failureCount} failed attempt(s).`,
+          });
+          console.log(
+            `AUTOMATION_DEFERRED: ${snapshot.announcementDate} ${slug} `
+            + `${execution.regenerationFallback === undefined ? "model retry" : "full regeneration"} is suppressed until `
+            + `${retryState.retryAt}; no ChatGPT tokens were used and `
+            + `${execution.regenerationFallback === undefined ? "checkpoint state" : "the protected draft"} remains intact `
+            + `(runId ${runId}).`,
+          );
+          removeTokenFreeDeferredRunArtifacts(paths);
+          return Object.freeze({
+            status: "deferred",
+            runId,
+            date: snapshot.announcementDate,
+            category: slug,
+            reason: execution.regenerationFallback === undefined
+              ? "category_retry_backoff"
+              : "category_regeneration_backoff",
+            retryAt: retryState.retryAt,
+          });
+        }
+        if (retryState.sourceBlocker !== null) {
+          if (
+            execution.mode === "source_resume"
+            && retryState.sourceBlocker.receipt.provisionalCandidateIds.join("\0")
+              !== execution.sourceReceipt.provisionalCandidateIds.join("\0")
+          ) {
+            fail("Latest source backoff receipt does not match the protected source-resume candidate set.");
+          }
+          const prefetch = await prefetchSourceBlockerCandidates({
+            receipt: retryState.sourceBlocker.receipt,
+            snapshot,
+            slug,
+            paths,
+            env,
+            fallbackProbe: (arxivId) => probeOfficialVersionFixedPdf(arxivId, { fetchImpl }),
+          });
+          if (!prefetch.ready) {
+            const observedAt = new Date();
+            const refreshedReceipt = createHostSourceProbeFailureReceipt(
+              retryState.sourceBlocker.receipt,
+              {
+                snapshot,
+                category: slug,
+                failedArxivId: prefetch.arxivId,
+              },
+            );
+            appendCheckpointAttempt({
+              job,
+              attemptId: runId,
+              stage: "category_source_probe",
+              status: "failed",
+              category: slug,
+              message: encodeSourceBlockerEventMessage(refreshedReceipt, { observedAt }),
+            });
+            const attentionRequired = sourceFailureNeedsAttention(retryState.sourceFailureCount);
+            console.log(
+              `AUTOMATION_DEFERRED: official e-print extraction and exact-v1 PDF fallback are still unavailable `
+              + `for ${prefetch.arxivId}; Codex was not started and the token-free backoff was extended `
+              + `(runId ${runId}).`,
+            );
+            if (attentionRequired) {
+              console.error(
+                `ATTENTION_REQUIRED: ${snapshot.announcementDate} ${slug} has reached `
+                + `${retryState.sourceFailureCount + 1} source failures; automatic bounded retries remain enabled.`,
+              );
+            }
+            removeTokenFreeDeferredRunArtifacts(paths);
+            return Object.freeze({
+              status: "deferred",
+              runId,
+              date: snapshot.announcementDate,
+              category: slug,
+              reason: "candidate_full_text_not_ready",
+              arxivId: prefetch.arxivId,
+              attentionRequired,
+            });
+          }
+          console.log(
+            `SOURCE_CANDIDATES_PREFETCHED: ${prefetch.prefetchedCount} official source archive(s) are local for `
+            + `${snapshot.announcementDate} ${slug}; ${prefetch.unsupported.length} candidate(s) have an `
+            + `independently verified exact-v1 official PDF fallback (runId ${runId}).`,
+          );
+        }
+      } else {
+        console.log(
+          `CATEGORY_REPAIR_READY: ${snapshot.announcementDate} ${slug}; protected draft repair bypasses `
+          + "generation backoff and source prefetch.",
+        );
+      }
       if (codexBin === undefined) {
         codexBin = discoverCodex({ env });
         assertPinnedCodexIdentity(codexBin, env);
@@ -1961,7 +3960,13 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
         category: slug,
         message: execution.mode === "repair"
           ? `${REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX}${execution.draft.sha256}; Started bounded ${slug} repair.`
-          : `Started ${slug} generation.`,
+          : execution.mode === "source_resume"
+            ? `${SOURCE_RESUME_DRAFT_MESSAGE_PREFIX}${execution.draft.sha256}; Resumed fixed-candidate ${slug} full-text evaluation.`
+            : execution.regenerationFallback === undefined
+              ? `Started ${slug} generation.`
+              : `${REPAIR_REGENERATION_FALLBACK_MESSAGE_PREFIX}${execution.regenerationFallback.protectedDraft.sha256}; `
+                + `Started ${slug} full regeneration after ${execution.regenerationFallback.repairFailureCount} `
+                + "terminal repair failures and bounded backoff.",
       });
       try {
         invokeCodexCategory({
@@ -1970,10 +3975,111 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
           runRoot: paths.runRoot,
           logPath: paths.codexLogs[slug],
           prompt: execution.prompt,
+          sourceBlockerPath: paths.sourceBlockers[slug],
         });
         const postCodexWorktree = inspectExistingWorktree(root, agent.worktree);
         if (!postCodexWorktree.exists || postCodexWorktree.head !== originMain) {
           fail("Agent worktree identity, cleanliness, or HEAD changed during category processing; no publication was attempted.");
+        }
+        if (existsSync(paths.sourceBlockers[slug])) {
+          const sourceReceipt = validateCategorySourceBlockerLayout({
+            blockerDirectory: paths.blockers,
+            blockerPath: paths.sourceBlockers[slug],
+            stagingDirectory: paths.categoryStaging[slug],
+            outboxDirectory: paths.outbox,
+            snapshot,
+            slug,
+            allowProvisionalReport: true,
+          });
+          const provisionalLayout = validateCategoryModelOutputLayout({
+            stagingDirectory: paths.categoryStaging[slug],
+            outboxDirectory: paths.outbox,
+            date: snapshot.announcementDate,
+            slug,
+          });
+          chmodSync(provisionalLayout.path, 0o600);
+          const provisionalReport = parseJsonFile(provisionalLayout.path);
+          validateCategorySourceResumeDraft({
+            report: provisionalReport,
+            receipt: sourceReceipt,
+            date: snapshot.announcementDate,
+            slug,
+            policy,
+            evaluationRunId: job.evaluationRunId,
+            snapshot,
+            candidateOrderRequired: execution.mode === "generation",
+            path: `sourceIncompleteDraft.${slug}`,
+          });
+          if (execution.mode === "source_resume") {
+            validateCategorySourceResumeMutation({
+              source: execution.draft.report,
+              resumed: provisionalReport,
+              receipt: execution.sourceReceipt,
+              requireComplete: false,
+              path: `sourceIncompleteResume.${slug}`,
+            });
+          }
+          const sourceDraft = preserveCheckpointCategorySourceDraft({
+            job,
+            category: slug,
+            sourcePath: realpathSync(provisionalLayout.path),
+            sourceReceipt,
+            attemptId: runId,
+            validateDraft: (candidate, context) => {
+              validateCategorySourceResumeDraft({
+                report: candidate,
+                receipt: sourceReceipt,
+                date: context.reportDate,
+                slug: context.category,
+                policy,
+                evaluationRunId: context.evaluationRunId,
+                snapshot: context.snapshot,
+                candidateOrderRequired: execution.mode === "generation",
+                path: `checkpointSourceIncompleteDraft.${context.category}`,
+              });
+              if (execution.mode === "source_resume") {
+                validateCategorySourceResumeMutation({
+                  source: execution.draft.report,
+                  resumed: candidate,
+                  receipt: execution.sourceReceipt,
+                  requireComplete: false,
+                  path: `checkpointSourceIncompleteResume.${context.category}`,
+                });
+              }
+              return true;
+            },
+          });
+          const observedAt = new Date();
+          appendCheckpointAttempt({
+            job,
+            attemptId: runId,
+            stage: execution.stage,
+            status: "failed",
+            category: slug,
+            message: encodeSourceBlockerEventMessage(sourceReceipt, { observedAt }),
+          });
+          const attentionRequired = sourceFailureNeedsAttention(retryState?.sourceFailureCount ?? 0);
+          console.log(
+            `AUTOMATION_DEFERRED: ${snapshot.announcementDate} ${slug} could not obtain official v1 full text `
+            + `for ${sourceReceipt.arxivId}; provisional screening draft ${sourceDraft.sha256} and its fixed `
+            + `candidate set were preserved for a token-free `
+            + `cooldown and source prefetch (runId ${runId}).`,
+          );
+          if (attentionRequired) {
+            console.error(
+              `ATTENTION_REQUIRED: ${snapshot.announcementDate} ${slug} has reached `
+              + `${(retryState?.sourceFailureCount ?? 0) + 1} source failures; automatic bounded retries remain enabled.`,
+            );
+          }
+          return Object.freeze({
+            status: "deferred",
+            runId,
+            date: snapshot.announcementDate,
+            category: slug,
+            reason: "source_incomplete",
+            arxivId: sourceReceipt.arxivId,
+            attentionRequired,
+          });
         }
         const layout = validateCategoryModelOutputLayout({
           stagingDirectory: paths.categoryStaging[slug],
@@ -1998,6 +4104,14 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
             repaired: report,
             path: `repairOutput.${slug}`,
           });
+        } else if (execution.mode === "source_resume") {
+          validateCategorySourceResumeMutation({
+            source: execution.draft.report,
+            resumed: report,
+            receipt: execution.sourceReceipt,
+            requireComplete: true,
+            path: `sourceResumeOutput.${slug}`,
+          });
         }
         importCheckpointCategoryReport({
           job,
@@ -2019,6 +4133,14 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
                 source: execution.draft.report,
                 repaired: candidate,
                 path: `checkpointRepair.${context.category}`,
+              });
+            } else if (execution.mode === "source_resume") {
+              validateCategorySourceResumeMutation({
+                source: execution.draft.report,
+                resumed: candidate,
+                receipt: execution.sourceReceipt,
+                requireComplete: true,
+                path: `checkpointSourceResume.${context.category}`,
               });
             }
             return true;
@@ -2044,6 +4166,7 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
         let preservedDraft;
         let preservationError;
         try {
+          assertGenericCategoryDraftRescueAllowed(paths.sourceBlockers[slug]);
           const layout = validateCategoryModelOutputLayout({
             stagingDirectory: paths.categoryStaging[slug],
             outboxDirectory: paths.outbox,
@@ -2072,6 +4195,14 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
                   repaired: candidate,
                   path: `failedRepairDraft.${context.category}`,
                 });
+              } else if (execution.mode === "source_resume") {
+                validateCategorySourceResumeMutation({
+                  source: execution.draft.report,
+                  resumed: candidate,
+                  receipt: execution.sourceReceipt,
+                  requireComplete: true,
+                  path: `failedSourceResumeDraft.${context.category}`,
+                });
               }
               return true;
             },
@@ -2084,7 +4215,11 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
             ? `${REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX}${execution.draft.sha256}; `
             : "";
           const draftOutcome = preservedDraft === undefined
-            ? ` Draft was not preserved: ${checkpointEventMessage(preservationError?.message ?? "no valid bounded report was available")}.`
+            ? execution.regenerationFallback === undefined
+              ? ` Draft was not preserved: ${checkpointEventMessage(preservationError?.message ?? "no valid bounded report was available")}.`
+              : ` New generation draft was not preserved: `
+                + `${checkpointEventMessage(preservationError?.message ?? "no valid bounded report was available")}; `
+                + `previous protected draft ${execution.regenerationFallback.protectedDraft.sha256} remains checkpointed.`
             : ` Protected draft ${preservedDraft.sha256} was preserved outside the model-write area.`;
           appendCheckpointAttempt({
             job,
@@ -2122,12 +4257,50 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
     });
     validateReportsAgainstSnapshot(reports, snapshot);
 
+    const freshIndex = parseJsonFile(join(publishedRoot, "public", "data", "index.json"));
+    const freshAuthorizationState = loadActiveDurableRecoveryAuthorization({
+      directory: paths.recoveryAuthorizations,
+      latestDate: validateDate(freshIndex.latestDate),
+    });
+    const freshAuthorization = freshAuthorizationState.active;
+    if (
+      freshAuthorization === null
+      || freshAuthorization.snapshotFingerprint !== authorization.snapshotFingerprint
+      || freshAuthorization.evaluationRunId !== authorization.evaluationRunId
+      || freshAuthorization.authorizedAt !== authorization.authorizedAt
+    ) {
+      fail("Durable continuation authorization changed or became inactive before publication.");
+    }
+    const authorizedBeforePublish = loadAuthorizedContinuationJob({
+      root: publishedRoot,
+      controlRoot,
+      index: freshIndex,
+      authorization: freshAuthorization,
+      runtimeFingerprint,
+    });
+    const freshCurrentSnapshot = await fetchOfficialListingSnapshot({ fetchImpl });
     const freshPastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
-    revalidatePastweekSnapshot(snapshot, freshPastweekWindow);
-    if (git(root, ["rev-parse", "HEAD"]) !== originMain) {
-      fail("Publisher worktree HEAD changed during generation; no publication was attempted.");
+    const publicationSelection = selectAuthorizedContinuationSnapshot({
+      storedSnapshot: authorizedBeforePublish.storedSnapshot,
+      currentSnapshot: freshCurrentSnapshot,
+      pastweekWindow: freshPastweekWindow,
+      latestDate: freshAuthorization.expectedLatestDate,
+      expectedDate: freshAuthorization.targetDate,
+      expectedSnapshotFingerprint: freshAuthorization.snapshotFingerprint,
+      evidence: freshAuthorization.evidence,
+      now: new Date(),
+    });
+    if (fingerprintSnapshot(publicationSelection.snapshot) !== snapshotFingerprint) {
+      fail("Durable continuation snapshot changed before publication.");
+    }
+    if (git(root, ["rev-parse", "HEAD"]) !== publisherControlHead) {
+      fail("Publisher control worktree HEAD changed during generation; no publication was attempted.");
     }
     assertCleanWorktree(root);
+    assertCleanWorktree(publishedRoot);
+    if (git(publishedRoot, ["rev-parse", "HEAD"]) !== originMain) {
+      fail("Publication worktree changed during generation; no publication was attempted.");
+    }
     appendPublicationStatus({
       job,
       attemptId: runId,
@@ -2135,7 +4308,11 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
       message: "Validated checkpoint reports; starting fixed publisher.",
     });
     try {
-      invokePublisher({ worktree: root, date: snapshot.announcementDate, stagingPath: paths.hostStaging });
+      invokePublisher({
+        worktree: publication.worktree,
+        date: snapshot.announcementDate,
+        stagingPath: paths.hostStaging,
+      });
     } catch (error) {
       try {
         appendPublicationStatus({
@@ -2150,7 +4327,19 @@ export async function runAutomation({ root, env = process.env, fetchImpl = globa
       console.error(`PUBLISH_RETRY: ${snapshot.announcementDate}; all category checkpoints are complete, so the next run will not call the model.`);
       throw error;
     }
-    const publishedCommit = git(root, ["rev-parse", "HEAD"]);
+    const publishedCommit = git(publication.worktree, ["rev-parse", "HEAD"]);
+    assertCleanWorktree(publication.worktree);
+    gitNetwork(root, ["fetch", "--quiet", "origin", "main"], { timeout: 120_000 });
+    const confirmedRemoteCommit = git(
+      root,
+      ["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"],
+    );
+    if (publishedCommit !== confirmedRemoteCommit) {
+      fail(
+        "Publication worktree HEAD does not exactly match freshly fetched origin/main; "
+        + "no published checkpoint event was recorded.",
+      );
+    }
     appendPublicationStatus({
       job,
       attemptId: runId,

@@ -32,7 +32,7 @@ assigned category
 
 このsnapshotが当該runの唯一の対象集合です。日付、ID、カテゴリ、件数を追加・削除・置換してはいけません。公式ページ、abstract、PDFを開いて内容を調査しますが、ページが別の日へ切り替わった、IDに到達できない、`v1`を確認できない、またはsnapshotと矛盾した場合は`ACTION_REQUIRED: SOURCE_INCOMPLETE`として異常終了します。PCの当日の日付やモデル自身の推測を代用してはいけません。
 
-既に公開済みの日付、3カテゴリの日付不一致、全カテゴリ0件はホストがCodex起動前に無変更終了します。未公開日が複数ある場合も、ホストが公式の発表日列から最古の1日だけを選びます。ホストは`quant-ph`、`gr-qc`、`hep-th`の固定順で、未完了の最初のカテゴリだけをモデルへ割り当てます。モデルが起動されたrunでは、割当snapshotの全件を評価した完全な1レポートを作るか、何も完成扱いにせず異常終了するかのどちらかです。他カテゴリのレポートを作成、修正、推測してはいけません。
+既に公開済みの日付、3カテゴリの日付不一致、全カテゴリ0件はホストがCodex起動前に無変更終了します。未公開日が複数ある場合、ホストは公式の発表日列から最古の1日だけを実行対象にし、その時点で確認できた後続の未公開snapshotも最古から順にactivateされる耐久キューへ先に保存します。ホストは`quant-ph`、`gr-qc`、`hep-th`の固定順で、未完了の最初のカテゴリだけをモデルへ割り当てます。モデルが起動されたrunでは、割当snapshotの全件を評価した完全な1レポートを作るか、本文取得不能時だけ全abstract評価済みの暫定レポートと固定receiptを残して停止するか、何も完成扱いにせず異常終了するかのいずれかです。他カテゴリのレポートを作成、修正、推測してはいけません。
 
 ## 3. 評価: Daily arXiv rubric 3.0
 
@@ -125,7 +125,11 @@ node scripts/extract-arxiv-source.mjs <unversioned-arXiv-ID>
 
 helperは`https://arxiv.org/e-print/<ID>v1`だけを取得し、最終URLが同じ公式ドメインの版固定`/src/<ID>v1`であることを検証します。run内で最低3秒の要求間隔を保ち、HTTP 429・一時的server error・転送中断をbounded retryします。さらにarchive path、checksum、展開量、UTF-8 text file種別を検証して、ホスト指定run root内の`$TMPDIR/sources/<ID>/`へTeX・参考文献等のbounded textだけを原子的に書きます。PDFやsourceをGit worktreeへ保存しません。追加package、Homebrew、`pdftotext`、Python packageは不要です。取得した主TeXと参照先を実際に読み、導入、前提、導出または手法、主結果、検証・比較、結論、限界、関連付録を確認して再評価します。PDF/sourceの取得成功、ファイルサイズ、節名の検索だけを全文確認の代用にしてはいけません。
 
-ホストはCodex起動前に当日バッチ末尾の版固定PDFとe-printを軽量確認済みです。モデルは暫定候補全件へ一括`HEAD`したり、その後に同じ全件へ`Range GET`を重ねたりして配信準備を再判定しません。候補は1件ずつ上のhelperで確認し、その候補でe-printが取得不能なら同じ候補の公式HTMLまたはPDFだけを確認します。いずれも利用不能なら他候補の可用性検査を続けず、直ちに`ACTION_REQUIRED: SOURCE_INCOMPLETE`で終了します。
+ホストはCodex起動前に当日バッチ末尾の版固定PDFとe-printを軽量確認済みです。再試行runでは固定済み候補のうち安全抽出できた公式sourceが`$TMPDIR/sources/<ID>/`へ先取りされている場合があるため、存在するIDはそれを再利用して再取得しません。モデルは暫定候補全件へ一括`HEAD`したり、その後に同じ全件へ`Range GET`を重ねたりして配信準備を再判定しません。候補は1件ずつ上のhelperで確認し、その候補でe-printが取得不能なら同じ候補の公式HTMLまたはPDFだけを確認します。
+
+いずれの公式本文経路も利用不能なら他候補の可用性検査を続けず、そこで停止します。全文取得を始める前に、全abstract比較に基づく全論文の暫定得点・順位・読者向け文章と、その時点で実際に確認済みの本文状態をschema 1.4レポートへ書き、候補を1件確認するたびに更新します。ホストのカテゴリプロンプトに`record-source-incomplete.mjs`の固定コマンドが示されている場合は、正確な暫定上位`min(12,totalNew)` ID集合と失敗IDだけをそのコマンドへ渡し、暫定レポートを残したまま`SOURCE_INCOMPLETE_RECORDED`で終了します。failure classはホストがコマンド内へ固定した`all_official_full_text_pathways_unavailable`を一字も変更しません。
+
+ホストはreceiptのexact schema、固定failure class、失敗ID、候補数、候補全IDが公式snapshotの当該カテゴリに属することに加え、初回暫定レポートでは決定的上位候補順とreceiptが完全一致し、本文確認済み論文が候補集合内だけであることを独立検証します。暫定レポートは完成reportと分離したcontent-addressed checkpointへ保存し、18→36→72時間のtoken-free backoffと候補source prefetchを行います。cooldown後は全abstract評価を繰り返さず、保護済み暫定レポートと同じ候補集合から全文確認だけを再開します。候補の一部を本文証拠で再採点した結果、その固定候補が現在順位N位より下へ移っても候補集合との結び付けは有効です。候補を現在順位の別論文へ入れ替えず、固定した全候補の確認を続けます。非候補の得点・本文確認状態・原文メタデータは変更せず、候補の全文証拠による再採点と、意味を保つ日本語修復だけを行います。cooldown後にe-print抽出が失敗した場合、取得helper自身が型付きで通信・配信不能と判定したとき、または安全な抽出形式非対応と明示したときだけ、ホストが同じIDの版固定公式PDFを独立確認してPDF経路で再開します。危険なarchive path、容量超過、権限、disk、予期しないredirect、validation等は、エラー文に`network`、`timeout`、`5xx`等が含まれてもfallbackも通常draft救済もせず停止します。このreceiptは本文取得不能専用であり、評価、schema、日本語、認証、設定の失敗には使いません。固定コマンドがない実行経路では`ACTION_REQUIRED: SOURCE_INCOMPLETE`で異常終了します。
 
 入力消費を抑えるため、TeX全文や参考文献全体を一度にterminalへ出力しません。まず主ファイルと節構造を特定し、上記の確認対象に対応する前後だけをboundedな範囲で読みます。ただし、節を未読のまま節名だけで内容を推測してはいけません。
 
@@ -308,15 +312,17 @@ node scripts/validate-staged-category.mjs YYYY-MM-DD <category> <category stagin
 
 カテゴリ専用stagingには、割当カテゴリの上記1 JSON以外を置きません。manifest、completion marker、status fileを作らず、ホストが作成したoutboxは空のまま残します。ホストはモデルが書いた成功宣言を使用せず、ホスト自身が保持するrunId、snapshotの日付、カテゴリ、staging pathから期待する1ファイル名を決定します。
 
-通常のno-opと完成済みカテゴリの再利用はCodex起動前にホストが処理します。モデルが起動された後は割当カテゴリの完全な1レポートを作成して固定監査とvalidatorを終えるか、異常終了するかのどちらかです。取得不能、日付不一致、モデル設定不一致、評価未完了、schema不確実、その他の失敗時は架空データで穴埋めせず異常終了します。
+通常のno-opと完成済みカテゴリの再利用はCodex起動前にホストが処理します。モデルが起動された後は、割当カテゴリの完全な1レポートを作成して固定監査とvalidatorを終えるか、上記の本文取得不能専用receiptと全abstract評価済み暫定レポートを残すか、異常終了するかのいずれかです。日付不一致、モデル設定不一致、評価未完了、schema不確実、その他の失敗時はreceiptで偽装せず、架空データで穴埋めせず異常終了します。
 
-Codex終了後、ホストはoutboxが空であること、カテゴリ専用stagingがsnapshotの日付とカテゴリに対応する正確な1個のregular JSON fileだけを含むこと、そのファイルが10 MiB以下であることを確認します。その後、JSON、schema、runId、モデル情報、公式ID集合、件数を独立検証し、成功したレポートだけを次の保護領域へcontent digest付きでcheckpointします。
+Codex終了後、通常成功ではホストはoutboxが空であること、カテゴリ専用stagingがsnapshotの日付とカテゴリに対応する正確な1個のregular JSON fileだけを含むこと、そのファイルが10 MiB以下であることを確認します。本文取得receiptの場合もoutboxは空、stagingは正確な1個の暫定report、blocker領域は割当カテゴリの正確な1 regular JSONだけでなければなりません。その後、通常reportはJSON、schema、runId、モデル情報、公式ID集合、件数を独立検証してcontent digest付きで完成checkpointへ入れます。source receiptと暫定reportはsnapshot、runtime、runId、固定候補集合を照合し、それらとattempt stage、report digestを単一のcontent-addressed source-draft envelopeへ入れて排他的に公開します。追記専用attempt履歴は別に保存しますが、途中停止で履歴eventだけが欠けてもenvelopeから再構成でき、それだけでは公開できません。
 
 ```text
 ~/Library/Application Support/Daily arXiv/jobs/<YYYY-MM-DD>-<snapshot-fingerprint>/<runtime-fingerprint>/
 ```
 
-ここには不変の`job.json`と`snapshot.json`、カテゴリ別の`reports/*.json`と`*.receipt.json`、厳格検証済み失敗出力の`drafts/<attemptId>.<category>.json`とreceipt、追記専用の`attempts/*.json`と`publication/*.json`、content-addressedな`.writes/*.blob`を保持します。既存checkpointを削除、上書きしません。draft本文の保存直後に停止してreceiptだけが欠けた場合も、次回runが本文を厳格に再検証してreceiptだけを追記します。同じsnapshotでもレビュー済みruntimeが変われば旧jobを保存したまま別のruntime用jobを開始し、旧runtimeのdraftは再利用しません。次の定時runは同じruntimeでdigestを再検証した完成済みカテゴリをCodexなしで再利用します。未完了カテゴリに有効なdraftがある場合は、新規調査、Web検索、arXiv再取得、source抽出、再採点、再順位付けを禁止し、欠けた`arxivVersion`、`submissionType`、`url`の決定的追加と、既存根拠を変えない読者向け日本語の修復だけを行います。同じdraft digestから開始した修復が2回失敗した後は、3回目のモデル起動前に安全停止します。draftがなければ失敗または未完了の最初のカテゴリだけから再開し、通常評価を行います。
+ここには不変の`job.json`と`snapshot.json`、カテゴリ別の`reports/*.json`と`*.receipt.json`、厳格検証済みの通常失敗出力を保存する`drafts/<attemptId>.<category>.json`とdigest付きreceipt、本文取得不能出力を一体保存する`drafts/<attemptId>.<category>.source-draft.json`、追記専用の`attempts/*.json`と`publication/*.json`、content-addressedな`.writes/*.blob`を保持します。既存checkpointを削除、上書きしません。通常draft本文の保存直後に停止してreceiptだけが欠けた場合は、次回runが本文を厳格に再検証して通常receiptだけを追記します。source draftは暫定reportとsource receiptを別々に公開せず、常に単一envelopeとして保存します。同じsnapshotでもリポジトリ内runtimeまたは固定CodexのSHA-256・versionが変われば、旧jobを保存したまま別のruntime用jobを開始し、旧runtimeのdraftは再利用しません。次の定時runは同じruntimeでdigestを再検証した完成済みカテゴリをCodexなしで再利用します。
+
+本文取得receiptに結び付いたdraftは、固定候補sourceを先取りした後に専用`source_resume`として復元し、全abstract評価を再実行しません。初回だけ固定候補が決定的上位N件であることを検証し、部分的な全文再採点後は固定候補が現在順位N位より下へ移っても同じID集合を維持します。`source_resume`の通常失敗と、開始後5時間以上terminal eventがない試行も18→36→72時間上限のbackoff対象にし、定時runごとに無制限にモデルを再起動しません。それ以外の有効なdraftは、新規調査、Web検索、arXiv再取得、source抽出、再採点、再順位付けを禁止し、欠けた`arxivVersion`、`submissionType`、`url`の決定的追加と、既存根拠を変えない読者向け日本語の修復だけを行います。同じcheckpoint job・カテゴリの修復系列で終端失敗が4回に達した後は、各失敗で別SHA-256の有効な後継draftが保存されていても回数をリセットせず、最新draftを削除・上書きせずcheckpointへ保持し、修復失敗を含む共通の18→36→72時間上限backoffを必ず経て、未完了カテゴリの通常評価を新規generationとして自動再開します。開始記録だけで応答streamが途切れた修復試行は4回の回数へ加えません。draftがなければ失敗または未完了の最初のカテゴリだけから再開し、通常評価を行います。
 
 3カテゴリが同じsnapshot fingerprintとrunIdで揃った場合だけ、ホストは空のhost stagingへ3レポートをmaterializeして全体を再検証します。publisherのfetch、commit、pushだけが失敗した場合もcheckpointを保持し、次の定時runはモデル評価を繰り返さず公開だけを再試行します。`published`記録が追記された後は同じjobから二重公開しません。
 

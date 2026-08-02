@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   discoverCodex,
   notifyMac,
-  parseMode,
+  parseAutomationInvocation,
   readOnlyDiagnostics,
   resolveAgentWorktreeBase,
   runAutomation,
@@ -18,8 +18,8 @@ try {
   const nodeMajor = Number(process.versions.node.split(".")[0]);
   if (!Number.isInteger(nodeMajor) || nodeMajor < 22) throw new Error("Node.js 22 or newer is required.");
   assertJapanTimeZone();
-  const mode = parseMode(process.argv.slice(2));
-  if (mode === "check") {
+  const invocation = parseAutomationInvocation(process.argv.slice(2));
+  if (invocation.mode === "check") {
     const codexBin = discoverCodex();
     const worktree = resolveAgentWorktreeBase(
       root,
@@ -28,7 +28,8 @@ try {
     const diagnostics = readOnlyDiagnostics({ root, worktree, codexBin });
     console.log(JSON.stringify(diagnostics, null, 2));
   } else {
-    await runAutomation({ root });
+    const outcome = await runAutomation({ root, recovery: invocation.recovery });
+    if (outcome?.attentionRequired === true) notifyMac("stalled");
   }
 } catch (error) {
   console.error(`ACTION_REQUIRED: ${error.stack ?? error.message}`);
