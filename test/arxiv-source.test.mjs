@@ -20,6 +20,8 @@ import {
   parseArxivPastweekListing,
   probeOfficialFullTextReadiness,
   revalidatePastweekSnapshot,
+  selectAgedCheckpointRecoverySnapshot,
+  selectAgedWindowContinuationSnapshot,
   selectBackfillSnapshot,
   selectAuthorizedContinuationSnapshot,
   selectCheckpointRecoverySnapshot,
@@ -70,6 +72,13 @@ function listingHtml({
 
 const PASTWEEK_DATES = Object.freeze(["2026-07-13", "2026-07-10", "2026-07-09", "2026-07-08"]);
 const PASTWEEK_HEADINGS = Object.freeze({
+  "2026-08-03": "Mon, 3 Aug 2026",
+  "2026-07-31": "Fri, 31 Jul 2026",
+  "2026-07-30": "Thu, 30 Jul 2026",
+  "2026-07-29": "Wed, 29 Jul 2026",
+  "2026-07-28": "Tue, 28 Jul 2026",
+  "2026-07-27": "Mon, 27 Jul 2026",
+  "2026-07-24": "Fri, 24 Jul 2026",
   "2026-07-13": "Mon, 13 Jul 2026",
   "2026-07-10": "Fri, 10 Jul 2026",
   "2026-07-09": "Thu, 9 Jul 2026",
@@ -80,7 +89,8 @@ const PASTWEEK_HEADINGS = Object.freeze({
 function pastweekGroupsFor(slug, { dates = PASTWEEK_DATES, partialOldest = false } = {}) {
   const categoryOffset = ARXIV_CATEGORIES.indexOf(slug) * 1_000;
   return dates.map((date, index) => {
-    const dateOffset = PASTWEEK_DATES.indexOf(date) >= 0 ? PASTWEEK_DATES.indexOf(date) * 10 : 90;
+    const fixtureIndex = PASTWEEK_DATES.indexOf(date);
+    const dateOffset = fixtureIndex >= 0 ? fixtureIndex * 10 : 100 + Number(date.slice(-2));
     const newIds = [`2607.${String(10001 + categoryOffset + dateOffset)}`];
     const crossIds = [`2607.${String(20001 + categoryOffset + dateOffset)}`];
     const shown = newIds.length + crossIds.length;
@@ -753,6 +763,308 @@ test("checkpoint recovery selector accepts only an exact oldest complete officia
       expectedSnapshotFingerprint,
       now,
     }), (error) => error.code === "SOURCE_INVALID");
+  });
+});
+
+test("aged checkpoint recovery is isolated to an exact two-boundary complete-window bridge", async (t) => {
+  const storedWindow = buildOfficialPastweekWindow(pastweekParsedListings({
+    datesBySlug: Object.fromEntries(ARXIV_CATEGORIES.map((slug) => [slug, ["2026-07-27"]])),
+  }));
+  const storedSnapshot = storedWindow.snapshots[0];
+  const expectedSnapshotFingerprint = fingerprintSnapshot(storedSnapshot);
+  const liveDates = ["2026-07-31", "2026-07-30", "2026-07-29", "2026-07-28"];
+  const liveWindow = buildOfficialPastweekWindow(pastweekParsedListings({
+    datesBySlug: Object.fromEntries(ARXIV_CATEGORIES.map((slug) => [slug, liveDates])),
+  }));
+  const currentSnapshot = currentSnapshotFromPastweek(liveWindow);
+  const now = new Date("2026-08-03T03:00:00.000Z");
+  const recovery = {
+    storedSnapshot,
+    currentSnapshot,
+    pastweekWindow: liveWindow,
+    latestDate: "2026-07-24",
+    expectedDate: "2026-07-27",
+    expectedSnapshotFingerprint,
+    now,
+  };
+
+  const selected = selectAgedCheckpointRecoverySnapshot(recovery);
+  assert.equal(selected.snapshot, storedSnapshot);
+  assert.equal(selected.pendingCount, 5);
+  assert.deepEqual(
+    selected.pendingSnapshots.map(({ announcementDate }) => announcementDate),
+    ["2026-07-27", "2026-07-28", "2026-07-29", "2026-07-30", "2026-07-31"],
+  );
+
+  const evidence = buildDurableSelectionEvidence({
+    selectionMode: "aged_checkpoint_recovery",
+    snapshot: storedSnapshot,
+    currentSnapshot,
+    pastweekWindow: liveWindow,
+    latestDate: "2026-07-24",
+    now,
+  });
+  assert.equal(evidence.selectionMode, "aged_checkpoint_recovery");
+  assert.equal(evidence.targetDate, "2026-07-27");
+  assert.deepEqual(evidence.pastweekAnnouncementDates, liveDates);
+  assert.deepEqual(evidence.completeSnapshotDates, liveDates);
+  assert.ok(!evidence.pastweekAnnouncementDates.includes(evidence.targetDate));
+
+  const continued = selectAuthorizedContinuationSnapshot({
+    ...recovery,
+    evidence,
+  });
+  assert.equal(continued.durable, true);
+  assert.equal(continued.targetStillLive, false);
+  assert.equal(continued.snapshot, storedSnapshot);
+
+  await t.test("normal and live checkpoint selectors remain strict", () => {
+    assert.throws(() => selectBackfillSnapshot({
+      currentSnapshot,
+      pastweekWindow: liveWindow,
+      latestDate: "2026-07-24",
+      now,
+    }), (error) => error.code === "SOURCE_BACKFILL_WINDOW");
+    assert.throws(() => selectCheckpointRecoverySnapshot(recovery),
+      (error) => error.code === "SOURCE_CONTENT_MISMATCH");
+    assert.throws(() => buildDurableSelectionEvidence({
+      selectionMode: "checkpoint_recovery",
+      snapshot: storedSnapshot,
+      currentSnapshot,
+      pastweekWindow: liveWindow,
+      latestDate: "2026-07-24",
+      now,
+    }), (error) => error.code === "SOURCE_CONTENT_MISMATCH");
+  });
+
+  await t.test("stored target date, full fingerprint, and source family stay pinned", () => {
+    const changedStored = structuredClone(storedSnapshot);
+    changedStored.categories["hep-th"].crosslistCount += 1;
+    assert.throws(() => selectAgedCheckpointRecoverySnapshot({
+      ...recovery,
+      storedSnapshot: changedStored,
+    }), (error) => error.code === "SOURCE_CONTENT_MISMATCH");
+    assert.throws(() => selectAgedCheckpointRecoverySnapshot({
+      ...recovery,
+      expectedDate: "2026-07-28",
+    }), (error) => error.code === "SOURCE_CONTENT_MISMATCH");
+
+    const wrongSource = structuredClone(storedSnapshot);
+    for (const slug of ARXIV_CATEGORIES) wrongSource.categories[slug].sourceUrl = ARXIV_LISTING_URLS[slug];
+    assert.throws(() => selectAgedCheckpointRecoverySnapshot({
+      ...recovery,
+      storedSnapshot: wrongSource,
+      expectedSnapshotFingerprint: fingerprintSnapshot(wrongSource),
+    }), (error) => error.code === "SOURCE_INVALID");
+  });
+
+  await t.test("both weekday-successor boundaries are exact", () => {
+    assert.throws(() => selectAgedCheckpointRecoverySnapshot({
+      ...recovery,
+      latestDate: "2026-07-23",
+    }), (error) => error.code === "SOURCE_BACKFILL_WINDOW");
+
+    const gapDates = ["2026-07-31", "2026-07-30", "2026-07-29"];
+    const gapWindow = buildOfficialPastweekWindow(pastweekParsedListings({
+      datesBySlug: Object.fromEntries(ARXIV_CATEGORIES.map((slug) => [slug, gapDates])),
+    }));
+    assert.throws(() => selectAgedCheckpointRecoverySnapshot({
+      ...recovery,
+      currentSnapshot: currentSnapshotFromPastweek(gapWindow),
+      pastweekWindow: gapWindow,
+    }), (error) => error.code === "SOURCE_BACKFILL_WINDOW");
+  });
+
+  await t.test("a partial oldest announcement fails closed", () => {
+    const partialWindow = buildOfficialPastweekWindow(pastweekParsedListings({
+      partialOldest: true,
+      datesBySlug: Object.fromEntries(ARXIV_CATEGORIES.map((slug) => [slug, liveDates])),
+    }));
+    assert.throws(() => selectAgedCheckpointRecoverySnapshot({
+      ...recovery,
+      currentSnapshot: currentSnapshotFromPastweek(partialWindow),
+      pastweekWindow: partialWindow,
+    }), (error) => error.code === "SOURCE_BACKFILL_WINDOW");
+  });
+
+  await t.test("the current /new head must exactly match the pastweek head", () => {
+    const changedCurrent = structuredClone(currentSnapshot);
+    changedCurrent.categories["hep-th"].crosslistCount += 1;
+    assert.throws(() => selectAgedCheckpointRecoverySnapshot({
+      ...recovery,
+      currentSnapshot: changedCurrent,
+    }), (error) => error.code === "SOURCE_CONTENT_MISMATCH");
+  });
+
+  await t.test("the aged target must be absent and its durable mode cannot be relabeled", () => {
+    const targetStillLiveDates = [...liveDates, "2026-07-27"];
+    const targetStillLiveWindow = buildOfficialPastweekWindow(pastweekParsedListings({
+      datesBySlug: Object.fromEntries(ARXIV_CATEGORIES.map((slug) => [slug, targetStillLiveDates])),
+    }));
+    assert.throws(() => selectAgedCheckpointRecoverySnapshot({
+      ...recovery,
+      currentSnapshot: currentSnapshotFromPastweek(targetStillLiveWindow),
+      pastweekWindow: targetStillLiveWindow,
+    }), (error) => error.code === "SOURCE_BACKFILL_WINDOW");
+    assert.throws(() => selectAuthorizedContinuationSnapshot({
+      ...recovery,
+      evidence: { ...evidence, selectionMode: "checkpoint_recovery" },
+    }), (error) => error.code === "SOURCE_INVALID");
+  });
+});
+
+test("aged window continuation selects the oldest eligible date after a complete boundary", async (t) => {
+  const buildWindow = ({ dates, zeroDates = [], partialOldest = false }) => (
+    buildOfficialPastweekWindow(ARXIV_CATEGORIES.map((slug) => {
+      const groups = pastweekGroupsFor(slug, { dates, partialOldest });
+      for (const group of groups) {
+        if (!zeroDates.includes(group.date)) continue;
+        const wasPartial = group.total !== group.shown;
+        group.newIds = [];
+        group.shown = group.crossIds.length;
+        group.total = group.shown + (wasPartial ? 1 : 0);
+      }
+      return parseArxivPastweekListing(pastweekHtml({ groups }), slug);
+    }))
+  );
+  const liveDates = ["2026-07-31", "2026-07-30", "2026-07-29", "2026-07-28"];
+  const liveWindow = buildWindow({ dates: liveDates, zeroDates: ["2026-07-28"] });
+  const currentSnapshot = currentSnapshotFromPastweek(liveWindow);
+  const latestDate = "2026-07-27";
+  const now = new Date("2026-08-03T03:00:00.000Z");
+
+  const selected = selectAgedWindowContinuationSnapshot({
+    currentSnapshot,
+    pastweekWindow: liveWindow,
+    latestDate,
+    now,
+  });
+  assert.equal(selected.snapshot.announcementDate, "2026-07-29");
+  assert.deepEqual(
+    selected.pendingSnapshots.map(({ announcementDate }) => announcementDate),
+    ["2026-07-29", "2026-07-30", "2026-07-31"],
+  );
+
+  const targetSnapshot = selected.snapshot;
+  const expectedSnapshotFingerprint = fingerprintSnapshot(targetSnapshot);
+  const evidence = buildDurableSelectionEvidence({
+    selectionMode: "aged_window_continuation",
+    snapshot: targetSnapshot,
+    currentSnapshot,
+    pastweekWindow: liveWindow,
+    latestDate,
+    now,
+  });
+  assert.equal(evidence.selectionMode, "aged_window_continuation");
+  assert.equal(evidence.expectedLatestDate, "2026-07-27");
+  assert.equal(evidence.targetDate, "2026-07-29");
+  assert.deepEqual(evidence.pastweekAnnouncementDates, liveDates);
+  assert.deepEqual(evidence.completeSnapshotDates, liveDates);
+
+  const continuation = selectAuthorizedContinuationSnapshot({
+    storedSnapshot: targetSnapshot,
+    currentSnapshot,
+    pastweekWindow: liveWindow,
+    latestDate,
+    expectedDate: targetSnapshot.announcementDate,
+    expectedSnapshotFingerprint,
+    evidence,
+    now,
+  });
+  assert.equal(continuation.targetStillLive, true);
+  assert.equal(continuation.snapshot.announcementDate, "2026-07-29");
+
+  const laterDates = ["2026-08-03", "2026-07-31", "2026-07-30"];
+  const laterWindow = buildWindow({ dates: laterDates });
+  const agedContinuation = selectAuthorizedContinuationSnapshot({
+    storedSnapshot: targetSnapshot,
+    currentSnapshot: currentSnapshotFromPastweek(laterWindow),
+    pastweekWindow: laterWindow,
+    latestDate,
+    expectedDate: targetSnapshot.announcementDate,
+    expectedSnapshotFingerprint,
+    evidence,
+    now,
+  });
+  assert.equal(agedContinuation.targetStillLive, false);
+  assert.equal(agedContinuation.snapshot, targetSnapshot);
+
+  await t.test("a missing immediate boundary announcement is rejected", () => {
+    const gapDates = ["2026-07-31", "2026-07-30", "2026-07-29"];
+    const gapWindow = buildWindow({ dates: gapDates });
+    assert.throws(() => selectAgedWindowContinuationSnapshot({
+      currentSnapshot: currentSnapshotFromPastweek(gapWindow),
+      pastweekWindow: gapWindow,
+      latestDate,
+      now,
+    }), (error) => error.code === "SOURCE_BACKFILL_WINDOW");
+  });
+
+  await t.test("a partial oldest announcement is rejected", () => {
+    const partialWindow = buildWindow({ dates: liveDates, partialOldest: true });
+    assert.throws(() => buildDurableSelectionEvidence({
+      selectionMode: "aged_window_continuation",
+      snapshot: partialWindow.snapshots.at(-1),
+      currentSnapshot: currentSnapshotFromPastweek(partialWindow),
+      pastweekWindow: partialWindow,
+      latestDate,
+      now,
+    }), (error) => error.code === "SOURCE_BACKFILL_WINDOW");
+  });
+
+  await t.test("a snapshot newer than the oldest eligible date is rejected", () => {
+    const newerSnapshot = liveWindow.snapshots.find(({ announcementDate }) => announcementDate === "2026-07-30");
+    assert.throws(() => buildDurableSelectionEvidence({
+      selectionMode: "aged_window_continuation",
+      snapshot: newerSnapshot,
+      currentSnapshot,
+      pastweekWindow: liveWindow,
+      latestDate,
+      now,
+    }), (error) => error.code === "SOURCE_CONTENT_MISMATCH");
+    const newerFingerprint = fingerprintSnapshot(newerSnapshot);
+    assert.throws(() => selectAuthorizedContinuationSnapshot({
+      storedSnapshot: newerSnapshot,
+      currentSnapshot,
+      pastweekWindow: liveWindow,
+      latestDate,
+      expectedDate: newerSnapshot.announcementDate,
+      expectedSnapshotFingerprint: newerFingerprint,
+      evidence: {
+        ...evidence,
+        targetDate: newerSnapshot.announcementDate,
+        targetSnapshotFingerprint: newerFingerprint,
+      },
+      now,
+    }), (error) => error.code === "SOURCE_CONTENT_MISMATCH");
+  });
+
+  await t.test("the mode cannot be relabeled as another durable selection", () => {
+    for (const selectionMode of ["normal", "checkpoint_recovery", "aged_checkpoint_recovery"]) {
+      assert.throws(() => selectAuthorizedContinuationSnapshot({
+        storedSnapshot: targetSnapshot,
+        currentSnapshot,
+        pastweekWindow: liveWindow,
+        latestDate,
+        expectedDate: targetSnapshot.announcementDate,
+        expectedSnapshotFingerprint,
+        evidence: { ...evidence, selectionMode },
+        now,
+      }), (error) => error.code === "SOURCE_INVALID");
+    }
+  });
+
+  await t.test("the current /new head must exactly match the pastweek head", () => {
+    const changedCurrent = structuredClone(currentSnapshot);
+    changedCurrent.categories["quant-ph"].newIds[0] = "2607.39999";
+    assert.throws(() => buildDurableSelectionEvidence({
+      selectionMode: "aged_window_continuation",
+      snapshot: targetSnapshot,
+      currentSnapshot: changedCurrent,
+      pastweekWindow: liveWindow,
+      latestDate,
+      now,
+    }), (error) => error.code === "SOURCE_CONTENT_MISMATCH");
   });
 });
 

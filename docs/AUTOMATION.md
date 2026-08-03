@@ -4,7 +4,7 @@
 
 OpenAI API課金なしで現在もっとも確実な本番経路は、ChatGPTアカウントで認証したCodex CLIをmacOS標準の`launchd`から実行する方式です。APIキー、GitHub PAT、ChatGPTデスクトップ、Atlas、Chrome、共用表示PCを起動しておく必要はありません。
 
-自動処理用Macは電源オンかつユーザーがログイン済みである必要があります。画面ロックとディスプレイスリープは問題ありません。予定時刻にシステムがスリープ中なら、`launchd`は次の起床時に実行します。完全シャットダウン中やログアウト中には動きません。
+自動処理用Macは電源オンかつユーザーがログイン済みである必要があります。画面ロックとディスプレイスリープは問題ありません。予定時刻にシステムがスリープ中なら、`launchd`は次の起床時に1 runだけ進めます。複数日を同時実行せず、active authorizationまたはcheckpointがあれば同じ日から再開します。完全シャットダウン中やログアウト中には動きません。
 
 次回ログイン時は、arXiv公式`pastweek`の直近5発表日に公開済み日が含まれていれば、抜けた日のうち最古の1日を復元します。1回の起動では1日だけを処理し、次の定時runで次の日へ進みます。選択済みの日は公式照合証跡をdurable authorizationとして保持するため、途中失敗中にpastweek範囲外へ落ちても同じcheckpointを再開できます。これにより中間日を飛ばさず、長時間runとChatGPT利用枠の集中を避けます。最初の選択前から公開済み日が公式範囲より古い場合は、最新日へ飛ばず安全停止します。
 
@@ -92,6 +92,8 @@ Codexのstdout/stderrはホストが20 MiBで打ち切り、上限超過runは�
 
 ### 日付checkpointと再開
 
+aged checkpoint復旧では、旧sourceの固定identity・所有者・mode・inode・link・内容digest・時刻をsource provenanceとしてauthorizationへ封印します。これは同一Mac上の運用証跡であり、第三者のタイムスタンプではありません。
+
 1日分のjobは、announcement dateと公式snapshotのSHA-256で親ディレクトリを選び、その中を評価runtimeのSHA-256で分離した`jobs/<date>-<snapshot-fingerprint>/<runtime-fingerprint>/`に置きます。`job.json`、`snapshot.json`、共有`evaluationRunId`は初回に固定し、既存値を上書きしません。通常のpastweek選択でも明示的旧snapshot復旧でも、モデル起動前にライブの公式head・発表日列・完全snapshot列・target fingerprintを検証し、内容digestをファイル名に持つ0600のdurable authorizationを`recovery-authorizations/`へ排他的に保存します。作成途中の内容は同一filesystem上の非active stagingへfsyncしてから`link(2)`で公開するため、途中終了した部分ファイルをactive authorizationとして読みません。受理した各カテゴリは`reports/<category>.json`とdigest付き`<category>.receipt.json`として保存します。通常の失敗draftは`drafts/<attemptId>.<category>.json`とdigest付きreceiptとして不変保存し、本文link直後の停止でreceiptだけが欠けた場合は次回runが同じ検証を再実行してreceiptを追記します。本文取得不能draftだけは、暫定report、固定候補receipt、attempt stage、snapshot・runtime・runId、report digestを1個のcontent-addressed `*.source-draft.json` envelopeへ入れて排他的に公開します。この関連付けは単一原子的artifactなので、ホスト停止時にもsource draftを通常修復draftへ誤分類しません。追記専用のretry監査eventだけが欠けた場合はenvelopeから再構成します。モデル試行は`attempts/*.json`、公開試行は`publication/*.json`へ追記し、content-addressedな`.writes/*.blob`も含め既存記録を削除・置換しません。
 
 次の定時runでは、public latestDateと一致するactive authorizationを自動検出し、同じsnapshot、runtime fingerprint、evaluationRunIdのjobを開きます。同じanchorのauthorizationが複数ある、digest・0600 mode・canonical内容が変わった、公開anchorやruntimeが一致しない場合はfail closedです。完成済みカテゴリのdigestとschemaを再検証し、有効なカテゴリはCodexを呼ばず再利用して、`quant-ph`、`gr-qc`、`hep-th`の順で最初の未完了カテゴリから再開します。
@@ -124,6 +126,8 @@ AIの評価内容を機械的に証明することはできませんが、次は
 - 未来日でなく、公開済みlatestDateより新しいこと
 - `New submissions`を全件表示した公式ページであること
 - 中間日復元では、公開済み日が公式pastweekの発表日列にあり、選択日まで欠落がないこと
+- aged checkpoint復旧では、公開済み日 → 保存target → 現在windowの最古完全日がそれぞれ直後の平日で、現在windowの全発表日が完全かつtargetより新しく、`/new`とpastweekのheadが一致すること
+- aged sourceがsnapshot-onlyで、固定date・snapshot・runtime・evaluationRunId・ローカルprovenance digestを再開時と公開直前に再検証できること
 - reportの全ID集合、カテゴリ、`v1`、New件数、Cross件数が公式snapshotと完全一致すること
 - generation前後で、選択したpastweek日付のsnapshot fingerprintが同一であること
 - 各モデル終了後もoutboxが空で、カテゴリ専用stagingがホストsnapshotの日付・カテゴリに対応する正確な1レポートだけを含むこと
@@ -138,6 +142,8 @@ AIの評価内容を機械的に証明することはできませんが、次は
 - push直前までHEADと`origin/main`が競合していないこと。公開失敗後の再試行でも同じcheckpointを再検証すること
 
 長時間run中に新しい発表日が追加されても、選択済みの日付がpastweek内にある間は毎回fingerprintを完全照合します。選択日が後に範囲外へ落ちた場合は、作成時にライブ照合したdurable authorization、保護済みsnapshot fingerprint、変更されていないpublic latestDate、後退していない公式head、現在の`/new`とpastweek headの完全一致を再検証して同じjobだけを継続できます。公開直前にも同じ条件を再取得して検証します。
+
+選択時点で既にpastweek外のaged targetは、専用の明示的復旧で封印したsource provenanceと欠落のない完全windowをさらに必須とします。これらも再開時と公開直前に再検証します。
 
 ## このMacで必要な前提
 
@@ -199,6 +205,22 @@ node scripts/configure-macos-schedule.mjs install
 
 直前の公開日だけが範囲外になり、その直後の未公開日について保護済みcheckpoint snapshotが残り、現在のpastweek最古完全snapshotと全ID・件数・URL・SHA-256が完全一致する場合に限り、一回限りの`--recover-checkpoint <expected-latest> <target> <snapshot-sha256> <source-runtime-sha256>`を人が確認して使用できます。latestDateがwindow外ならtargetは通常の次の平日でなければならず、長い欠落列を飛ばしません。旧jobのreport/draftは移植しませんが、承認済み条件と同時に確認できた後続snapshot列は耐久キューとして保存されます。そのrunが延期・失敗しても次の無引数runが同じ新runtime jobを再開し、対象公開後は次のauthorizationが自動でactivateされます。authorizationは削除せず、対応する`expectedLatestDate`が現在のpublic latestDateである間だけactiveになります。
 
+この`--recover-checkpoint`はtargetが現在のpastweek内の最古完全snapshotである経路です。通常の自動選択とこのlive recoveryの条件は、範囲外のtargetを通すために緩めません。
+
+target自体がpastweekから1発表日だけ外れた場合は、別の一回限りの`--recover-aged-checkpoint`を人が固定値を確認して実行します。今回の審査済みsource checkpointに対する完全なCLI構文は次のとおりです。
+
+```bash
+node scripts/run-local-automation.mjs --recover-aged-checkpoint \
+  2026-07-24 \
+  2026-07-27 \
+  554489e6de889f4dbe5763c4e2b09c95780d9f33a827f2d2aa4e755bff4fff82 \
+  667abaeb9b7f0468268087eddefc12236d38e5ca1933fc2a649fdfed36b0fc4e
+```
+
+受理条件は、公開済み日の直後の平日がtarget、targetの直後の平日が現在のpastweek最古日であること、現在windowの全発表日が3カテゴリで完全かつtargetより新しいこと、`/new`とpastweekのheadが一致することです。sourceは指定date・snapshot fingerprint・runtime fingerprint・evaluationRunIdで一意な、report・draft・publicationを含まないsnapshot-only checkpointに限ります。その所有者、0700/0400 mode、symlink不在、artifactとcontent-addressed blobのidentity・digest・時刻を、現runtimeのdestination checkpointを用意する前にprovenanceとして封印します。
+
+モデル起動前かつdestination job作成前に、保存targetと現在windowの後続非空snapshot全部を最古から最新の連続durable planとして検証し、原子的に保存します。先頭は`aged_checkpoint_recovery`、最初のlive後続だけは`aged_window_continuation`、以後は`normal`とし、authorizationは最新側から作成してactive headを最後に原子的に公開します。このため途中停止で未完のheadはactivateされず、次の無引数runは保存済みplanから再開できます。旧jobのreport・draftは移植せず、現runtimeの新しいjobで評価します。初日の公開後は無引数の定時・login runが1回1日で次のauthorizationをactivateし、スリープや再起動の後も同じ連続planから再開します。中間日、部分window、source provenance不一致のどれかがあれば、モデルを起動せずfail closedです。
+
 作成対象:
 
 ```text
@@ -242,6 +264,8 @@ git -C /Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data status --short --branc
 
 異常終了したlockはすぐ削除せず保存します。元processが存在せず5時間以上経過したlockだけを`stale-locks`へ移し、午後または翌日のrunを継続します。正常lockも削除せず`lock-history`へ移して監査履歴にします。
 ごく稀に、5時間超の有効なlockに記録されたPIDが別processへ再利用され、そのprocessが長時間存続している場合は、実行重複を避けるため`ACTION_REQUIRED`として停止し、lockと該当PIDを手動確認します。
+
+`CHECKPOINT_RECOVERY_SELECTED`は現在のpastweek内targetをlive再検証した旧経路、`AGED_CHECKPOINT_RECOVERY_SELECTED`は封印済みsnapshot-only sourceの専用例外経路を示します。どちらも以後は`DURABLE_CONTINUATION_AUTHORIZED`、`DURABLE_CONTINUATION_SELECTED`、`DURABLE_CONTINUATION_QUEUE_VERIFIED`で連続planを追跡できます。
 
 ## 共用表示PC
 

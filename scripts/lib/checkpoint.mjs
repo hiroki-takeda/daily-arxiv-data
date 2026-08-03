@@ -14,8 +14,18 @@ import {
   realpathSync,
   writeFileSync,
 } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
-import { fingerprintSnapshot } from "./arxiv-source.mjs";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+} from "node:path";
+import {
+  ARXIV_PASTWEEK_LISTING_URLS,
+  fingerprintSnapshot,
+} from "./arxiv-source.mjs";
 import { validateCheckpointSourceBlockerReceipt } from "./source-blocker.mjs";
 
 export const CHECKPOINT_SCHEMA_VERSION = "1.0";
@@ -36,6 +46,20 @@ const MAX_SOURCE_DRAFT_ENVELOPE_BYTES = 2 * MAX_REPORT_BYTES;
 const DIRECTORY_MODE = 0o700;
 const IMMUTABLE_FILE_MODE = 0o400;
 const MATERIALIZED_FILE_MODE = 0o600;
+const AGED_PROVENANCE_SCHEMA_VERSION = "1.0";
+const AGED_PROVENANCE_KIND = "aged_checkpoint_provenance";
+const AGED_PROVENANCE_ENTRY_KEYS = Object.freeze([
+  "path", "type", "mode", "uid", "dev", "ino", "nlink", "size",
+  "birthtimeNs", "mtimeNs", "ctimeNs", "sha256",
+]);
+const AGED_PROVENANCE_KEYS = Object.freeze([
+  "schemaVersion", "kind", "targetDate", "oldestLiveDate", "expectedUid",
+  "snapshotFingerprint", "snapshotRawSha256", "manifestRawSha256",
+  "runtimeFingerprint", "evaluationRunId", "manifestCreatedAt", "attemptCount",
+  "family", "entries", "evidenceSha256",
+]);
+const MAX_PROVENANCE_RUN_MS = 6 * 60 * 60 * 1000;
+const MAX_EVENT_FILE_CLOCK_SKEW_MS = 5 * 60 * 1000;
 const DRAFT_ATTEMPT_STAGES = Object.freeze([
   "category_generation",
   "category_source_resume",
@@ -778,6 +802,592 @@ export function loadCheckpointJob({
     publicationEvents,
     publicationStatus: publicationEvents.at(-1)?.status ?? null,
     publishedCommit: publishedEvents.at(-1)?.commit ?? null,
+  });
+}
+
+function parseSchedulerRunIdTimestamp(value, label) {
+  const match = /^run-(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z-[a-f0-9]{12}$/u.exec(value);
+  if (!match) fail(`${label} must use the scheduler run ID format.`);
+  const timestamp = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}.000Z`;
+  const milliseconds = Date.parse(timestamp);
+  if (!Number.isFinite(milliseconds)) fail(`${label} contains an invalid timestamp.`);
+  return milliseconds;
+}
+
+function jstDayBounds(date) {
+  validateDate(date);
+  const startMs = Date.parse(`${date}T00:00:00+09:00`);
+  const cursor = new Date(`${date}T00:00:00Z`);
+  cursor.setUTCDate(cursor.getUTCDate() + 1);
+  const nextDate = cursor.toISOString().slice(0, 10);
+  return Object.freeze({
+    startMs,
+    endMs: Date.parse(`${nextDate}T00:00:00+09:00`),
+  });
+}
+
+function statNanoseconds(metadata, key) {
+  const nanoseconds = metadata[`${key}Ns`];
+  if (typeof nanoseconds === "bigint") return nanoseconds;
+  const milliseconds = metadata[`${key}Ms`];
+  if (typeof milliseconds !== "bigint" && !Number.isFinite(milliseconds)) {
+    fail(`Checkpoint ${key} timestamp is unavailable.`);
+  }
+  const numericMilliseconds = typeof milliseconds === "bigint" ? milliseconds : BigInt(Math.trunc(milliseconds));
+  return numericMilliseconds * 1_000_000n;
+}
+
+function assertProvenanceTimestamp(metadata, label, targetBounds, oldestLiveStartMs) {
+  const lower = BigInt(targetBounds.startMs) * 1_000_000n;
+  const upper = BigInt(Math.min(targetBounds.endMs, oldestLiveStartMs)) * 1_000_000n;
+  for (const key of ["birthtime", "mtime", "ctime"]) {
+    const value = statNanoseconds(metadata, key);
+    if (value < lower || value >= upper) {
+      fail(`${label} ${key} must remain within the target JST day and before oldestLiveDate.`);
+    }
+  }
+}
+
+function sameProvenanceIdentity(left, right) {
+  return ["dev", "ino", "uid", "mode", "nlink", "size", "birthtimeNs", "mtimeNs", "ctimeNs"]
+    .every((key) => {
+      const normalizedLeft = key.endsWith("Ns")
+        ? statNanoseconds(left, key.slice(0, -2))
+        : left[key];
+      const normalizedRight = key.endsWith("Ns")
+        ? statNanoseconds(right, key.slice(0, -2))
+        : right[key];
+      return normalizedLeft === normalizedRight;
+    });
+}
+
+function provenanceEntry({
+  path,
+  base,
+  label,
+  type,
+  expectedUid,
+  targetBounds,
+  oldestLiveStartMs,
+  requireTargetTimestamp = true,
+}) {
+  const metadata = lstatSync(path, { bigint: true });
+  const expectedMode = type === "directory" ? BigInt(DIRECTORY_MODE) : BigInt(IMMUTABLE_FILE_MODE);
+  if (
+    metadata.isSymbolicLink()
+    || (type === "directory" ? !metadata.isDirectory() : !metadata.isFile())
+    || metadata.uid !== BigInt(expectedUid)
+    || (metadata.mode & 0o777n) !== expectedMode
+    || realpathSync(path) !== resolve(path)
+  ) {
+    fail(`${label} must be an owned canonical ${type} with mode 0${expectedMode.toString(8)}.`);
+  }
+  if (type === "file" && metadata.nlink !== 2n) {
+    fail(`${label} must have exactly one artifact link and one content-addressed blob link.`);
+  }
+  if (requireTargetTimestamp) {
+    assertProvenanceTimestamp(metadata, label, targetBounds, oldestLiveStartMs);
+  }
+
+  let content = null;
+  let stableMetadata = metadata;
+  if (type === "file") {
+    let descriptor;
+    try {
+      descriptor = openSync(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      const before = fstatSync(descriptor, { bigint: true });
+      content = readFileSync(descriptor);
+      const after = fstatSync(descriptor, { bigint: true });
+      const finalPathMetadata = lstatSync(path, { bigint: true });
+      if (
+        !sameProvenanceIdentity(metadata, before)
+        || !sameProvenanceIdentity(before, after)
+        || !sameProvenanceIdentity(after, finalPathMetadata)
+        || BigInt(content.length) !== after.size
+      ) {
+        fail(`${label} changed while its aged-checkpoint provenance was captured.`);
+      }
+      stableMetadata = after;
+    } finally {
+      if (descriptor !== undefined) closeSync(descriptor);
+    }
+  }
+
+  const relativePath = relative(base, path) || ".";
+  const entry = {
+    path: relativePath,
+    type,
+    mode: `0${Number(stableMetadata.mode & 0o777n).toString(8)}`,
+    uid: Number(stableMetadata.uid),
+    dev: stableMetadata.dev.toString(),
+    ino: stableMetadata.ino.toString(),
+    nlink: stableMetadata.nlink.toString(),
+    size: stableMetadata.size.toString(),
+    birthtimeNs: statNanoseconds(stableMetadata, "birthtime").toString(),
+    mtimeNs: statNanoseconds(stableMetadata, "mtime").toString(),
+    ctimeNs: statNanoseconds(stableMetadata, "ctime").toString(),
+    sha256: content === null ? null : sha256(content),
+  };
+  return Object.freeze({ entry: Object.freeze(entry), content });
+}
+
+function assertTimeWithinAgedTarget(milliseconds, label, targetBounds, oldestLiveStartMs) {
+  const upper = Math.min(targetBounds.endMs, oldestLiveStartMs);
+  if (!Number.isFinite(milliseconds) || milliseconds < targetBounds.startMs || milliseconds >= upper) {
+    fail(`${label} must be within the target JST day and before oldestLiveDate.`);
+  }
+}
+
+function validateAgedProvenanceEntry(entry, label) {
+  exactKeys(entry, AGED_PROVENANCE_ENTRY_KEYS, label);
+  if (typeof entry.path !== "string" || entry.path.length === 0 || isAbsolute(entry.path)) {
+    fail(`${label}.path must be a non-empty relative path.`);
+  }
+  if (!["directory", "file"].includes(entry.type)) fail(`${label}.type is invalid.`);
+  if (entry.mode !== (entry.type === "directory" ? "0700" : "0400")) {
+    fail(`${label}.mode is invalid.`);
+  }
+  if (!Number.isSafeInteger(entry.uid) || entry.uid < 0) fail(`${label}.uid is invalid.`);
+  for (const key of ["dev", "ino", "nlink", "size", "birthtimeNs", "mtimeNs", "ctimeNs"]) {
+    if (typeof entry[key] !== "string" || !/^(?:0|[1-9][0-9]*)$/u.test(entry[key])) {
+      fail(`${label}.${key} must be a canonical non-negative integer string.`);
+    }
+  }
+  if (entry.type === "directory") {
+    if (entry.sha256 !== null) fail(`${label}.sha256 must be null for a directory.`);
+  } else if (typeof entry.sha256 !== "string" || !SHA256_PATTERN.test(entry.sha256)) {
+    fail(`${label}.sha256 must be a lowercase SHA-256 digest.`);
+  }
+  return entry;
+}
+
+function validateExpectedAgedProvenance(evidence) {
+  exactKeys(evidence, AGED_PROVENANCE_KEYS, "Expected aged-checkpoint provenance");
+  if (
+    evidence.schemaVersion !== AGED_PROVENANCE_SCHEMA_VERSION
+    || evidence.kind !== AGED_PROVENANCE_KIND
+  ) {
+    fail("Expected aged-checkpoint provenance has an unsupported identity.");
+  }
+  validateDate(evidence.targetDate);
+  validateDate(evidence.oldestLiveDate);
+  if (!Number.isSafeInteger(evidence.expectedUid) || evidence.expectedUid < 0) {
+    fail("Expected aged-checkpoint provenance expectedUid is invalid.");
+  }
+  for (const key of [
+    "snapshotFingerprint", "snapshotRawSha256", "manifestRawSha256",
+    "runtimeFingerprint", "evidenceSha256",
+  ]) validateSha256(evidence[key], `Expected aged-checkpoint provenance ${key}`);
+  validateSafeId(evidence.evaluationRunId, "Expected aged-checkpoint provenance evaluationRunId");
+  isoTimestamp(evidence.manifestCreatedAt, "Expected aged-checkpoint provenance manifestCreatedAt");
+  if (!Number.isSafeInteger(evidence.attemptCount) || evidence.attemptCount < 0) {
+    fail("Expected aged-checkpoint provenance attemptCount is invalid.");
+  }
+  validateAgedProvenanceEntry(evidence.family, "Expected aged-checkpoint provenance family");
+  if (evidence.family.path !== "." || evidence.family.type !== "directory") {
+    fail("Expected aged-checkpoint provenance family must describe the family root.");
+  }
+  if (!Array.isArray(evidence.entries) || evidence.entries.length < 6) {
+    fail("Expected aged-checkpoint provenance entries are incomplete.");
+  }
+  const paths = [];
+  evidence.entries.forEach((entry, index) => {
+    validateAgedProvenanceEntry(entry, `Expected aged-checkpoint provenance entries[${index}]`);
+    if (entry.path === ".") fail("Expected aged-checkpoint provenance source entries may not replace the family root.");
+    paths.push(entry.path);
+  });
+  if (new Set(paths).size !== paths.length || [...paths].sort().join("\0") !== paths.join("\0")) {
+    fail("Expected aged-checkpoint provenance entries must be unique and sorted by path.");
+  }
+  const { evidenceSha256, ...digestInput } = evidence;
+  const actualDigest = sha256(Buffer.from(serializeJson(digestInput), "utf8"));
+  if (actualDigest !== evidenceSha256) {
+    fail("Expected aged-checkpoint provenance evidence digest is invalid.");
+  }
+  return evidence;
+}
+
+function assertStableFamilyIdentity(current, expected) {
+  for (const key of ["path", "type", "mode", "uid", "dev", "ino", "birthtimeNs", "sha256"]) {
+    if (current[key] !== expected[key]) {
+      fail("Aged-checkpoint family identity changed after its initial provenance seal.");
+    }
+  }
+}
+
+function assertSameProvenanceEntry(current, expected, label) {
+  for (const key of AGED_PROVENANCE_ENTRY_KEYS) {
+    if (current[key] !== expected[key]) {
+      fail(`${label} changed during final provenance verification.`);
+    }
+  }
+}
+
+/**
+ * Captures a fail-closed, host-only provenance seal for the exceptional case
+ * where an immutable snapshot-only checkpoint has aged exactly beyond the
+ * live pastweek window. This is local filesystem provenance, not an external
+ * cryptographic timestamp.
+ */
+export function captureAgedCheckpointProvenance({
+  job,
+  oldestLiveDate,
+  expectedUid = currentUid(),
+  expectedEvidence = null,
+  allowedAdditionalRuntimeFingerprints = [],
+  beforeFinalVerificationForTest = null,
+} = {}) {
+  if (!job || typeof job !== "object" || !job.manifest) {
+    fail("A loaded checkpoint job is required for aged-checkpoint provenance.");
+  }
+  if (!Number.isSafeInteger(expectedUid) || expectedUid < 0 || currentUid() !== expectedUid) {
+    fail("Aged-checkpoint provenance expectedUid must equal the current user.");
+  }
+  validateDate(oldestLiveDate);
+  const targetDate = validateDate(job.manifest.reportDate);
+  if (oldestLiveDate <= targetDate) {
+    fail("Aged-checkpoint provenance oldestLiveDate must be newer than the target date.");
+  }
+  const targetBounds = jstDayBounds(targetDate);
+  const oldestLiveStartMs = Date.parse(`${oldestLiveDate}T00:00:00+09:00`);
+  if (!Array.isArray(allowedAdditionalRuntimeFingerprints)) {
+    fail("Aged-checkpoint additional runtime fingerprints must be an array.");
+  }
+  for (const value of allowedAdditionalRuntimeFingerprints) {
+    validateSha256(value, "Aged-checkpoint additional runtime fingerprint");
+  }
+  if (new Set(allowedAdditionalRuntimeFingerprints).size !== allowedAdditionalRuntimeFingerprints.length) {
+    fail("Aged-checkpoint additional runtime fingerprints must be unique.");
+  }
+  if (
+    beforeFinalVerificationForTest !== null
+    && typeof beforeFinalVerificationForTest !== "function"
+  ) {
+    fail("Aged-checkpoint final-verification test hook must be a function or null.");
+  }
+  const reviewedEvidence = expectedEvidence === null
+    ? null
+    : validateExpectedAgedProvenance(expectedEvidence);
+  if (reviewedEvidence === null && allowedAdditionalRuntimeFingerprints.length !== 0) {
+    fail("Initial aged-checkpoint provenance requires a unique source-only family.");
+  }
+
+  const reloaded = loadCheckpointJob({
+    controlRoot: job.controlRoot,
+    reportDate: targetDate,
+    snapshotFingerprint: job.manifest.snapshotFingerprint,
+    runtimeFingerprint: job.manifest.runtimeFingerprint,
+    evaluationRunId: job.evaluationRunId,
+  });
+  if (job.path !== reloaded.path || job.familyPath !== reloaded.familyPath) {
+    fail("Aged-checkpoint provenance job paths changed after the source job was loaded.");
+  }
+  if (allowedAdditionalRuntimeFingerprints.includes(reloaded.manifest.runtimeFingerprint)) {
+    fail("The source runtime may not be repeated as an additional runtime.");
+  }
+  if (reviewedEvidence !== null && (
+    reviewedEvidence.targetDate !== targetDate
+    || reviewedEvidence.oldestLiveDate !== oldestLiveDate
+    || reviewedEvidence.expectedUid !== expectedUid
+    || reviewedEvidence.snapshotFingerprint !== reloaded.manifest.snapshotFingerprint
+    || reviewedEvidence.runtimeFingerprint !== reloaded.manifest.runtimeFingerprint
+    || reviewedEvidence.evaluationRunId !== reloaded.evaluationRunId
+  )) {
+    fail("Expected aged-checkpoint provenance does not match the loaded source identity.");
+  }
+  for (const category of CHECKPOINT_CATEGORIES) {
+    if (reloaded.snapshot.categories[category].sourceUrl !== ARXIV_PASTWEEK_LISTING_URLS[category]) {
+      fail("Aged-checkpoint provenance requires an official pastweek snapshot.");
+    }
+  }
+  if (
+    reloaded.completeCategories.length !== 0
+    || reloaded.incompleteReports.length !== 0
+    || reloaded.incompleteDrafts.length !== 0
+    || CHECKPOINT_CATEGORIES.some((category) => reloaded.drafts[category].length !== 0)
+    || reloaded.publicationEvents.length !== 0
+    || reloaded.publicationStatus !== null
+    || reloaded.publishedCommit !== null
+    || readdirSync(reloaded.paths.reports).length !== 0
+    || readdirSync(reloaded.paths.drafts).length !== 0
+    || readdirSync(reloaded.paths.publication).length !== 0
+  ) {
+    fail("Aged-checkpoint provenance may seal only an unpublished snapshot-only source job.");
+  }
+
+  const jobsDirectory = dirname(reloaded.familyPath);
+  const matchingFamilies = readdirSync(jobsDirectory)
+    .filter((name) => name.startsWith(`${targetDate}-`))
+    .sort();
+  if (
+    matchingFamilies.length !== 1
+    || matchingFamilies[0] !== basename(reloaded.familyPath)
+  ) {
+    fail("Aged-checkpoint provenance requires exactly one checkpoint family for the target date.");
+  }
+  const familyEntries = readdirSync(reloaded.familyPath).sort();
+  const expectedFamilyEntries = [
+    reloaded.manifest.runtimeFingerprint,
+    ...allowedAdditionalRuntimeFingerprints,
+  ].sort();
+  if (familyEntries.join("\0") !== expectedFamilyEntries.join("\0")) {
+    fail(
+      reviewedEvidence === null
+        ? "Aged-checkpoint provenance requires exactly one runtime in the target checkpoint family."
+        : "Aged-checkpoint family contains a runtime that was not explicitly allowed for revalidation.",
+    );
+  }
+  for (const runtimeFingerprint of allowedAdditionalRuntimeFingerprints) {
+    assertSecureDirectory(
+      join(reloaded.familyPath, runtimeFingerprint),
+      `Allowed aged-checkpoint destination runtime ${runtimeFingerprint}`,
+    );
+  }
+
+  const currentFamilyCapture = provenanceEntry({
+    path: reloaded.familyPath,
+    base: reloaded.familyPath,
+    label: `Aged-checkpoint family ${reloaded.familyPath}`,
+    type: "directory",
+    expectedUid,
+    targetBounds,
+    oldestLiveStartMs,
+    requireTargetTimestamp: reviewedEvidence === null,
+  });
+  if (reviewedEvidence !== null) {
+    assertStableFamilyIdentity(currentFamilyCapture.entry, reviewedEvidence.family);
+  }
+
+  const directoryPaths = [
+    reloaded.paths.root,
+    reloaded.paths.writes,
+    reloaded.paths.attempts,
+    reloaded.paths.drafts,
+    reloaded.paths.publication,
+    reloaded.paths.reports,
+  ];
+  const attemptNames = readdirSync(reloaded.paths.attempts).sort();
+  const artifactPaths = [
+    reloaded.paths.manifest,
+    reloaded.paths.snapshot,
+    ...attemptNames.map((name) => join(reloaded.paths.attempts, name)),
+  ];
+  const blobNames = readdirSync(reloaded.paths.writes).sort();
+  if (blobNames.length !== artifactPaths.length) {
+    fail("Aged-checkpoint provenance requires one content-addressed blob per immutable artifact.");
+  }
+  const blobPaths = blobNames.map((name) => join(reloaded.paths.writes, name));
+
+  const captures = [
+    ...directoryPaths.map((path) => provenanceEntry({
+      path,
+      base: reloaded.familyPath,
+      label: `Aged-checkpoint directory ${path}`,
+      type: "directory",
+      expectedUid,
+      targetBounds,
+      oldestLiveStartMs,
+    })),
+    ...[...artifactPaths, ...blobPaths].map((path) => provenanceEntry({
+      path,
+      base: reloaded.familyPath,
+      label: `Aged-checkpoint file ${path}`,
+      type: "file",
+      expectedUid,
+      targetBounds,
+      oldestLiveStartMs,
+    })),
+  ];
+  const capturesByPath = new Map(captures.map((capture) => [capture.entry.path, capture]));
+  const blobsByInode = new Map();
+  for (const name of blobNames) {
+    const match = BLOB_PATTERN.exec(name);
+    if (!match) fail(`Unexpected aged-checkpoint write blob: ${name}`);
+    const capture = capturesByPath.get(relative(reloaded.familyPath, join(reloaded.paths.writes, name)));
+    if (capture.entry.sha256 !== match[1]) {
+      fail(`Aged-checkpoint write blob digest does not match its filename: ${name}`);
+    }
+    const inodeKey = `${capture.entry.dev}:${capture.entry.ino}`;
+    if (blobsByInode.has(inodeKey)) fail("Aged-checkpoint write blobs repeat an inode.");
+    blobsByInode.set(inodeKey, capture);
+  }
+  const pairedBlobPaths = new Set();
+  for (const path of artifactPaths) {
+    const capture = capturesByPath.get(relative(reloaded.familyPath, path));
+    const blob = blobsByInode.get(`${capture.entry.dev}:${capture.entry.ino}`);
+    if (blob === undefined || blob.entry.sha256 !== capture.entry.sha256) {
+      fail(`Aged-checkpoint artifact is not paired with exactly one matching write blob: ${path}`);
+    }
+    pairedBlobPaths.add(blob.entry.path);
+  }
+  if (pairedBlobPaths.size !== blobPaths.length) {
+    fail("Aged-checkpoint provenance contains an unpaired content-addressed blob.");
+  }
+
+  const manifestTime = Date.parse(reloaded.manifest.createdAt);
+  assertTimeWithinAgedTarget(
+    manifestTime,
+    "Aged-checkpoint manifest createdAt",
+    targetBounds,
+    oldestLiveStartMs,
+  );
+  const evaluationRunTime = parseSchedulerRunIdTimestamp(
+    reloaded.evaluationRunId,
+    "Aged-checkpoint evaluationRunId",
+  );
+  if (manifestTime < evaluationRunTime || manifestTime - evaluationRunTime > 5_000) {
+    fail("Aged-checkpoint manifest createdAt does not match evaluationRunId.");
+  }
+  const manifestCapture = capturesByPath.get(
+    relative(reloaded.familyPath, reloaded.paths.manifest),
+  );
+  const manifestBirthMs = Number(BigInt(manifestCapture.entry.birthtimeNs) / 1_000_000n);
+  if (manifestBirthMs < manifestTime || manifestBirthMs - manifestTime > MAX_PROVENANCE_RUN_MS) {
+    fail("Aged-checkpoint manifest filesystem birthtime is inconsistent with its run.");
+  }
+
+  let previousAttemptTime = manifestTime;
+  for (const [index, event] of reloaded.attempts.entries()) {
+    const eventTime = Date.parse(event.at);
+    assertTimeWithinAgedTarget(
+      eventTime,
+      `Aged-checkpoint attempt ${index} timestamp`,
+      targetBounds,
+      oldestLiveStartMs,
+    );
+    const attemptRunTime = parseSchedulerRunIdTimestamp(
+      event.attemptId,
+      `Aged-checkpoint attempt ${index} attemptId`,
+    );
+    if (
+      eventTime < previousAttemptTime
+      || eventTime < attemptRunTime
+      || eventTime - attemptRunTime > MAX_PROVENANCE_RUN_MS
+    ) {
+      fail(`Aged-checkpoint attempt ${index} timestamp is inconsistent with its run history.`);
+    }
+    const eventName = `${event.at.replace(/[-:]/gu, "")}-${event.eventId}.json`;
+    const eventCapture = capturesByPath.get(
+      relative(reloaded.familyPath, join(reloaded.paths.attempts, eventName)),
+    );
+    if (eventCapture === undefined) {
+      fail(`Aged-checkpoint attempt ${index} is missing its immutable event artifact.`);
+    }
+    const eventBirthMs = Number(BigInt(eventCapture.entry.birthtimeNs) / 1_000_000n);
+    if (Math.abs(eventBirthMs - eventTime) > MAX_EVENT_FILE_CLOCK_SKEW_MS) {
+      fail(`Aged-checkpoint attempt ${index} filesystem birthtime is inconsistent with event.at.`);
+    }
+    previousAttemptTime = eventTime;
+  }
+
+  // Synchronous test-only fault injection makes the otherwise very narrow
+  // capture/reload race deterministic. Production callers leave this null.
+  beforeFinalVerificationForTest?.();
+
+  // Re-load after provenance capture so a concurrent directory or artifact
+  // mutation cannot be sealed merely because it happened between two reads.
+  const finalJob = loadCheckpointJob({
+    controlRoot: reloaded.controlRoot,
+    reportDate: targetDate,
+    snapshotFingerprint: reloaded.manifest.snapshotFingerprint,
+    runtimeFingerprint: reloaded.manifest.runtimeFingerprint,
+    evaluationRunId: reloaded.evaluationRunId,
+  });
+  if (
+    finalJob.attempts.length !== reloaded.attempts.length
+    || readdirSync(finalJob.familyPath).sort().join("\0") !== familyEntries.join("\0")
+    || readdirSync(finalJob.paths.writes).sort().join("\0") !== blobNames.join("\0")
+  ) {
+    fail("Aged-checkpoint source changed before its provenance could be sealed.");
+  }
+
+  const finalFamilyCapture = provenanceEntry({
+    path: finalJob.familyPath,
+    base: finalJob.familyPath,
+    label: `Aged-checkpoint family ${finalJob.familyPath}`,
+    type: "directory",
+    expectedUid,
+    targetBounds,
+    oldestLiveStartMs,
+    requireTargetTimestamp: reviewedEvidence === null,
+  });
+  assertSameProvenanceEntry(
+    finalFamilyCapture.entry,
+    currentFamilyCapture.entry,
+    "Aged-checkpoint family",
+  );
+  const finalCaptures = [
+    ...directoryPaths.map((path) => provenanceEntry({
+      path,
+      base: finalJob.familyPath,
+      label: `Aged-checkpoint directory ${path}`,
+      type: "directory",
+      expectedUid,
+      targetBounds,
+      oldestLiveStartMs,
+    })),
+    ...[...artifactPaths, ...blobPaths].map((path) => provenanceEntry({
+      path,
+      base: finalJob.familyPath,
+      label: `Aged-checkpoint file ${path}`,
+      type: "file",
+      expectedUid,
+      targetBounds,
+      oldestLiveStartMs,
+    })),
+  ];
+  const capturesByEntryPath = new Map(captures.map((capture) => [capture.entry.path, capture]));
+  for (const capture of finalCaptures) {
+    const original = capturesByEntryPath.get(capture.entry.path);
+    if (original === undefined) {
+      fail("Aged-checkpoint source layout changed during final provenance verification.");
+    }
+    assertSameProvenanceEntry(
+      capture.entry,
+      original.entry,
+      `Aged-checkpoint source entry ${capture.entry.path}`,
+    );
+  }
+  if (finalCaptures.length !== captures.length) {
+    fail("Aged-checkpoint source layout changed during final provenance verification.");
+  }
+
+  const entries = captures.map(({ entry }) => entry)
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const manifestRawSha256 = capturesByPath.get(
+    relative(reloaded.familyPath, reloaded.paths.manifest),
+  ).entry.sha256;
+  const snapshotRawSha256 = capturesByPath.get(
+    relative(reloaded.familyPath, reloaded.paths.snapshot),
+  ).entry.sha256;
+  if (snapshotRawSha256 !== reloaded.manifest.snapshotSha256) {
+    fail("Aged-checkpoint raw snapshot digest changed after job validation.");
+  }
+  const evidence = {
+    schemaVersion: AGED_PROVENANCE_SCHEMA_VERSION,
+    kind: AGED_PROVENANCE_KIND,
+    targetDate,
+    oldestLiveDate,
+    expectedUid,
+    snapshotFingerprint: reloaded.manifest.snapshotFingerprint,
+    snapshotRawSha256,
+    manifestRawSha256,
+    runtimeFingerprint: reloaded.manifest.runtimeFingerprint,
+    evaluationRunId: reloaded.evaluationRunId,
+    manifestCreatedAt: reloaded.manifest.createdAt,
+    attemptCount: reloaded.attempts.length,
+    family: reviewedEvidence?.family ?? currentFamilyCapture.entry,
+    entries,
+  };
+  const evidenceSha256 = sha256(Buffer.from(serializeJson(evidence), "utf8"));
+  if (reviewedEvidence !== null && evidenceSha256 !== reviewedEvidence.evidenceSha256) {
+    fail("Aged-checkpoint source subtree changed after its initial provenance seal.");
+  }
+  return Object.freeze({
+    ...evidence,
+    family: Object.freeze(evidence.family),
+    entries: Object.freeze(entries),
+    evidenceSha256,
   });
 }
 

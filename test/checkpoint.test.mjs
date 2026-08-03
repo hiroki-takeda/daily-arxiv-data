@@ -1,24 +1,31 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import {
   chmodSync,
   existsSync,
+  linkSync,
   mkdirSync,
   readFileSync,
   readdirSync,
   realpathSync,
   statSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
-import { fingerprintSnapshot } from "../scripts/lib/arxiv-source.mjs";
+import {
+  ARXIV_PASTWEEK_LISTING_URLS,
+  fingerprintSnapshot,
+} from "../scripts/lib/arxiv-source.mjs";
 import {
   CHECKPOINT_CATEGORIES,
   appendCheckpointAttempt,
   appendPublicationStatus,
+  captureAgedCheckpointProvenance,
   checkpointJobFamilyPath,
   checkpointJobPath,
   importCheckpointCategoryReport,
@@ -65,6 +72,89 @@ async function fixture() {
   const controlRoot = join(base, "control");
   mkdirSync(controlRoot, { mode: 0o700 });
   return { base, controlRoot };
+}
+
+function jstDate(instant) {
+  return new Date(instant.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function nextCalendarDate(date) {
+  const cursor = new Date(`${date}T00:00:00Z`);
+  cursor.setUTCDate(cursor.getUTCDate() + 1);
+  return cursor.toISOString().slice(0, 10);
+}
+
+function schedulerRunId(instant, suffix) {
+  const timestamp = instant.toISOString().slice(0, 19).replaceAll("-", "").replaceAll(":", "");
+  return `run-${timestamp}Z-${suffix}`;
+}
+
+function snapshotForAgedProvenance(reportDate) {
+  return {
+    announcementDate: reportDate,
+    categories: Object.fromEntries(CHECKPOINT_CATEGORIES.map((category, index) => [category, {
+      slug: category,
+      sourceUrl: ARXIV_PASTWEEK_LISTING_URLS[category],
+      newCount: 1,
+      crosslistCount: index,
+      newIds: [`2099.0000${3 - index}`],
+    }])),
+  };
+}
+
+async function agedProvenanceFixture({ withAttempt = true } = {}) {
+  const { base, controlRoot } = await fixture();
+  const createdAt = new Date();
+  const reportDate = jstDate(createdAt);
+  const oldestLiveDate = nextCalendarDate(reportDate);
+  const snapshot = snapshotForAgedProvenance(reportDate);
+  const snapshotFingerprint = fingerprintSnapshot(snapshot);
+  const runtimeFingerprint = "e".repeat(64);
+  const evaluationRunId = schedulerRunId(createdAt, "abcdef123456");
+  let job = openCheckpointJob({
+    controlRoot,
+    snapshot,
+    snapshotFingerprint,
+    runtimeFingerprint,
+    evaluationRunId,
+    now: createdAt,
+  });
+  if (withAttempt) {
+    const attemptedAt = createdAt;
+    appendCheckpointAttempt({
+      job,
+      attemptId: schedulerRunId(attemptedAt, "123456abcdef"),
+      stage: "category_generation",
+      category: "quant-ph",
+      status: "started",
+      message: "Started bounded provenance test.",
+      at: attemptedAt,
+      eventId: "9".repeat(32),
+    });
+    job = loadCheckpointJob({
+      controlRoot,
+      reportDate,
+      snapshotFingerprint,
+      runtimeFingerprint,
+      evaluationRunId,
+    });
+  }
+  return {
+    base,
+    controlRoot,
+    job,
+    reportDate,
+    oldestLiveDate,
+    snapshotFingerprint,
+    runtimeFingerprint,
+    evaluationRunId,
+  };
+}
+
+function canonicalJson(value) {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalJson(value[key])]));
 }
 
 function openFresh(controlRoot, overrides = {}) {
@@ -143,6 +233,248 @@ test("checkpoint job uses date-fingerprint path and reuses its immutable evaluat
   assert.equal(reopened.evaluationRunId, EVALUATION_RUN_ID);
   assert.equal(reopened.manifest.createdAt, "2099-01-05T12:00:00.000Z");
   assert.ok(readdirSync(reopened.paths.writes).length >= 2, "atomic write blobs are retained, not deleted");
+});
+
+test("aged checkpoint provenance seals one pre-cutoff snapshot-only family", async () => {
+  const fixtureState = await agedProvenanceFixture();
+  const evidence = captureAgedCheckpointProvenance({
+    job: fixtureState.job,
+    oldestLiveDate: fixtureState.oldestLiveDate,
+    expectedUid: process.getuid(),
+  });
+  assert.equal(evidence.kind, "aged_checkpoint_provenance");
+  assert.equal(evidence.targetDate, fixtureState.reportDate);
+  assert.equal(evidence.oldestLiveDate, fixtureState.oldestLiveDate);
+  assert.equal(evidence.snapshotFingerprint, fixtureState.snapshotFingerprint);
+  assert.equal(evidence.runtimeFingerprint, fixtureState.runtimeFingerprint);
+  assert.equal(evidence.evaluationRunId, fixtureState.evaluationRunId);
+  assert.equal(evidence.attemptCount, 1);
+  assert.match(evidence.snapshotRawSha256, /^[a-f0-9]{64}$/u);
+  assert.match(evidence.manifestRawSha256, /^[a-f0-9]{64}$/u);
+  assert.match(evidence.evidenceSha256, /^[a-f0-9]{64}$/u);
+  assert.ok(evidence.entries.some(({ path }) => path.endsWith("/snapshot.json")));
+  assert.ok(evidence.entries.some(({ path }) => path.includes("/.writes/")));
+  assert.ok(evidence.entries.every(({ type, mode }) => (
+    type === "directory" ? mode === "0700" : mode === "0400"
+  )));
+  const { evidenceSha256, ...digestInput } = evidence;
+  const expectedEvidenceDigest = createHash("sha256")
+    .update(`${JSON.stringify(canonicalJson(digestInput), null, 2)}\n`)
+    .digest("hex");
+  assert.equal(evidenceSha256, expectedEvidenceDigest);
+  assert.equal(Object.isFrozen(evidence), true);
+  assert.equal(Object.isFrozen(evidence.entries), true);
+});
+
+test("aged checkpoint provenance revalidates an unchanged source after one reviewed destination runtime", async () => {
+  const state = await agedProvenanceFixture();
+  const initialEvidence = captureAgedCheckpointProvenance({
+    job: state.job,
+    oldestLiveDate: state.oldestLiveDate,
+    expectedUid: process.getuid(),
+  });
+  const destinationRuntime = "d".repeat(64);
+  const destinationCreatedAt = new Date();
+  openCheckpointJob({
+    controlRoot: state.controlRoot,
+    snapshot: state.job.snapshot,
+    snapshotFingerprint: state.snapshotFingerprint,
+    runtimeFingerprint: destinationRuntime,
+    evaluationRunId: schedulerRunId(destinationCreatedAt, "dddddddddddd"),
+    now: destinationCreatedAt,
+  });
+
+  assert.throws(() => captureAgedCheckpointProvenance({
+    job: state.job,
+    oldestLiveDate: state.oldestLiveDate,
+    expectedUid: process.getuid(),
+  }), /exactly one runtime/u);
+  assert.throws(() => captureAgedCheckpointProvenance({
+    job: state.job,
+    oldestLiveDate: state.oldestLiveDate,
+    expectedUid: process.getuid(),
+    expectedEvidence: initialEvidence,
+  }), /not explicitly allowed/u);
+
+  const revalidated = captureAgedCheckpointProvenance({
+    job: state.job,
+    oldestLiveDate: state.oldestLiveDate,
+    expectedUid: process.getuid(),
+    expectedEvidence: initialEvidence,
+    allowedAdditionalRuntimeFingerprints: [destinationRuntime],
+  });
+  assert.equal(revalidated.evidenceSha256, initialEvidence.evidenceSha256);
+  assert.deepEqual(revalidated.entries, initialEvidence.entries);
+  assert.deepEqual(revalidated.family, initialEvidence.family);
+
+  const changedTime = new Date();
+  utimesSync(state.job.paths.snapshot, changedTime, changedTime);
+  assert.throws(() => captureAgedCheckpointProvenance({
+    job: state.job,
+    oldestLiveDate: state.oldestLiveDate,
+    expectedUid: process.getuid(),
+    expectedEvidence: initialEvidence,
+    allowedAdditionalRuntimeFingerprints: [destinationRuntime],
+  }), /source subtree changed/u);
+});
+
+test("aged checkpoint provenance detects a mutation between capture and final verification", async () => {
+  const state = await agedProvenanceFixture({ withAttempt: false });
+  const original = statSync(state.job.paths.snapshot);
+  let changed = new Date(`${state.reportDate}T12:34:56+09:00`);
+  if (changed.getTime() === Math.trunc(original.mtimeMs)) {
+    changed = new Date(`${state.reportDate}T12:34:57+09:00`);
+  }
+
+  assert.throws(() => captureAgedCheckpointProvenance({
+    job: state.job,
+    oldestLiveDate: state.oldestLiveDate,
+    expectedUid: process.getuid(),
+    beforeFinalVerificationForTest: () => {
+      utimesSync(state.job.paths.snapshot, changed, changed);
+    },
+  }), /changed during final provenance verification/u);
+});
+
+test("aged checkpoint provenance rejects mutable, late, ambiguous, linked, or non-snapshot sources", async (t) => {
+  await t.test("sealed evidence tamper", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    const evidence = captureAgedCheckpointProvenance({
+      job: state.job,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+    });
+    const tampered = structuredClone(evidence);
+    tampered.entries[0].mtimeNs = (BigInt(tampered.entries[0].mtimeNs) + 1n).toString();
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: state.job,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+      expectedEvidence: tampered,
+    }), /evidence digest is invalid/u);
+  });
+
+  await t.test("mode tamper", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    chmodSync(state.job.paths.snapshot, 0o600);
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: state.job,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+    }), /mode 0400|permissions/u);
+  });
+
+  await t.test("late artifact timestamp", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    const late = new Date(`${state.oldestLiveDate}T01:00:00+09:00`);
+    utimesSync(state.job.paths.snapshot, late, late);
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: state.job,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+    }), /mtime must remain within the target JST day/u);
+  });
+
+  await t.test("extra runtime in family", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    mkdirSync(join(state.job.familyPath, "f".repeat(64)), { mode: 0o700 });
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: state.job,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+    }), /exactly one runtime/u);
+  });
+
+  await t.test("extra target-date family", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    mkdirSync(
+      join(state.job.familyPath, "..", `${state.reportDate}-${"f".repeat(64)}`),
+      { mode: 0o700 },
+    );
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: state.job,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+    }), /exactly one checkpoint family/u);
+  });
+
+  await t.test("third hard link", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    linkSync(state.job.paths.snapshot, join(state.base, "unexpected-snapshot-link"));
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: state.job,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+    }), /exactly one artifact link/u);
+  });
+
+  await t.test("valid report in source job", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    const sourcePath = join(state.base, "aged-report.json");
+    writeFileSync(sourcePath, `${JSON.stringify({
+      schemaVersion: "test",
+      reportDate: state.reportDate,
+      slug: "quant-ph",
+      evaluationRun: { runId: state.evaluationRunId },
+      payload: "must-not-be-reused",
+    })}\n`, { mode: 0o600 });
+    importCheckpointCategoryReport({
+      job: state.job,
+      category: "quant-ph",
+      sourcePath,
+      attemptId: schedulerRunId(new Date(), "fedcba654321"),
+      now: new Date(),
+      validateReport: () => true,
+    });
+    const withReport = loadCheckpointJob({
+      controlRoot: state.controlRoot,
+      reportDate: state.reportDate,
+      snapshotFingerprint: state.snapshotFingerprint,
+      runtimeFingerprint: state.runtimeFingerprint,
+      evaluationRunId: state.evaluationRunId,
+    });
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: withReport,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+    }), /snapshot-only/u);
+  });
+
+  await t.test("attempt timestamp after cutoff", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    const late = new Date(`${state.oldestLiveDate}T01:00:00+09:00`);
+    appendCheckpointAttempt({
+      job: state.job,
+      attemptId: schedulerRunId(late, "bbbbbbbbbbbb"),
+      stage: "category_generation",
+      category: "quant-ph",
+      status: "started",
+      message: "Late synthetic event.",
+      at: late,
+      eventId: "8".repeat(32),
+    });
+    const withLateAttempt = loadCheckpointJob({
+      controlRoot: state.controlRoot,
+      reportDate: state.reportDate,
+      snapshotFingerprint: state.snapshotFingerprint,
+      runtimeFingerprint: state.runtimeFingerprint,
+      evaluationRunId: state.evaluationRunId,
+    });
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: withLateAttempt,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid(),
+    }), /attempt 0 timestamp must be within the target JST day/u);
+  });
+
+  await t.test("wrong expected uid", async () => {
+    const state = await agedProvenanceFixture({ withAttempt: false });
+    assert.throws(() => captureAgedCheckpointProvenance({
+      job: state.job,
+      oldestLiveDate: state.oldestLiveDate,
+      expectedUid: process.getuid() + 1,
+    }), /must equal the current user/u);
+  });
 });
 
 test("a snapshot-only interrupted creation completes safely with the next supplied evaluationRunId", async () => {

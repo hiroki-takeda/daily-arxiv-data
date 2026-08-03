@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { chmodSync, existsSync, mkdirSync, readFileSync, realpathSync, readdirSync, statSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { hostname, tmpdir } from "node:os";
@@ -10,6 +11,7 @@ import {
   AUTOMATION_RUNTIME_PATHS,
   MODEL_ID,
   acquireLock,
+  assertAgedRecoveryPlanMatchesQueue,
   assertPublisherControlFastForward,
   assertGenericCategoryDraftRescueAllowed,
   assertChatGptLogin,
@@ -18,6 +20,7 @@ import {
   buildCategoryAutomationPrompt,
   buildCategoryRepairPrompt,
   buildCodexArgs,
+  buildAgedRecoveryPlanEntries,
   codexBinaryIdentity,
   classifyFullTextReadiness,
   computeCategoryRetryState,
@@ -61,8 +64,10 @@ import {
   ARXIV_LISTING_URLS,
   ARXIV_PASTWEEK_LISTING_URLS,
   fingerprintSnapshot,
+  selectAgedCheckpointRecoverySnapshot,
   selectAuthorizedContinuationSnapshot,
   selectBackfillSnapshot,
+  selectCheckpointRecoverySnapshot,
 } from "../scripts/lib/arxiv-source.mjs";
 import {
   fetchArxivSourceArchive,
@@ -120,6 +125,65 @@ function queueSnapshot(date, urls, idSuffix, { empty = false } = {}) {
   };
 }
 
+function canonicalJson(value) {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalJson(value[key])]));
+}
+
+function agedProvenanceFixture({
+  targetDate,
+  oldestLiveDate,
+  snapshotFingerprint,
+  runtimeFingerprint,
+  evaluationRunId,
+}) {
+  const timestamp = `${targetDate}T03:00:00.000Z`;
+  const directoryEntry = (path, inode) => ({
+    path,
+    type: "directory",
+    mode: "0700",
+    uid: typeof process.getuid === "function" ? process.getuid() : 0,
+    dev: "1",
+    ino: String(inode),
+    nlink: "2",
+    size: "0",
+    birthtimeNs: "1",
+    mtimeNs: "1",
+    ctimeNs: "1",
+    sha256: null,
+  });
+  const evidence = {
+    schemaVersion: "1.0",
+    kind: "aged_checkpoint_provenance",
+    targetDate,
+    oldestLiveDate,
+    expectedUid: typeof process.getuid === "function" ? process.getuid() : 0,
+    snapshotFingerprint,
+    snapshotRawSha256: "a".repeat(64),
+    manifestRawSha256: "b".repeat(64),
+    runtimeFingerprint,
+    evaluationRunId,
+    manifestCreatedAt: timestamp,
+    attemptCount: 0,
+    family: directoryEntry(".", 1),
+    entries: [
+      ".writes",
+      "attempts",
+      "drafts",
+      "publication",
+      "reports",
+      runtimeFingerprint,
+    ].sort().map((path, index) => directoryEntry(path, index + 2)),
+  };
+  return {
+    ...evidence,
+    evidenceSha256: createHash("sha256")
+      .update(`${JSON.stringify(canonicalJson(evidence), null, 2)}\n`)
+      .digest("hex"),
+  };
+}
+
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), "daily-arxiv-runner-test-"));
   const staging = join(root, "staging");
@@ -142,7 +206,7 @@ function manifestObject(staging, overrides = {}) {
   };
 }
 
-test("mode parser exposes normal, diagnostic, and one-shot exact checkpoint recovery modes", () => {
+test("mode parser exposes normal, diagnostic, live, and aged one-shot checkpoint recovery modes", () => {
   assert.equal(parseMode([]), "run");
   assert.equal(parseMode(["--check"]), "check");
   assert.deepEqual(parseAutomationInvocation([
@@ -154,6 +218,23 @@ test("mode parser exposes normal, diagnostic, and one-shot exact checkpoint reco
   ]), {
     mode: "run",
     recovery: {
+      selectionMode: "checkpoint_recovery",
+      expectedLatestDate: "2026-07-24",
+      targetDate: "2026-07-27",
+      snapshotFingerprint: "a".repeat(64),
+      sourceRuntimeFingerprint: "b".repeat(64),
+    },
+  });
+  assert.deepEqual(parseAutomationInvocation([
+    "--recover-aged-checkpoint",
+    "2026-07-24",
+    "2026-07-27",
+    "a".repeat(64),
+    "b".repeat(64),
+  ]), {
+    mode: "run",
+    recovery: {
+      selectionMode: "aged_checkpoint_recovery",
       expectedLatestDate: "2026-07-24",
       targetDate: "2026-07-27",
       snapshotFingerprint: "a".repeat(64),
@@ -163,12 +244,20 @@ test("mode parser exposes normal, diagnostic, and one-shot exact checkpoint reco
   assert.throws(() => parseMode(["--dry-run"]), /Usage/);
   assert.throws(() => parseMode(["--check", "extra"]), /Usage/);
   assert.throws(() => parseMode(["--recover-checkpoint", "2026-07-24"]), /Usage/);
+  assert.throws(() => parseMode(["--recover-aged-checkpoint", "2026-07-24"]), /Usage/);
   assert.throws(() => parseMode([
     "--recover-checkpoint",
     "2026-07-24",
     "2026-07-27",
     "not-a-digest",
     "b".repeat(64),
+  ]), /SHA-256/);
+  assert.throws(() => parseMode([
+    "--recover-aged-checkpoint",
+    "2026-07-24",
+    "2026-07-27",
+    "a".repeat(64),
+    "not-a-digest",
   ]), /SHA-256/);
 });
 
@@ -201,6 +290,7 @@ test("one-shot recovery loads only the exact unpublished immutable checkpoint sn
     evaluationRunId: RUN_ID,
   });
   const recovery = {
+    selectionMode: "checkpoint_recovery",
     expectedLatestDate: latestDate,
     targetDate: DATE,
     snapshotFingerprint,
@@ -503,7 +593,7 @@ test("durable queue protects every captured missing edition before the oldest on
   }
 });
 
-test("checkpoint recovery protects the exact 7/27-style head and every live successor", async () => {
+test("checkpoint recovery protects an aged-out 7/27-style head and every live successor", async () => {
   const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-checkpoint-queue-test-")));
   const controlRoot = join(root, "control");
   const directory = join(controlRoot, "recovery-authorizations");
@@ -511,13 +601,13 @@ test("checkpoint recovery protects the exact 7/27-style head and every live succ
   mkdirSync(directory, { recursive: true, mode: 0o700 });
   mkdirSync(stagingDirectory, { mode: 0o700 });
   const latestDate = "2026-07-24";
-  const dates = ["2026-07-31", "2026-07-30", "2026-07-29", "2026-07-28", "2026-07-27"];
+  const dates = ["2026-07-31", "2026-07-30", "2026-07-29", "2026-07-28"];
   const snapshots = dates.map((date, index) => (
     queueSnapshot(date, ARXIV_PASTWEEK_LISTING_URLS, 3_100 - (index * 100))
   ));
   const pastweekWindow = { announcementDates: dates, snapshots };
   const currentSnapshot = queueSnapshot("2026-07-31", ARXIV_LISTING_URLS, 3_100);
-  const targetSnapshot = snapshots.at(-1);
+  const targetSnapshot = queueSnapshot("2026-07-27", ARXIV_PASTWEEK_LISTING_URLS, 2_700);
   const sourceRuntimeFingerprint = "7".repeat(64);
   const destinationRuntimeFingerprint = "6".repeat(64);
   const sourceEvaluationRunId = "run-20260727T023139Z-a96a4dd333d0";
@@ -539,15 +629,66 @@ test("checkpoint recovery protects the exact 7/27-style head and every live succ
     evaluationRunId: destinationEvaluationRunId,
     now,
   });
+  const selection = selectAgedCheckpointRecoverySnapshot({
+    storedSnapshot: targetSnapshot,
+    currentSnapshot,
+    pastweekWindow,
+    latestDate,
+    expectedDate: "2026-07-27",
+    expectedSnapshotFingerprint: fingerprintSnapshot(targetSnapshot),
+    now,
+  });
+  assert.deepEqual(
+    selection.pendingSnapshots.map(({ announcementDate }) => announcementDate),
+    ["2026-07-27", "2026-07-28", "2026-07-29", "2026-07-30", "2026-07-31"],
+  );
+  const sourceCheckpointProvenance = agedProvenanceFixture({
+    targetDate: "2026-07-27",
+    oldestLiveDate: "2026-07-28",
+    snapshotFingerprint: fingerprintSnapshot(targetSnapshot),
+    runtimeFingerprint: sourceRuntimeFingerprint,
+    evaluationRunId: sourceEvaluationRunId,
+  });
+  const sealedEntries = buildAgedRecoveryPlanEntries({
+    latestDate,
+    pendingSnapshots: selection.pendingSnapshots,
+    currentSnapshot,
+    pastweekWindow,
+    now,
+  });
+  const tamperedEntries = structuredClone(sealedEntries);
+  tamperedEntries[1].evidence.targetSnapshotFingerprint = "0".repeat(64);
+  assert.throws(() => ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: [],
+    selectionMode: "aged_checkpoint_recovery",
+    expectedLatestDate: latestDate,
+    pendingSnapshots: selection.pendingSnapshots,
+    sourceJob,
+    sourceCheckpointProvenance,
+    sealedEntries: tamperedEntries,
+    automationRuntimeFingerprint: destinationRuntimeFingerprint,
+    firstJob,
+    policy: validPolicy(),
+    currentSnapshot,
+    pastweekWindow,
+    attemptId: destinationEvaluationRunId,
+    now,
+  }), /evidence does not match|sealed/u);
+  assert.equal(readdirSync(directory).length, 0);
   const queue = ensureDurableContinuationQueue({
     directory,
     stagingDirectory,
     controlRoot,
     records: [],
-    selectionMode: "checkpoint_recovery",
+    selectionMode: "aged_checkpoint_recovery",
     expectedLatestDate: latestDate,
-    pendingSnapshots: snapshots.toReversed(),
+    pendingSnapshots: selection.pendingSnapshots,
     sourceJob,
+    sourceCheckpointProvenance,
+    sealedEntries,
     automationRuntimeFingerprint: destinationRuntimeFingerprint,
     firstJob,
     policy: validPolicy(),
@@ -556,27 +697,102 @@ test("checkpoint recovery protects the exact 7/27-style head and every live succ
     attemptId: destinationEvaluationRunId,
     now,
   });
-  assert.deepEqual(queue.targets, dates.toReversed());
+  assert.deepEqual(queue.targets, ["2026-07-27", ...dates.toReversed()]);
   assert.equal(readdirSync(directory).length, 5);
+  const plan = {
+    expectedLatestDate: latestDate,
+    targetDate: targetSnapshot.announcementDate,
+    snapshotFingerprint: fingerprintSnapshot(targetSnapshot),
+    sourceRuntimeFingerprint,
+    sourceEvaluationRunId,
+    automationRuntimeFingerprint: destinationRuntimeFingerprint,
+    sourceCheckpointProvenance,
+    entries: sealedEntries,
+  };
+  const queueRecords = queue.entries.map(({ record }) => record);
+  assert.doesNotThrow(() => assertAgedRecoveryPlanMatchesQueue(plan, queueRecords));
+  assert.throws(
+    () => assertAgedRecoveryPlanMatchesQueue(plan, queueRecords.slice(0, -1)),
+    /does not match sealed entry 4/u,
+  );
+  const tamperedQueueRecords = structuredClone(queueRecords);
+  tamperedQueueRecords[1].evidence.officialHeadFingerprint = "0".repeat(64);
+  assert.throws(
+    () => assertAgedRecoveryPlanMatchesQueue(plan, tamperedQueueRecords),
+    /does not match sealed entry 1/u,
+  );
+  const extensionSnapshot = queueSnapshot("2026-08-03", ARXIV_PASTWEEK_LISTING_URLS, 3_300);
+  const advancedCurrentSnapshot = queueSnapshot("2026-08-03", ARXIV_LISTING_URLS, 3_300);
+  const advancedPastweekWindow = {
+    announcementDates: ["2026-08-03", ...dates],
+    snapshots: [extensionSnapshot, ...snapshots],
+  };
+  const advancedNow = new Date("2026-08-03T03:00:00.000Z");
+  const advancedSelection = selectAuthorizedContinuationSnapshot({
+    storedSnapshot: queue.first.job.snapshot,
+    currentSnapshot: advancedCurrentSnapshot,
+    pastweekWindow: advancedPastweekWindow,
+    latestDate,
+    expectedDate: queue.first.record.targetDate,
+    expectedSnapshotFingerprint: queue.first.record.snapshotFingerprint,
+    evidence: queue.first.record.evidence,
+    now: advancedNow,
+  });
+  const advancedQueue = ensureDurableContinuationQueue({
+    directory,
+    stagingDirectory,
+    controlRoot,
+    records: queueRecords,
+    selectionMode: "aged_checkpoint_recovery",
+    expectedLatestDate: latestDate,
+    pendingSnapshots: advancedSelection.pendingSnapshots,
+    sourceJob,
+    sourceCheckpointProvenance,
+    automationRuntimeFingerprint: destinationRuntimeFingerprint,
+    firstJob: queue.first.job,
+    policy: validPolicy(),
+    currentSnapshot: advancedCurrentSnapshot,
+    pastweekWindow: advancedPastweekWindow,
+    attemptId: "run-20260803T030000Z-123456abcdef",
+    now: advancedNow,
+  });
+  assert.deepEqual(advancedQueue.targets, ["2026-07-27", ...dates.toReversed(), "2026-08-03"]);
+  assert.doesNotThrow(() => assertAgedRecoveryPlanMatchesQueue(
+    plan,
+    advancedQueue.entries.map(({ record }) => record),
+  ));
+  const disconnectedExtension = structuredClone(advancedQueue.entries.at(-1).record);
+  disconnectedExtension.expectedLatestDate = "2026-08-04";
+  disconnectedExtension.targetDate = "2026-08-05";
+  disconnectedExtension.evidence.expectedLatestDate = disconnectedExtension.expectedLatestDate;
+  disconnectedExtension.evidence.targetDate = disconnectedExtension.targetDate;
+  assert.throws(
+    () => assertAgedRecoveryPlanMatchesQueue(plan, [...queueRecords, disconnectedExtension]),
+    /Unexpected authorization intersects aged recovery chain at 2026-08-04/u,
+  );
   const first = loadActiveDurableRecoveryAuthorization({
     directory,
     latestDate,
   }).active;
-  assert.equal(first.selectionMode, "checkpoint_recovery");
+  assert.equal(first.selectionMode, "aged_checkpoint_recovery");
   assert.equal(first.targetDate, "2026-07-27");
   assert.equal(first.sourceRuntimeFingerprint, sourceRuntimeFingerprint);
   assert.equal(first.sourceEvaluationRunId, sourceEvaluationRunId);
-  for (const [anchor, target] of [
-    ["2026-07-27", "2026-07-28"],
-    ["2026-07-28", "2026-07-29"],
-    ["2026-07-29", "2026-07-30"],
-    ["2026-07-30", "2026-07-31"],
+  assert.equal(
+    first.sourceCheckpointProvenance.evidenceSha256,
+    sourceCheckpointProvenance.evidenceSha256,
+  );
+  for (const [anchor, target, mode] of [
+    ["2026-07-27", "2026-07-28", "aged_window_continuation"],
+    ["2026-07-28", "2026-07-29", "normal"],
+    ["2026-07-29", "2026-07-30", "normal"],
+    ["2026-07-30", "2026-07-31", "normal"],
   ]) {
     const successor = loadActiveDurableRecoveryAuthorization({
       directory,
       latestDate: anchor,
     }).active;
-    assert.equal(successor.selectionMode, "normal");
+    assert.equal(successor.selectionMode, mode);
     assert.equal(successor.targetDate, target);
   }
 });
@@ -805,6 +1021,7 @@ test("runtime update barrier covers every scheduled runtime dependency", () => {
     "scripts/lib/local-automation.mjs",
     "scripts/lib/macos-schedule.mjs",
     "scripts/lib/arxiv-source.mjs",
+    "scripts/lib/aged-recovery-plan.mjs",
     "scripts/lib/checkpoint.mjs",
     "scripts/lib/pipeline.mjs",
     "scripts/lib/source-blocker.mjs",
@@ -1426,6 +1643,8 @@ test("lock/control state and host staging stay outside model-writable system tem
   assert.equal(paths.hostStaging, `/Users/test/Library/Application Support/Daily arXiv/host-staging/${RUN_ID}`);
   assert.equal(paths.categoryStaging["quant-ph"], `${paths.runRoot}/staging/quant-ph`);
   assert.equal(paths.codexLogs["quant-ph"], `/Users/test/Library/Application Support/Daily arXiv/logs/${RUN_ID}.quant-ph.codex.log`);
+  assert.equal(paths.agedRecoveryPlans, "/Users/test/Library/Application Support/Daily arXiv/aged-recovery-plans");
+  assert.equal(paths.agedRecoveryPlanStaging, "/Users/test/Library/Application Support/Daily arXiv/aged-recovery-plan-staging");
   assert.ok(!paths.hostStaging.startsWith("/tmp/"));
   assert.ok(!paths.lock.startsWith("/tmp/"));
 });

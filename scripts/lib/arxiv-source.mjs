@@ -1128,6 +1128,131 @@ export function selectCheckpointRecoverySnapshot({
   });
 }
 
+export function selectAgedCheckpointRecoverySnapshot({
+  storedSnapshot,
+  currentSnapshot,
+  pastweekWindow,
+  latestDate,
+  expectedDate,
+  expectedSnapshotFingerprint,
+  now = new Date(),
+} = {}) {
+  validateDate(latestDate, "latestDate");
+  validateDate(expectedDate, "expectedDate");
+  if (typeof expectedSnapshotFingerprint !== "string" || !/^[a-f0-9]{64}$/u.test(expectedSnapshotFingerprint)) {
+    fail("SOURCE_INVALID", "expectedSnapshotFingerprint must be a lowercase SHA-256 digest.");
+  }
+
+  const classification = classifyOfficialCurrentSnapshot(currentSnapshot, { latestDate, now });
+  if (classification === "current") {
+    fail("SOURCE_BACKFILL_WINDOW", "Aged checkpoint recovery requires an unpublished official announcement.");
+  }
+  assertPastweekHeadMatchesCurrent(currentSnapshot, pastweekWindow);
+
+  assertSnapshot(storedSnapshot);
+  for (const slug of ARXIV_CATEGORIES) {
+    if (storedSnapshot.categories[slug].sourceUrl !== ARXIV_PASTWEEK_LISTING_URLS[slug]) {
+      fail("SOURCE_INVALID", "The stored aged-recovery snapshot must come from the official pastweek listings.");
+    }
+  }
+  if (storedSnapshot.announcementDate !== expectedDate) {
+    fail("SOURCE_CONTENT_MISMATCH", "The stored aged-recovery snapshot does not match expectedDate.");
+  }
+  if (fingerprintSnapshot(storedSnapshot) !== expectedSnapshotFingerprint) {
+    fail("SOURCE_CONTENT_MISMATCH", "The stored aged-recovery snapshot does not match expectedSnapshotFingerprint.");
+  }
+  if (
+    expectedDate <= latestDate
+    || immediateWeekdaySuccessor(latestDate) !== expectedDate
+  ) {
+    fail(
+      "SOURCE_BACKFILL_WINDOW",
+      "Aged checkpoint recovery target must be the immediate weekday successor of latestDate.",
+    );
+  }
+
+  const announcementDates = pastweekWindow.announcementDates;
+  const completeSnapshotDates = pastweekWindow.snapshots.map(({ announcementDate }) => announcementDate);
+  const oldestLiveDate = announcementDates.at(-1);
+  const everyAnnouncementIsComplete = (
+    completeSnapshotDates.length === announcementDates.length
+    && completeSnapshotDates.join("\0") === announcementDates.join("\0")
+  );
+  if (
+    !everyAnnouncementIsComplete
+    || announcementDates.includes(expectedDate)
+    || completeSnapshotDates.includes(expectedDate)
+    || announcementDates.some((date) => date <= expectedDate)
+    || immediateWeekdaySuccessor(expectedDate) !== oldestLiveDate
+  ) {
+    fail(
+      "SOURCE_BACKFILL_WINDOW",
+      "Aged checkpoint recovery target must immediately precede a fully complete official pastweek window.",
+    );
+  }
+
+  const targetIsEligible = ARXIV_CATEGORIES.some(
+    (slug) => storedSnapshot.categories[slug].newCount > 0,
+  );
+  if (!targetIsEligible) {
+    fail("SOURCE_INCOMPLETE", "Aged checkpoint recovery target contains no eligible primary-new papers.");
+  }
+  const newerEligibleSnapshots = pastweekWindow.snapshots.filter((snapshot) => (
+    snapshot.announcementDate > expectedDate
+    && ARXIV_CATEGORIES.some((slug) => snapshot.categories[slug].newCount > 0)
+  )).reverse();
+  const pendingSnapshots = [storedSnapshot, ...newerEligibleSnapshots];
+  return Object.freeze({
+    snapshot: storedSnapshot,
+    pendingCount: pendingSnapshots.length,
+    pendingSnapshots: Object.freeze(pendingSnapshots),
+  });
+}
+
+export function selectAgedWindowContinuationSnapshot({
+  currentSnapshot,
+  pastweekWindow,
+  latestDate,
+  now = new Date(),
+} = {}) {
+  const classification = classifyOfficialCurrentSnapshot(currentSnapshot, { latestDate, now });
+  if (classification === "current") {
+    fail("SOURCE_BACKFILL_WINDOW", "Aged window continuation requires an unpublished official announcement.");
+  }
+  assertPastweekHeadMatchesCurrent(currentSnapshot, pastweekWindow);
+
+  const announcementDates = pastweekWindow.announcementDates;
+  const completeSnapshotDates = pastweekWindow.snapshots.map(({ announcementDate }) => announcementDate);
+  const oldestAnnouncementDate = announcementDates.at(-1);
+  const everyAnnouncementIsComplete = (
+    completeSnapshotDates.length === announcementDates.length
+    && completeSnapshotDates.join("\0") === announcementDates.join("\0")
+  );
+  if (
+    announcementDates.includes(latestDate)
+    || !everyAnnouncementIsComplete
+    || announcementDates.some((date) => date <= latestDate)
+    || immediateWeekdaySuccessor(latestDate) !== oldestAnnouncementDate
+  ) {
+    fail(
+      "SOURCE_BACKFILL_WINDOW",
+      "Aged window continuation requires a complete official window beginning immediately after latestDate.",
+    );
+  }
+
+  const eligibleSnapshots = pastweekWindow.snapshots.filter((snapshot) => (
+    snapshot.announcementDate > latestDate
+    && ARXIV_CATEGORIES.some((slug) => snapshot.categories[slug].newCount > 0)
+  )).reverse();
+  const oldestEligibleSnapshot = eligibleSnapshots[0];
+  if (oldestEligibleSnapshot === undefined) return null;
+  return Object.freeze({
+    snapshot: oldestEligibleSnapshot,
+    pendingCount: eligibleSnapshots.length,
+    pendingSnapshots: Object.freeze(eligibleSnapshots),
+  });
+}
+
 const DURABLE_SELECTION_EVIDENCE_KEYS = Object.freeze([
   "schemaVersion",
   "selectionMode",
@@ -1160,7 +1285,12 @@ function validateDurableSelectionEvidence(evidence, {
   if (evidence.schemaVersion !== "1.0") {
     fail("SOURCE_INVALID", "Durable selection evidence schemaVersion must be 1.0.");
   }
-  if (!["normal", "checkpoint_recovery"].includes(evidence.selectionMode)) {
+  if (![
+    "normal",
+    "checkpoint_recovery",
+    "aged_checkpoint_recovery",
+    "aged_window_continuation",
+  ].includes(evidence.selectionMode)) {
     fail("SOURCE_INVALID", "Durable selection evidence selectionMode is invalid.");
   }
   for (const [label, date] of [
@@ -1197,28 +1327,70 @@ function validateDurableSelectionEvidence(evidence, {
   }
   if (
     evidence.pastweekAnnouncementDates[0] !== evidence.officialHeadDate
-    || !evidence.pastweekAnnouncementDates.includes(evidence.targetDate)
-    || !evidence.completeSnapshotDates.includes(evidence.targetDate)
     || evidence.officialHeadDate < evidence.targetDate
   ) {
     fail("SOURCE_INVALID", "Durable selection evidence has inconsistent official announcement dates.");
   }
-  if (evidence.selectionMode === "normal") {
-    if (!evidence.pastweekAnnouncementDates.includes(evidence.expectedLatestDate)) {
-      fail("SOURCE_INVALID", "Normal durable selection evidence must include its public latestDate anchor.");
-    }
-  } else {
-    const intervening = evidence.pastweekAnnouncementDates.filter(
-      (date) => date > evidence.expectedLatestDate && date < evidence.targetDate,
+  if (evidence.selectionMode === "aged_checkpoint_recovery") {
+    const allAnnouncementsWereComplete = (
+      evidence.completeSnapshotDates.length === evidence.pastweekAnnouncementDates.length
+      && evidence.completeSnapshotDates.join("\0") === evidence.pastweekAnnouncementDates.join("\0")
     );
     if (
-      intervening.length !== 0
-      || (
-        !evidence.pastweekAnnouncementDates.includes(evidence.expectedLatestDate)
-        && immediateWeekdaySuccessor(evidence.expectedLatestDate) !== evidence.targetDate
-      )
+      !allAnnouncementsWereComplete
+      || evidence.pastweekAnnouncementDates.includes(evidence.targetDate)
+      || evidence.completeSnapshotDates.includes(evidence.targetDate)
+      || evidence.pastweekAnnouncementDates.some((date) => date <= evidence.targetDate)
+      || immediateWeekdaySuccessor(evidence.expectedLatestDate) !== evidence.targetDate
+      || immediateWeekdaySuccessor(evidence.targetDate) !== evidence.completeSnapshotDates.at(-1)
     ) {
-      fail("SOURCE_INVALID", "Checkpoint-recovery evidence may not skip a listed official announcement.");
+      fail(
+        "SOURCE_INVALID",
+        "Aged checkpoint-recovery evidence must bridge two exact weekday-successor boundaries into a complete window.",
+      );
+    }
+  } else if (evidence.selectionMode === "aged_window_continuation") {
+    const allAnnouncementsWereComplete = (
+      evidence.completeSnapshotDates.length === evidence.pastweekAnnouncementDates.length
+      && evidence.completeSnapshotDates.join("\0") === evidence.pastweekAnnouncementDates.join("\0")
+    );
+    if (
+      !allAnnouncementsWereComplete
+      || evidence.pastweekAnnouncementDates.includes(evidence.expectedLatestDate)
+      || !evidence.pastweekAnnouncementDates.includes(evidence.targetDate)
+      || !evidence.completeSnapshotDates.includes(evidence.targetDate)
+      || evidence.pastweekAnnouncementDates.some((date) => date <= evidence.expectedLatestDate)
+      || immediateWeekdaySuccessor(evidence.expectedLatestDate) !== evidence.completeSnapshotDates.at(-1)
+    ) {
+      fail(
+        "SOURCE_INVALID",
+        "Aged window-continuation evidence must cover a complete window beginning immediately after its anchor.",
+      );
+    }
+  } else {
+    if (
+      !evidence.pastweekAnnouncementDates.includes(evidence.targetDate)
+      || !evidence.completeSnapshotDates.includes(evidence.targetDate)
+    ) {
+      fail("SOURCE_INVALID", "Durable selection evidence has inconsistent official announcement dates.");
+    }
+    if (evidence.selectionMode === "normal") {
+      if (!evidence.pastweekAnnouncementDates.includes(evidence.expectedLatestDate)) {
+        fail("SOURCE_INVALID", "Normal durable selection evidence must include its public latestDate anchor.");
+      }
+    } else {
+      const intervening = evidence.pastweekAnnouncementDates.filter(
+        (date) => date > evidence.expectedLatestDate && date < evidence.targetDate,
+      );
+      if (
+        intervening.length !== 0
+        || (
+          !evidence.pastweekAnnouncementDates.includes(evidence.expectedLatestDate)
+          && immediateWeekdaySuccessor(evidence.expectedLatestDate) !== evidence.targetDate
+        )
+      ) {
+        fail("SOURCE_INVALID", "Checkpoint-recovery evidence may not skip a listed official announcement.");
+      }
     }
   }
   return evidence;
@@ -1232,13 +1404,24 @@ export function buildDurableSelectionEvidence({
   latestDate,
   now = new Date(),
 } = {}) {
-  if (!["normal", "checkpoint_recovery"].includes(selectionMode)) {
-    fail("SOURCE_INVALID", "Durable selection mode must be normal or checkpoint_recovery.");
+  if (![
+    "normal",
+    "checkpoint_recovery",
+    "aged_checkpoint_recovery",
+    "aged_window_continuation",
+  ].includes(selectionMode)) {
+    fail(
+      "SOURCE_INVALID",
+      "Durable selection mode must be normal, checkpoint_recovery, aged_checkpoint_recovery, "
+      + "or aged_window_continuation.",
+    );
   }
   const snapshotFingerprint = fingerprintSnapshot(snapshot);
-  const selection = selectionMode === "normal"
-    ? selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latestDate, now })
-    : selectCheckpointRecoverySnapshot({
+  let selection;
+  if (selectionMode === "normal") {
+    selection = selectBackfillSnapshot({ currentSnapshot, pastweekWindow, latestDate, now });
+  } else if (selectionMode === "checkpoint_recovery") {
+    selection = selectCheckpointRecoverySnapshot({
       storedSnapshot: snapshot,
       currentSnapshot,
       pastweekWindow,
@@ -1247,12 +1430,30 @@ export function buildDurableSelectionEvidence({
       expectedSnapshotFingerprint: snapshotFingerprint,
       now,
     });
+  } else if (selectionMode === "aged_checkpoint_recovery") {
+    selection = selectAgedCheckpointRecoverySnapshot({
+      storedSnapshot: snapshot,
+      currentSnapshot,
+      pastweekWindow,
+      latestDate,
+      expectedDate: snapshot.announcementDate,
+      expectedSnapshotFingerprint: snapshotFingerprint,
+      now,
+    });
+  } else {
+    selection = selectAgedWindowContinuationSnapshot({
+      currentSnapshot,
+      pastweekWindow,
+      latestDate,
+      now,
+    });
+  }
   if (
     selection === null
     || selection.snapshot.announcementDate !== snapshot.announcementDate
     || fingerprintSnapshot(selection.snapshot) !== snapshotFingerprint
   ) {
-    fail("SOURCE_CONTENT_MISMATCH", "The durable authorization target is not the exact live selected snapshot.");
+    fail("SOURCE_CONTENT_MISMATCH", "The durable authorization target is not the exact selected snapshot.");
   }
   const evidence = {
     schemaVersion: "1.0",
@@ -1328,6 +1529,32 @@ export function selectAuthorizedContinuationSnapshot({
     && fingerprintSnapshot(currentSnapshot) !== evidence.officialHeadFingerprint
   ) {
     fail("SOURCE_CONTENT_MISMATCH", "The unchanged official head no longer matches durable validation evidence.");
+  }
+  if (
+    evidence.selectionMode === "aged_window_continuation"
+    && currentSnapshot.announcementDate === evidence.officialHeadDate
+  ) {
+    const currentAnnouncementDates = pastweekWindow.announcementDates;
+    const currentCompleteDates = pastweekWindow.snapshots.map(({ announcementDate }) => announcementDate);
+    if (
+      currentAnnouncementDates.join("\0") !== evidence.pastweekAnnouncementDates.join("\0")
+      || currentCompleteDates.join("\0") !== evidence.completeSnapshotDates.join("\0")
+    ) {
+      fail("SOURCE_CONTENT_MISMATCH", "The aged window-continuation evidence no longer matches the live window.");
+    }
+    const liveSelection = selectAgedWindowContinuationSnapshot({
+      currentSnapshot,
+      pastweekWindow,
+      latestDate,
+      now,
+    });
+    if (
+      liveSelection === null
+      || liveSelection.snapshot.announcementDate !== expectedDate
+      || fingerprintSnapshot(liveSelection.snapshot) !== expectedSnapshotFingerprint
+    ) {
+      fail("SOURCE_CONTENT_MISMATCH", "The aged window continuation is not the oldest live eligible snapshot.");
+    }
   }
 
   const freshSnapshot = pastweekWindow.snapshots.find(

@@ -31,6 +31,7 @@ import {
   fetchOfficialPastweekWindow,
   fingerprintSnapshot,
   probeOfficialFullTextReadiness,
+  selectAgedCheckpointRecoverySnapshot,
   selectAuthorizedContinuationSnapshot,
   selectBackfillSnapshot,
   selectCheckpointRecoverySnapshot,
@@ -40,6 +41,7 @@ import {
 import {
   appendCheckpointAttempt,
   appendPublicationStatus,
+  captureAgedCheckpointProvenance,
   checkpointJobPath,
   importCheckpointCategoryReport,
   latestCheckpointCategoryDraft,
@@ -66,6 +68,10 @@ import {
   isArxivSourceFormatUnsupported,
   isArxivSourceUnavailable,
 } from "../extract-arxiv-source.mjs";
+import {
+  createAgedRecoveryPlan,
+  loadActiveAgedRecoveryPlan,
+} from "./aged-recovery-plan.mjs";
 import {
   CURRENT_QUALITY_GATE_EFFECTIVE_DATE,
   MAX_LANGUAGE_AUDIT_PASSES,
@@ -105,6 +111,7 @@ const REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX = "REPAIR_SOURCE_DRAFT_SHA256=";
 const REPAIR_REGENERATION_FALLBACK_MESSAGE_PREFIX = "REPAIR_REGENERATION_FALLBACK_DRAFT_SHA256=";
 const SOURCE_RESUME_DRAFT_MESSAGE_PREFIX = "SOURCE_RESUME_DRAFT_SHA256=";
 const DURABLE_AUTHORIZATION_SCHEMA_VERSION = "1.0";
+const AGED_DURABLE_AUTHORIZATION_SCHEMA_VERSION = "1.1";
 const DURABLE_AUTHORIZATION_KIND = "edition_continuation";
 const DURABLE_AUTHORIZATION_KEYS = Object.freeze([
   "schemaVersion",
@@ -120,6 +127,10 @@ const DURABLE_AUTHORIZATION_KEYS = Object.freeze([
   "authorizedAt",
   "evidence",
 ]);
+const AGED_DURABLE_AUTHORIZATION_KEYS = Object.freeze([
+  ...DURABLE_AUTHORIZATION_KEYS,
+  "sourceCheckpointProvenance",
+]);
 const DURABLE_EVIDENCE_KEYS = Object.freeze([
   "schemaVersion",
   "selectionMode",
@@ -130,6 +141,23 @@ const DURABLE_EVIDENCE_KEYS = Object.freeze([
   "officialHeadFingerprint",
   "pastweekAnnouncementDates",
   "completeSnapshotDates",
+]);
+const AGED_CHECKPOINT_PROVENANCE_KEYS = Object.freeze([
+  "schemaVersion",
+  "kind",
+  "targetDate",
+  "oldestLiveDate",
+  "expectedUid",
+  "snapshotFingerprint",
+  "snapshotRawSha256",
+  "manifestRawSha256",
+  "runtimeFingerprint",
+  "evaluationRunId",
+  "manifestCreatedAt",
+  "attemptCount",
+  "family",
+  "entries",
+  "evidenceSha256",
 ]);
 export const MAX_UNCHANGED_DRAFT_REPAIR_FAILURES = 4;
 export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
@@ -144,6 +172,7 @@ export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   "scripts/preflight-staged-category.mjs",
   "scripts/record-source-incomplete.mjs",
   "scripts/lib/arxiv-source.mjs",
+  "scripts/lib/aged-recovery-plan.mjs",
   "scripts/lib/checkpoint.mjs",
   "scripts/lib/local-automation.mjs",
   "scripts/lib/macos-schedule.mjs",
@@ -179,6 +208,25 @@ export function parseAutomationInvocation(argv) {
     return Object.freeze({
       mode: "run",
       recovery: Object.freeze({
+        selectionMode: "checkpoint_recovery",
+        expectedLatestDate,
+        targetDate,
+        snapshotFingerprint,
+        sourceRuntimeFingerprint,
+      }),
+    });
+  }
+  if (argv.length === 5 && argv[0] === "--recover-aged-checkpoint") {
+    const [, expectedLatestDate, targetDate, snapshotFingerprint, sourceRuntimeFingerprint] = argv;
+    validateDate(expectedLatestDate);
+    validateDate(targetDate);
+    if (!SHA256_PATTERN.test(snapshotFingerprint) || !SHA256_PATTERN.test(sourceRuntimeFingerprint)) {
+      fail("Aged checkpoint recovery fingerprints must be lowercase SHA-256 digests.");
+    }
+    return Object.freeze({
+      mode: "run",
+      recovery: Object.freeze({
+        selectionMode: "aged_checkpoint_recovery",
         expectedLatestDate,
         targetDate,
         snapshotFingerprint,
@@ -189,6 +237,8 @@ export function parseAutomationInvocation(argv) {
   fail(
     "Usage: node scripts/run-local-automation.mjs [--check | "
     + "--recover-checkpoint <expected-latest-date> <target-date> "
+    + "<snapshot-fingerprint> <source-runtime-fingerprint> | "
+    + "--recover-aged-checkpoint <expected-latest-date> <target-date> "
     + "<snapshot-fingerprint> <source-runtime-fingerprint>]",
   );
 }
@@ -414,6 +464,8 @@ export function runPaths(runId, {
     staleLocks: join(controlRoot, "stale-locks"),
     recoveryAuthorizations: join(controlRoot, "recovery-authorizations"),
     recoveryAuthorizationStaging: join(controlRoot, "recovery-authorization-staging"),
+    agedRecoveryPlans: join(controlRoot, "aged-recovery-plans"),
+    agedRecoveryPlanStaging: join(controlRoot, "aged-recovery-plan-staging"),
     logDirectory,
     codexLog: join(logDirectory, `${runId}.codex.log`),
     codexLogs: Object.freeze(Object.fromEntries(
@@ -1086,6 +1138,8 @@ export function prepareControlDirectories(paths) {
   ensureSecureDirectory(paths.staleLocks, "Automation stale-lock directory");
   ensureSecureDirectory(paths.recoveryAuthorizations, "Automation recovery authorization directory");
   ensureSecureDirectory(paths.recoveryAuthorizationStaging, "Automation recovery authorization staging directory");
+  ensureSecureDirectory(paths.agedRecoveryPlans, "Automation aged recovery plan directory");
+  ensureSecureDirectory(paths.agedRecoveryPlanStaging, "Automation aged recovery plan staging directory");
 }
 
 export function prepareRunDirectories(paths) {
@@ -2859,6 +2913,7 @@ export function loadCheckpointRecoverySource({
     fail("Checkpoint recovery requires its exact one-shot invocation.");
   }
   const expectedKeys = [
+    "selectionMode",
     "expectedLatestDate",
     "targetDate",
     "snapshotFingerprint",
@@ -2866,6 +2921,9 @@ export function loadCheckpointRecoverySource({
   ];
   if (Object.keys(recovery).sort().join("\0") !== expectedKeys.sort().join("\0")) {
     fail("Checkpoint recovery invocation has unexpected or missing fields.");
+  }
+  if (!["checkpoint_recovery", "aged_checkpoint_recovery"].includes(recovery.selectionMode)) {
+    fail("Checkpoint recovery invocation has an invalid selectionMode.");
   }
   validateDate(recovery.expectedLatestDate);
   validateDate(recovery.targetDate);
@@ -2933,15 +2991,102 @@ function validateCanonicalTimestamp(value, label) {
   return value;
 }
 
-function validateDurableRecoveryAuthorization(record) {
-  exactKeys(record, DURABLE_AUTHORIZATION_KEYS, "Durable recovery authorization");
+function validateStoredAgedCheckpointProvenance(provenance, record) {
+  if (provenance === null || typeof provenance !== "object" || Array.isArray(provenance)) {
+    fail("Aged checkpoint-recovery authorization requires sourceCheckpointProvenance.");
+  }
+  exactKeys(
+    provenance,
+    AGED_CHECKPOINT_PROVENANCE_KEYS,
+    "Aged checkpoint-recovery source provenance",
+  );
+  if (provenance.schemaVersion !== "1.0" || provenance.kind !== "aged_checkpoint_provenance") {
+    fail("Aged checkpoint-recovery source provenance has an invalid schema or kind.");
+  }
+  validateDate(provenance.targetDate);
+  validateDate(provenance.oldestLiveDate);
   if (
-    record.schemaVersion !== DURABLE_AUTHORIZATION_SCHEMA_VERSION
+    provenance.targetDate !== record.targetDate
+    || provenance.oldestLiveDate <= provenance.targetDate
+    || provenance.snapshotFingerprint !== record.snapshotFingerprint
+    || provenance.runtimeFingerprint !== record.sourceRuntimeFingerprint
+    || provenance.evaluationRunId !== record.sourceEvaluationRunId
+    || provenance.oldestLiveDate !== record.evidence?.completeSnapshotDates?.at(-1)
+  ) {
+    fail("Aged checkpoint-recovery source provenance does not match its fixed authorization identity.");
+  }
+  if (!Number.isSafeInteger(provenance.expectedUid) || provenance.expectedUid < 0) {
+    fail("Aged checkpoint-recovery source provenance expectedUid is invalid.");
+  }
+  for (const key of [
+    "snapshotFingerprint",
+    "snapshotRawSha256",
+    "manifestRawSha256",
+    "runtimeFingerprint",
+    "evidenceSha256",
+  ]) {
+    if (typeof provenance[key] !== "string" || !SHA256_PATTERN.test(provenance[key])) {
+      fail(`Aged checkpoint-recovery source provenance ${key} must be a lowercase SHA-256 digest.`);
+    }
+  }
+  validateRunId(provenance.evaluationRunId);
+  validateCanonicalTimestamp(
+    provenance.manifestCreatedAt,
+    "Aged checkpoint-recovery source provenance manifestCreatedAt",
+  );
+  if (!Number.isSafeInteger(provenance.attemptCount) || provenance.attemptCount < 0) {
+    fail("Aged checkpoint-recovery source provenance attemptCount is invalid.");
+  }
+  if (
+    provenance.family === null
+    || typeof provenance.family !== "object"
+    || Array.isArray(provenance.family)
+    || !Array.isArray(provenance.entries)
+    || provenance.entries.length < 6
+  ) {
+    fail("Aged checkpoint-recovery source provenance filesystem evidence is incomplete.");
+  }
+  const { evidenceSha256, ...digestInput } = provenance;
+  const actualDigest = createHash("sha256")
+    .update(Buffer.from(serializeCanonicalJson(digestInput), "utf8"))
+    .digest("hex");
+  if (actualDigest !== evidenceSha256) {
+    fail("Aged checkpoint-recovery source provenance evidence digest is invalid.");
+  }
+  return Object.freeze({
+    ...provenance,
+    family: Object.freeze({ ...provenance.family }),
+    entries: Object.freeze(provenance.entries.map((entry) => Object.freeze({ ...entry }))),
+  });
+}
+
+function validateDurableRecoveryAuthorization(record) {
+  if (record === null || typeof record !== "object" || Array.isArray(record)) {
+    fail("Durable recovery authorization must be an object.");
+  }
+  const hasAgedSourceProvenance = record.selectionMode === "aged_checkpoint_recovery";
+  exactKeys(
+    record,
+    hasAgedSourceProvenance ? AGED_DURABLE_AUTHORIZATION_KEYS : DURABLE_AUTHORIZATION_KEYS,
+    "Durable recovery authorization",
+  );
+  if (
+    ![DURABLE_AUTHORIZATION_SCHEMA_VERSION, AGED_DURABLE_AUTHORIZATION_SCHEMA_VERSION]
+      .includes(record.schemaVersion)
     || record.kind !== DURABLE_AUTHORIZATION_KIND
   ) {
     fail("Durable recovery authorization has an invalid schema or kind.");
   }
-  if (!["normal", "checkpoint_recovery"].includes(record.selectionMode)) {
+  if (
+    (
+      record.schemaVersion === DURABLE_AUTHORIZATION_SCHEMA_VERSION
+      && !["normal", "checkpoint_recovery"].includes(record.selectionMode)
+    )
+    || (
+      record.schemaVersion === AGED_DURABLE_AUTHORIZATION_SCHEMA_VERSION
+      && !["aged_checkpoint_recovery", "aged_window_continuation"].includes(record.selectionMode)
+    )
+  ) {
     fail("Durable recovery authorization selectionMode is invalid.");
   }
   validateDate(record.expectedLatestDate);
@@ -2959,9 +3104,9 @@ function validateDurableRecoveryAuthorization(record) {
   }
   validateRunId(record.evaluationRunId);
   validateCanonicalTimestamp(record.authorizedAt, "Durable recovery authorization authorizedAt");
-  if (record.selectionMode === "normal") {
+  if (["normal", "aged_window_continuation"].includes(record.selectionMode)) {
     if (record.sourceRuntimeFingerprint !== null || record.sourceEvaluationRunId !== null) {
-      fail("Normal durable recovery authorization may not contain a source checkpoint identity.");
+      fail("Source-free durable recovery authorization may not contain a source checkpoint identity.");
     }
   } else {
     if (
@@ -2972,6 +3117,9 @@ function validateDurableRecoveryAuthorization(record) {
     }
     validateRunId(record.sourceEvaluationRunId);
   }
+  const sourceCheckpointProvenance = hasAgedSourceProvenance
+    ? validateStoredAgedCheckpointProvenance(record.sourceCheckpointProvenance, record)
+    : null;
   exactKeys(record.evidence, DURABLE_EVIDENCE_KEYS, "Durable recovery authorization evidence");
   if (
     record.evidence.schemaVersion !== DURABLE_AUTHORIZATION_SCHEMA_VERSION
@@ -2989,6 +3137,7 @@ function validateDurableRecoveryAuthorization(record) {
   }
   return Object.freeze({
     ...record,
+    ...(hasAgedSourceProvenance ? { sourceCheckpointProvenance } : {}),
     evidence: Object.freeze({
       ...record.evidence,
       pastweekAnnouncementDates: Object.freeze([...record.evidence.pastweekAnnouncementDates]),
@@ -3062,6 +3211,7 @@ export function createDurableRecoveryAuthorization({
   expectedLatestDate,
   snapshot,
   sourceJob = null,
+  sourceCheckpointProvenance = null,
   automationRuntimeFingerprint,
   job,
   evidence,
@@ -3081,8 +3231,10 @@ export function createDurableRecoveryAuthorization({
     fail("A loaded destination checkpoint job is required for durable authorization.");
   }
   const snapshotFingerprint = fingerprintSnapshot(snapshot);
-  const record = validateDurableRecoveryAuthorization({
-    schemaVersion: DURABLE_AUTHORIZATION_SCHEMA_VERSION,
+  const candidate = {
+    schemaVersion: ["aged_checkpoint_recovery", "aged_window_continuation"].includes(selectionMode)
+      ? AGED_DURABLE_AUTHORIZATION_SCHEMA_VERSION
+      : DURABLE_AUTHORIZATION_SCHEMA_VERSION,
     kind: DURABLE_AUTHORIZATION_KIND,
     selectionMode,
     expectedLatestDate,
@@ -3094,7 +3246,13 @@ export function createDurableRecoveryAuthorization({
     evaluationRunId: job.evaluationRunId,
     authorizedAt: new Date(now).toISOString(),
     evidence,
-  });
+  };
+  if (selectionMode === "aged_checkpoint_recovery") {
+    candidate.sourceCheckpointProvenance = sourceCheckpointProvenance;
+  } else if (sourceCheckpointProvenance !== null) {
+    fail("Only aged checkpoint recovery may contain source checkpoint provenance.");
+  }
+  const record = validateDurableRecoveryAuthorization(candidate);
   if (
     job.manifest.reportDate !== record.targetDate
     || job.manifest.snapshotFingerprint !== record.snapshotFingerprint
@@ -3172,6 +3330,129 @@ function loadAuthorizationCheckpoint({ controlRoot, record }) {
   });
 }
 
+export function buildAgedRecoveryPlanEntries({
+  latestDate,
+  pendingSnapshots,
+  currentSnapshot,
+  pastweekWindow,
+  now = new Date(),
+} = {}) {
+  validateDate(latestDate);
+  if (!Array.isArray(pendingSnapshots) || pendingSnapshots.length < 1) {
+    fail("Aged recovery plan requires at least one pending snapshot.");
+  }
+  const entries = [];
+  let anchor = latestDate;
+  for (const [index, snapshot] of pendingSnapshots.entries()) {
+    const selectionMode = index === 0
+      ? "aged_checkpoint_recovery"
+      : index === 1
+        ? "aged_window_continuation"
+        : "normal";
+    const evidence = buildDurableSelectionEvidence({
+      selectionMode,
+      snapshot,
+      currentSnapshot,
+      pastweekWindow,
+      latestDate: anchor,
+      now,
+    });
+    entries.push(Object.freeze({
+      selectionMode,
+      expectedLatestDate: anchor,
+      snapshot,
+      evidence,
+    }));
+    anchor = snapshot.announcementDate;
+  }
+  return Object.freeze(entries);
+}
+
+function assertAgedRecoveryPlanMatchesAuthorization(plan, authorization) {
+  if (!plan || typeof plan !== "object" || !authorization || typeof authorization !== "object") {
+    fail("Aged recovery plan and authorization are both required.");
+  }
+  const first = plan.entries?.[0];
+  if (
+    authorization.selectionMode !== "aged_checkpoint_recovery"
+    || first?.selectionMode !== "aged_checkpoint_recovery"
+    || plan.expectedLatestDate !== authorization.expectedLatestDate
+    || plan.targetDate !== authorization.targetDate
+    || plan.snapshotFingerprint !== authorization.snapshotFingerprint
+    || plan.sourceRuntimeFingerprint !== authorization.sourceRuntimeFingerprint
+    || plan.sourceEvaluationRunId !== authorization.sourceEvaluationRunId
+    || plan.automationRuntimeFingerprint !== authorization.automationRuntimeFingerprint
+    || serializeCanonicalJson(first.evidence) !== serializeCanonicalJson(authorization.evidence)
+    || plan.sourceCheckpointProvenance.evidenceSha256
+      !== authorization.sourceCheckpointProvenance?.evidenceSha256
+  ) {
+    fail("Active aged recovery plan does not match its durable authorization.");
+  }
+}
+
+export function assertAgedRecoveryPlanMatchesQueue(plan, records) {
+  if (!plan || typeof plan !== "object" || !Array.isArray(plan.entries) || !Array.isArray(records)) {
+    fail("Aged recovery plan queue comparison requires a plan and authorization records.");
+  }
+  const recordsByAnchor = new Map();
+  for (const candidate of records) {
+    const record = validateDurableRecoveryAuthorization(candidate);
+    if (recordsByAnchor.has(record.expectedLatestDate)) {
+      fail(`Aged recovery authorization queue repeats anchor ${record.expectedLatestDate}.`);
+    }
+    recordsByAnchor.set(record.expectedLatestDate, record);
+  }
+  const planAnchors = new Set(plan.entries.map(({ expectedLatestDate }) => expectedLatestDate));
+  for (const [index, entry] of plan.entries.entries()) {
+    const record = recordsByAnchor.get(entry.expectedLatestDate);
+    if (
+      record === undefined
+      || record.selectionMode !== entry.selectionMode
+      || record.targetDate !== entry.snapshot.announcementDate
+      || record.snapshotFingerprint !== fingerprintSnapshot(entry.snapshot)
+      || record.automationRuntimeFingerprint !== plan.automationRuntimeFingerprint
+      || serializeCanonicalJson(record.evidence) !== serializeCanonicalJson(entry.evidence)
+    ) {
+      fail(`Aged recovery durable queue does not match sealed entry ${index}.`);
+    }
+    if (index === 0) {
+      assertAgedRecoveryPlanMatchesAuthorization(plan, record);
+    } else if (
+      record.sourceRuntimeFingerprint !== null
+      || record.sourceEvaluationRunId !== null
+      || Object.hasOwn(record, "sourceCheckpointProvenance")
+    ) {
+      fail(`Aged recovery successor ${record.targetDate} contains an unexpected source identity.`);
+    }
+  }
+  const finalTargetDate = plan.entries.at(-1).snapshot.announcementDate;
+  const allowedExtensionAnchors = new Set();
+  let extensionAnchor = finalTargetDate;
+  while (recordsByAnchor.has(extensionAnchor) && !planAnchors.has(extensionAnchor)) {
+    const extension = recordsByAnchor.get(extensionAnchor);
+    if (
+      extension.selectionMode !== "normal"
+      || extension.automationRuntimeFingerprint !== plan.automationRuntimeFingerprint
+      || extension.sourceRuntimeFingerprint !== null
+      || extension.sourceEvaluationRunId !== null
+      || Object.hasOwn(extension, "sourceCheckpointProvenance")
+    ) {
+      fail(`Aged recovery extension at ${extensionAnchor} is not a source-free normal continuation.`);
+    }
+    allowedExtensionAnchors.add(extensionAnchor);
+    extensionAnchor = extension.targetDate;
+  }
+  for (const record of recordsByAnchor.values()) {
+    if (
+      record.expectedLatestDate >= plan.expectedLatestDate
+      && !planAnchors.has(record.expectedLatestDate)
+      && !allowedExtensionAnchors.has(record.expectedLatestDate)
+    ) {
+      fail(`Unexpected authorization intersects aged recovery chain at ${record.expectedLatestDate}.`);
+    }
+  }
+}
+
 export function ensureDurableContinuationQueue({
   directory,
   stagingDirectory,
@@ -3181,6 +3462,8 @@ export function ensureDurableContinuationQueue({
   expectedLatestDate,
   pendingSnapshots,
   sourceJob = null,
+  sourceCheckpointProvenance = null,
+  sealedEntries = null,
   automationRuntimeFingerprint,
   firstJob,
   policy,
@@ -3190,13 +3473,20 @@ export function ensureDurableContinuationQueue({
   now = new Date(),
   createAuthorization = createDurableRecoveryAuthorization,
 } = {}) {
-  if (!["normal", "checkpoint_recovery"].includes(selectionMode)) {
+  if (!["normal", "checkpoint_recovery", "aged_checkpoint_recovery", "aged_window_continuation"]
+    .includes(selectionMode)) {
     fail("Durable continuation queue requires a normal or checkpoint-recovery first selection.");
   }
   validateDate(expectedLatestDate);
   validateRunId(attemptId);
   if (!Array.isArray(records) || !Array.isArray(pendingSnapshots) || pendingSnapshots.length < 1) {
     fail("Durable continuation queue requires existing records and at least one pending snapshot.");
+  }
+  if (sealedEntries !== null && (
+    !Array.isArray(sealedEntries)
+    || sealedEntries.length !== pendingSnapshots.length
+  )) {
+    fail("Durable continuation sealed entries must exactly cover the pending snapshot queue.");
   }
   if (typeof automationRuntimeFingerprint !== "string" || !SHA256_PATTERN.test(automationRuntimeFingerprint)) {
     fail("Durable continuation queue requires the automation runtime fingerprint.");
@@ -3291,12 +3581,27 @@ export function ensureDurableContinuationQueue({
   const plans = [];
   let anchor = expectedLatestDate;
   for (const [index, snapshot] of orderedSnapshots.entries()) {
+    const sealed = sealedEntries?.[index] ?? null;
+    const defaultMode = index === 0
+      ? selectionMode
+      : selectionMode === "aged_checkpoint_recovery" && index === 1
+        ? "aged_window_continuation"
+        : "normal";
+    if (sealed !== null && (
+      sealed.selectionMode !== defaultMode
+      || sealed.expectedLatestDate !== anchor
+      || fingerprintSnapshot(sealed.snapshot) !== fingerprintSnapshot(snapshot)
+    )) {
+      fail(`Durable continuation sealed entry changed at target ${snapshot.announcementDate}.`);
+    }
     plans.push(Object.freeze({
       index,
-      mode: index === 0 ? selectionMode : "normal",
+      mode: defaultMode,
       expectedLatestDate: anchor,
       snapshot,
       sourceJob: index === 0 ? sourceJob : null,
+      sourceCheckpointProvenance: index === 0 ? sourceCheckpointProvenance : null,
+      sealedEvidence: sealed?.evidence ?? null,
     }));
     anchor = snapshot.announcementDate;
   }
@@ -3317,7 +3622,7 @@ export function ensureDurableContinuationQueue({
       ) {
         fail(`Existing durable continuation conflicts at anchor ${plan.expectedLatestDate}.`);
       }
-      if (plan.mode === "normal") {
+      if (["normal", "aged_window_continuation"].includes(plan.mode)) {
         if (existing.sourceRuntimeFingerprint !== null || existing.sourceEvaluationRunId !== null) {
           fail(`Normal queued continuation ${existing.targetDate} has an unexpected source checkpoint.`);
         }
@@ -3327,6 +3632,22 @@ export function ensureDurableContinuationQueue({
         || existing.sourceEvaluationRunId !== plan.sourceJob.evaluationRunId
       ) {
         fail(`Checkpoint-recovery queue head ${existing.targetDate} changed source identity.`);
+      }
+      if (
+        plan.mode === "aged_checkpoint_recovery"
+        && (
+          plan.sourceCheckpointProvenance === null
+          || existing.sourceCheckpointProvenance.evidenceSha256
+            !== plan.sourceCheckpointProvenance.evidenceSha256
+        )
+      ) {
+        fail(`Aged checkpoint-recovery queue head ${existing.targetDate} changed source provenance.`);
+      }
+      if (
+        plan.sealedEvidence !== null
+        && serializeCanonicalJson(existing.evidence) !== serializeCanonicalJson(plan.sealedEvidence)
+      ) {
+        fail(`Durable continuation sealed evidence changed for ${existing.targetDate}.`);
       }
       const job = loadAuthorizationCheckpoint({ controlRoot, record: existing });
       selectAuthorizedContinuationSnapshot({
@@ -3348,7 +3669,7 @@ export function ensureDurableContinuationQueue({
       continue;
     }
 
-    const evidence = buildDurableSelectionEvidence({
+    const evidence = plan.sealedEvidence ?? buildDurableSelectionEvidence({
       selectionMode: plan.mode,
       snapshot: plan.snapshot,
       currentSnapshot,
@@ -3356,12 +3677,36 @@ export function ensureDurableContinuationQueue({
       latestDate: plan.expectedLatestDate,
       now,
     });
-    if (plan.mode === "checkpoint_recovery" && (
+    if (plan.sealedEvidence !== null) {
+      selectAuthorizedContinuationSnapshot({
+        storedSnapshot: plan.snapshot,
+        currentSnapshot,
+        pastweekWindow,
+        latestDate: plan.expectedLatestDate,
+        expectedDate: plan.snapshot.announcementDate,
+        expectedSnapshotFingerprint: fingerprintSnapshot(plan.snapshot),
+        evidence,
+        now,
+      });
+    }
+    if (["checkpoint_recovery", "aged_checkpoint_recovery"].includes(plan.mode) && (
       plan.sourceJob === null
       || typeof plan.sourceJob !== "object"
       || !plan.sourceJob.manifest
     )) {
       fail("Checkpoint-recovery queue head requires its exact source checkpoint job.");
+    }
+    if (
+      plan.mode === "aged_checkpoint_recovery"
+      && plan.sourceCheckpointProvenance === null
+    ) {
+      fail("Aged checkpoint-recovery queue head requires sealed source provenance.");
+    }
+    if (
+      plan.mode !== "aged_checkpoint_recovery"
+      && plan.sourceCheckpointProvenance !== null
+    ) {
+      fail("Only aged checkpoint recovery may carry sealed source provenance.");
     }
     preflightedPlans.push(Object.freeze({
       plan,
@@ -3418,6 +3763,7 @@ export function ensureDurableContinuationQueue({
         expectedLatestDate: plan.expectedLatestDate,
         snapshot: plan.snapshot,
         sourceJob: plan.sourceJob,
+        sourceCheckpointProvenance: plan.sourceCheckpointProvenance,
         automationRuntimeFingerprint,
         job,
         evidence,
@@ -3564,15 +3910,32 @@ export async function runAutomation({
       directory: paths.recoveryAuthorizations,
       latestDate,
     });
+    const agedPlanState = loadActiveAgedRecoveryPlan({
+      directory: paths.agedRecoveryPlans,
+      latestDate,
+      automationRuntimeFingerprint: runtimeFingerprint,
+    });
     let authorization = authorizationState.active;
+    let agedPlanRecord = agedPlanState.active;
     let selection;
     let selectionMode;
     let sourceJob = null;
+    let sourceCheckpointProvenance = null;
+    let sealedEntries = null;
     let pastweekWindow;
     if (authorization !== null) {
+      if (authorization.selectionMode === "aged_checkpoint_recovery") {
+        if (agedPlanRecord === null) {
+          fail("Aged checkpoint-recovery authorization is missing its pre-destination durable plan.");
+        }
+        assertAgedRecoveryPlanMatchesAuthorization(agedPlanRecord.plan, authorization);
+        assertAgedRecoveryPlanMatchesQueue(agedPlanRecord.plan, authorizationState.records);
+      } else if (agedPlanRecord !== null) {
+        fail("An active aged recovery plan conflicts with a different durable authorization.");
+      }
       if (recovery !== null) {
         if (
-          authorization.selectionMode !== "checkpoint_recovery"
+          authorization.selectionMode !== recovery.selectionMode
           || authorization.expectedLatestDate !== recovery.expectedLatestDate
           || authorization.targetDate !== recovery.targetDate
           || authorization.snapshotFingerprint !== recovery.snapshotFingerprint
@@ -3588,6 +3951,22 @@ export async function runAutomation({
         authorization,
         runtimeFingerprint,
       });
+      if (authorization.selectionMode === "aged_checkpoint_recovery") {
+        sourceJob = loadCheckpointJob({
+          controlRoot,
+          reportDate: authorization.targetDate,
+          snapshotFingerprint: authorization.snapshotFingerprint,
+          runtimeFingerprint: authorization.sourceRuntimeFingerprint,
+          evaluationRunId: authorization.sourceEvaluationRunId,
+        });
+        sourceCheckpointProvenance = captureAgedCheckpointProvenance({
+          job: sourceJob,
+          oldestLiveDate: authorization.sourceCheckpointProvenance.oldestLiveDate,
+          expectedUid: authorization.sourceCheckpointProvenance.expectedUid,
+          expectedEvidence: authorization.sourceCheckpointProvenance,
+          allowedAdditionalRuntimeFingerprints: [runtimeFingerprint],
+        });
+      }
       pastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
       selection = selectAuthorizedContinuationSnapshot({
         storedSnapshot: authorized.storedSnapshot,
@@ -3600,6 +3979,67 @@ export async function runAutomation({
         now,
       });
       selectionMode = authorization.selectionMode;
+    } else if (agedPlanRecord !== null) {
+      const plan = agedPlanRecord.plan;
+      const plannedRecovery = Object.freeze({
+        selectionMode: "aged_checkpoint_recovery",
+        expectedLatestDate: plan.expectedLatestDate,
+        targetDate: plan.targetDate,
+        snapshotFingerprint: plan.snapshotFingerprint,
+        sourceRuntimeFingerprint: plan.sourceRuntimeFingerprint,
+      });
+      if (
+        recovery !== null
+        && serializeCanonicalJson(recovery) !== serializeCanonicalJson(plannedRecovery)
+      ) {
+        fail("The explicit checkpoint recovery does not match the active aged recovery plan.");
+      }
+      const source = loadCheckpointRecoverySource({
+        root: publishedRoot,
+        controlRoot,
+        index,
+        recovery: plannedRecovery,
+      });
+      sourceJob = source.sourceJob;
+      const destinationCheckpointPath = checkpointJobPath({
+        controlRoot,
+        reportDate: plan.targetDate,
+        snapshotFingerprint: plan.snapshotFingerprint,
+        runtimeFingerprint,
+      });
+      sourceCheckpointProvenance = captureAgedCheckpointProvenance({
+        job: sourceJob,
+        oldestLiveDate: plan.sourceCheckpointProvenance.oldestLiveDate,
+        expectedUid: plan.sourceCheckpointProvenance.expectedUid,
+        expectedEvidence: plan.sourceCheckpointProvenance,
+        allowedAdditionalRuntimeFingerprints: existsSync(destinationCheckpointPath)
+          ? [runtimeFingerprint]
+          : [],
+      });
+      pastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
+      const first = plan.entries[0];
+      selectAuthorizedContinuationSnapshot({
+        storedSnapshot: first.snapshot,
+        currentSnapshot,
+        pastweekWindow,
+        latestDate,
+        expectedDate: first.snapshot.announcementDate,
+        expectedSnapshotFingerprint: fingerprintSnapshot(first.snapshot),
+        evidence: first.evidence,
+        now,
+      });
+      sealedEntries = plan.entries;
+      selectionMode = "aged_checkpoint_recovery";
+      selection = Object.freeze({
+        snapshot: first.snapshot,
+        pendingCount: plan.entries.length,
+        pendingSnapshots: Object.freeze(plan.entries.map(({ snapshot }) => snapshot)),
+      });
+      console.log(
+        `AGED_RECOVERY_PLAN_RESUMED: ${plan.targetDate}; sealed queue `
+        + `${plan.entries.map(({ snapshot }) => snapshot.announcementDate).join(",")} `
+        + `(plan ${agedPlanRecord.sha256}, runId ${runId}).`,
+      );
     } else {
       if (recovery === null) {
         const classification = classifySnapshotDate(currentSnapshot, { latestDate, now });
@@ -3619,16 +4059,58 @@ export async function runAutomation({
         });
         sourceJob = source.sourceJob;
         pastweekWindow = await fetchOfficialPastweekWindow({ fetchImpl });
-        selection = selectCheckpointRecoverySnapshot({
-          storedSnapshot: source.storedSnapshot,
-          currentSnapshot,
-          pastweekWindow,
-          latestDate,
-          expectedDate: recovery.targetDate,
-          expectedSnapshotFingerprint: recovery.snapshotFingerprint,
-          now,
-        });
-        selectionMode = "checkpoint_recovery";
+        selectionMode = recovery.selectionMode;
+        selection = selectionMode === "aged_checkpoint_recovery"
+          ? selectAgedCheckpointRecoverySnapshot({
+            storedSnapshot: source.storedSnapshot,
+            currentSnapshot,
+            pastweekWindow,
+            latestDate,
+            expectedDate: recovery.targetDate,
+            expectedSnapshotFingerprint: recovery.snapshotFingerprint,
+            now,
+          })
+          : selectCheckpointRecoverySnapshot({
+            storedSnapshot: source.storedSnapshot,
+            currentSnapshot,
+            pastweekWindow,
+            latestDate,
+            expectedDate: recovery.targetDate,
+            expectedSnapshotFingerprint: recovery.snapshotFingerprint,
+            now,
+          });
+        if (selectionMode === "aged_checkpoint_recovery") {
+          if (runtimeFingerprint === sourceJob.manifest.runtimeFingerprint) {
+            fail("Aged checkpoint recovery requires a new reviewed automation runtime.");
+          }
+          sourceCheckpointProvenance = captureAgedCheckpointProvenance({
+            job: sourceJob,
+            oldestLiveDate: pastweekWindow.announcementDates.at(-1),
+          });
+          sealedEntries = buildAgedRecoveryPlanEntries({
+            latestDate,
+            pendingSnapshots: selection.pendingSnapshots,
+            currentSnapshot,
+            pastweekWindow,
+            now,
+          });
+          agedPlanRecord = createAgedRecoveryPlan({
+            directory: paths.agedRecoveryPlans,
+            stagingDirectory: paths.agedRecoveryPlanStaging,
+            expectedLatestDate: latestDate,
+            sourceJob,
+            automationRuntimeFingerprint: runtimeFingerprint,
+            sourceCheckpointProvenance,
+            entries: sealedEntries,
+            now,
+          });
+          console.log(
+            `AGED_RECOVERY_PLAN_SEALED: ${recovery.targetDate}; source provenance `
+            + `${sourceCheckpointProvenance.evidenceSha256}, queue `
+            + `${sealedEntries.map(({ snapshot }) => snapshot.announcementDate).join(",")} `
+            + `(plan ${agedPlanRecord.sha256}, runId ${runId}).`,
+          );
+        }
       }
     }
     if (selection === null) {
@@ -3648,7 +4130,9 @@ export async function runAutomation({
         ? "DURABLE_CONTINUATION_SELECTED"
         : selectionMode === "normal"
           ? "BACKFILL_SELECTED"
-          : "CHECKPOINT_RECOVERY_SELECTED"}: `
+          : selectionMode === "aged_checkpoint_recovery"
+            ? "AGED_CHECKPOINT_RECOVERY_SELECTED"
+            : "CHECKPOINT_RECOVERY_SELECTED"}: `
       + `${snapshot.announcementDate} is the oldest of ${pendingCount} unpublished non-empty edition(s) `
       + `(runId ${runId}).`,
     );
@@ -3671,7 +4155,7 @@ export async function runAutomation({
     const authorizationWasActive = authorization !== null;
     if (
       authorizationWasActive
-      && authorization.selectionMode === "checkpoint_recovery"
+      && ["checkpoint_recovery", "aged_checkpoint_recovery"].includes(authorization.selectionMode)
       && sourceJob === null
     ) {
       sourceJob = loadCheckpointJob({
@@ -3691,6 +4175,8 @@ export async function runAutomation({
       expectedLatestDate: latestDate,
       pendingSnapshots,
       sourceJob,
+      sourceCheckpointProvenance,
+      sealedEntries,
       automationRuntimeFingerprint: runtimeFingerprint,
       firstJob: job,
       policy,
@@ -3701,6 +4187,23 @@ export async function runAutomation({
     });
     authorization = queue.first.record;
     job = queue.first.job;
+    if (authorization.selectionMode === "aged_checkpoint_recovery") {
+      if (agedPlanRecord === null) {
+        fail("Aged checkpoint-recovery authorization was created without its durable plan.");
+      }
+      assertAgedRecoveryPlanMatchesAuthorization(agedPlanRecord.plan, authorization);
+      assertAgedRecoveryPlanMatchesQueue(
+        agedPlanRecord.plan,
+        queue.entries.map(({ record }) => record),
+      );
+      sourceCheckpointProvenance = captureAgedCheckpointProvenance({
+        job: sourceJob,
+        oldestLiveDate: authorization.sourceCheckpointProvenance.oldestLiveDate,
+        expectedUid: authorization.sourceCheckpointProvenance.expectedUid,
+        expectedEvidence: authorization.sourceCheckpointProvenance,
+        allowedAdditionalRuntimeFingerprints: [runtimeFingerprint],
+      });
+    }
     if (!authorizationWasActive) {
       console.log(
         `DURABLE_CONTINUATION_AUTHORIZED: ${queue.targets.join(",")} beginning with `
@@ -4265,9 +4768,7 @@ export async function runAutomation({
     const freshAuthorization = freshAuthorizationState.active;
     if (
       freshAuthorization === null
-      || freshAuthorization.snapshotFingerprint !== authorization.snapshotFingerprint
-      || freshAuthorization.evaluationRunId !== authorization.evaluationRunId
-      || freshAuthorization.authorizedAt !== authorization.authorizedAt
+      || serializeCanonicalJson(freshAuthorization) !== serializeCanonicalJson(authorization)
     ) {
       fail("Durable continuation authorization changed or became inactive before publication.");
     }
@@ -4300,6 +4801,42 @@ export async function runAutomation({
     assertCleanWorktree(publishedRoot);
     if (git(publishedRoot, ["rev-parse", "HEAD"]) !== originMain) {
       fail("Publication worktree changed during generation; no publication was attempted.");
+    }
+    if (freshAuthorization.selectionMode === "aged_checkpoint_recovery") {
+      const freshPlanState = loadActiveAgedRecoveryPlan({
+        directory: paths.agedRecoveryPlans,
+        latestDate: freshAuthorization.expectedLatestDate,
+        automationRuntimeFingerprint: runtimeFingerprint,
+      });
+      if (
+        agedPlanRecord === null
+        || freshPlanState.active === null
+        || freshPlanState.active.sha256 !== agedPlanRecord.sha256
+      ) {
+        fail("Aged recovery durable plan changed or became inactive before publication.");
+      }
+      assertAgedRecoveryPlanMatchesAuthorization(
+        freshPlanState.active.plan,
+        freshAuthorization,
+      );
+      assertAgedRecoveryPlanMatchesQueue(
+        freshPlanState.active.plan,
+        freshAuthorizationState.records,
+      );
+      const freshSourceJob = loadCheckpointJob({
+        controlRoot,
+        reportDate: freshAuthorization.targetDate,
+        snapshotFingerprint: freshAuthorization.snapshotFingerprint,
+        runtimeFingerprint: freshAuthorization.sourceRuntimeFingerprint,
+        evaluationRunId: freshAuthorization.sourceEvaluationRunId,
+      });
+      captureAgedCheckpointProvenance({
+        job: freshSourceJob,
+        oldestLiveDate: freshAuthorization.sourceCheckpointProvenance.oldestLiveDate,
+        expectedUid: freshAuthorization.sourceCheckpointProvenance.expectedUid,
+        expectedEvidence: freshAuthorization.sourceCheckpointProvenance,
+        allowedAdditionalRuntimeFingerprints: [runtimeFingerprint],
+      });
     }
     appendPublicationStatus({
       job,
