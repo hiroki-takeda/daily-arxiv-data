@@ -1,0 +1,697 @@
+{
+  "schemaVersion": "1.4",
+  "reportDate": "2026-07-30",
+  "evaluationRun": {
+    "modelId": "gpt-5.6-sol",
+    "modelDisplayName": "GPT-5.6-Sol",
+    "reasoningEffort": "high",
+    "modelSelectionVerified": true,
+    "runId": "run-20260803T074517Z-1102f824c5bb"
+  },
+  "slug": "hep-th",
+  "label": "High Energy Physics - Theory",
+  "totalNew": 15,
+  "crosslistsExcluded": 16,
+  "evaluatedCount": 15,
+  "fullTextEvaluatedCount": 12,
+  "papers": [
+    {
+      "rank": 1,
+      "arxivId": "2607.26197",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26197",
+      "title": "Intersection Bounds for BPS Strings in Six-Dimensional Supergravity",
+      "titleJa": "6次元超重力におけるBPS弦の交差数境界",
+      "authors": [
+        "Hee-Cheol Kim",
+        "Kai Xu"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 19,
+        "originality": 18,
+        "technicalStrength": 19
+      },
+      "scoreReasons": {
+        "broadImpact": "BPS弦の交差数を有限に抑える結果は、量子重力の整合性条件と6次元模型の分類を結ぶ。ただし対象は6次元N=(1,0)超重力のテンソル電荷格子である。",
+        "categoryImpact": "E弦と−3生成元の交差を3以下、非Higgs化クラスター内の−2生成元との交差を最大7に抑え、孤立−2の場合にも1240の有限上限を与える。完全な模型分類は残る。",
+        "originality": "重力異常電荷の格子Zariski分解をブラックストリング引力流として定式化し、E_8カレント代数埋め込みと補完的に使う。SCFT分類と異常相殺は継承する。",
+        "technicalStrength": "負定値支持上の係数から成分別境界を証明し、M行列の単調性とE_8への最大Dynkin指数で例外を処理する。F理論の上限より弱く、E弦間交差は別研究に残す。"
+      },
+      "totalScore": 72,
+      "abstractLines": [
+        "6次元N=(1,0)超重力では、原始的BPS弦電荷とその交差形式がテンソルモジュライ空間を支配する。",
+        "Zariski分解を電荷格子上の引力機構として解釈し、E弦世界面のカレント代数埋め込みと併用する。",
+        "自己交差数が−2、−3の生成元とE弦の交差数に普遍境界を与え、双対性を除いて有限であることを示す。"
+      ],
+      "curiosity": "局所的な異常相殺だけでは決まらないBPS弦の交差数を、有効場理論の整合性からどこまで制限できるか。",
+      "concept": "Zariski分解で許容電荷を正の部分と負の部分に分け、その条件をE弦世界面のカレント代数埋め込みへ接続する。",
+      "conclusion": "E弦が−2、−3曲線型のBPS生成元と交差する場合にも強い上限が成立し、テンソル電荷の交差数は双対性を除いて有限となる。模型全体の有限分類は残る。",
+      "assessment": "未制御だった交差を三つの明示的上限へ落とし、テンソル部門の有限分類を前進させる。二つの分類完全性仮定を置き、幾何学的上限との隔たりも残る。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "序論、超重力とBPS錐の前提、格子Zariski分解の証明、交差境界、E_8埋め込み、議論と未解決問題を確認した。M行列計算と最大指数は独立再計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26197v1",
+        "https://arxiv.org/pdf/2607.26197v1"
+      ]
+    },
+    {
+      "rank": 2,
+      "arxivId": "2607.26124",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26124",
+      "title": "Gravitational Waves from Multiple Cosmic Superstrings and the Overshoot Problem",
+      "titleJa": "複数種の宇宙超弦が生む重力波とオーバーシュート問題",
+      "authors": [
+        "Luca Brunelli",
+        "Michele Cicoli",
+        "Muhammad Hassan",
+        "Seyed Ehsan Qoreishi",
+        "Francisco Gil Pedro"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 18
+      },
+      "scoreReasons": {
+        "broadImpact": "弦宇宙論のモジュライ安定化を高周波重力波の多峰性へ結び、初期宇宙と重力波観測へ具体的な接点を与える。後期モジュライ優勢期による希釈に依存する。",
+        "categoryImpact": "LVS体積モジュラスと三種の弦ループを放射反作用まで連成し、重力波優勢期のHubble摩擦でオーバーシュートを回避する。初期F弦量が多い場合は再び失敗する。",
+        "originality": "NS5およびD3由来の有効弦と基本弦の異なる崩壊時期を、一つのモジュライ力学と多峰重力波へ統合する。宇宙弦放射とモジュライ安定化自体は既存要素である。",
+        "technicalStrength": "自律力学系の固定点と数値発展を調べ、断熱的放射式、有限幅ループ分布、巨大な重力波密度での摂動性を別々に検査する。ループ分布の自己無撞着な反作用は未計算である。"
+      },
+      "totalScore": 71,
+      "abstractLines": [
+        "インフレーション後の弦宇宙論では、急峻なポテンシャルを下るモジュラスが安定点を越える問題が生じる。",
+        "NS5およびD3ブレーン由来の有効弦と基本弦を含む連成力学系を解析し、崩壊時の重力波生成を追跡する。",
+        "初期の重力波放射がオーバーシュートを防ぎ、後期希釈後にも高周波の多峰スペクトルが残り得る。"
+      ],
+      "curiosity": "複数種の宇宙超弦の崩壊は、モジュラスを安定点へ捕捉しながら観測可能な痕跡を残せるか。",
+      "concept": "弦種ごとの張力と崩壊時刻の差を利用し、先に崩壊する有効弦の重力波放射をモジュラス運動の摩擦源として扱う。",
+      "conclusion": "有効弦の早期崩壊がモジュラスの行き過ぎを抑え、基本弦は振動期まで残って別の重力波峰を作る。信号強度は後期モジュライ優勢期の希釈量に左右される。",
+      "assessment": "安定化を担う摩擦源そのものから観測スペクトルを計算し、近似への検査も複数備える。信号振幅は初期弦組成とモジュラス寿命に大きく依存する。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、三種の弦とLVS埋め込み、自律力学系、重力波反作用、スペクトル、有限幅検査、結論、摂動性の付録を確認した。数値積分と図は独立再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26124v1",
+        "https://arxiv.org/pdf/2607.26124v1"
+      ]
+    },
+    {
+      "rank": 3,
+      "arxivId": "2607.27190",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.27190",
+      "title": "Quadratic Axion Couplings in String Theory",
+      "titleJa": "弦理論におけるアクシオンの二次結合",
+      "authors": [
+        "Naman Agarwal",
+        "Andrew R. Frey",
+        "Ratul Mahanta",
+        "Evan McDonough"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 17
+      },
+      "scoreReasons": {
+        "broadImpact": "アクシオンと光子の二次結合を弦理論から導き、暗黒物質・暗黒エネルギー探索と弦理論アクシバースの分光へつなぐ。例示した結合は多くの場合抑制される。",
+        "categoryImpact": "二次結合を10次元作用、ブレーン作用、重いモジュラスの消去、非摂動的ゲージ運動関数へ分類し、KKLTとLVSで大きさを算定する。標準模型の埋め込みは残る。",
+        "originality": "電磁運動項への二次結合を古典項からインスタントンまで横断して初めて系統調査し、同じ観測子で比較する。各コンパクト化機構は既存研究を継承する。",
+        "technicalStrength": "正準規格化した結合をKKLTとLVSで導き、重いモジュラスを消去できないKKLTの質量階層も明示する。代表パラメータの評価であり、完全な粒子模型は構成しない。"
+      },
+      "totalScore": 69,
+      "abstractLines": [
+        "電磁場に対するアクシオンの二次結合は新しい探索信号を与えるが、弦理論での生成機構は十分整理されていない。",
+        "古典的、摂動的、非摂動的な三種類の機構を提案し、代表例で結合強度をアクシオン崩壊定数により規格化する。",
+        "量子寄与は小さいもののQCDアクシオンの類似結合を上回り得て、アクシバース探索に利用できる可能性を示す。"
+      ],
+      "curiosity": "光子との二次結合は弦コンパクト化でどのように生まれ、アクシオン探索に届く大きさを持ち得るか。",
+      "concept": "二次電磁結合の起源を古典的モジュライ依存性、摂動補正、インスタントン寄与に分解し、共通の規格化で比較する。",
+      "conclusion": "弦理論には二次アクシオン結合を作る複数の経路があり、量子寄与は抑制されてもQCDアクシオンの基準を超え得る。頻度と最大強度の一般則は残る。",
+      "assessment": "探索対象になり得る結合を三つの起源へ対応づけ、成立しない質量階層も区別している。電磁気そのものの実現とアクシオン暗黒物質模型は今後の構築に委ねる。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、古典・摂動・非摂動の生成機構、KKLTとLVSの正準規格化とベンチマーク、議論を確認した。数値係数とコンパクト化データは独立再計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.27190v1",
+        "https://arxiv.org/pdf/2607.27190v1"
+      ]
+    },
+    {
+      "rank": 4,
+      "arxivId": "2607.27133",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.27133",
+      "title": "Quantum Field Theory Of Cosmological Perturbations Induced By Ultralight Dark Matter",
+      "titleJa": "超軽量暗黒物質が誘起する宇宙論的摂動の量子場理論",
+      "authors": [
+        "Tomislav Prokopec",
+        "Marco Vecchioni"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 18
+      },
+      "scoreReasons": {
+        "broadImpact": "超軽量暗黒物質の量子状態を原始重力波の伝播へ結び、暗黒物質模型と初期宇宙観測の双方に関わる。検討した非相対論的質量域では効果が無視できる。",
+        "categoryImpact": "凝縮体の4点自己エネルギーが消えることをWard恒等式に結び、重力波への効果を量子2点統計へ限定する。スカラー摂動の定量解析は今後に残す。",
+        "originality": "一般ガウス状態の2PI作用から重力子方程式を閉じ、古典凝縮体と圧縮由来の量子圧を作用段階で分離する。断熱展開とFloquet解析は既知手法である。",
+        "technicalStrength": "1ループ自己エネルギーを次元正則化し、局所項と非局所項、純粋状態と混合状態を比較して共鳴上限を得る。非局所積分は中点・断熱近似で、完全数値検査を欠く。"
+      },
+      "totalScore": 69,
+      "abstractLines": [
+        "超軽量スカラー暗黒物質は通常古典場として扱われるが、その量子状態が宇宙論的摂動へ与える効果は未整理である。",
+        "一般のガウス初期状態に対する源項を断熱近似で正則化し、重力子場の閉じた運動方程式を導く。",
+        "古典凝縮体は重力波伝播に影響せず、圧縮状態は共鳴を起こし得るが、想定質量域では成長が無視できる。"
+      ],
+      "curiosity": "超軽量暗黒物質の古典凝縮と量子圧は、原始重力波の伝播へそれぞれ何をもたらすか。",
+      "concept": "暗黒物質場のガウス状態を量子論のまま保持し、正則化した応力源を重力子の時間依存有効質量へまとめる。",
+      "conclusion": "重力波を変えるのは古典凝縮ではなく圧縮状態の量子圧であり、特定モードに共鳴条件が生じる。ただし物質放射等価時の非相対論的模型では増幅は小さい。",
+      "assessment": "古典効果と量子効果を因果的な有効作用から切り分け、検出不能という定量上限まで導く。中点処方、べき型初期状態、物質優勢期という仮定が重い。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、2PI有効作用、自己エネルギーと正則化、テンソル方程式、状態別共鳴解析、結論、非局所積分の付録を確認した。長い積分と数値上限は独立再計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.27133v1",
+        "https://arxiv.org/pdf/2607.27133v1"
+      ]
+    },
+    {
+      "rank": 5,
+      "arxivId": "2607.26194",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26194",
+      "title": "Toward an Observable Algebra for JT-de Sitter Space: Gap Protection and Modular Dressings",
+      "titleJa": "JT-de Sitter空間の可観測量代数へ：ギャップ保護とモジュラー・ドレッシング",
+      "authors": [
+        "Hassan ElSayed"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 18
+      },
+      "scoreReasons": {
+        "broadImpact": "de Sitter量子重力の領域可観測量を因果幾何と作用素環で結ぶが、物理的重力代数ではなくカイラル共形ネットの表現依存模型であるため波及は限定される。",
+        "categoryImpact": "共有時計でドレスした領域代数が等調性を持つための必要十分条件を与え、真空相関による障害と分離積状態での有限族の回復を証明する。JT重力への実装は残る。",
+        "originality": "半円以上の補ギャップ保護を連続核の交換子模型へ結び、任意に短い反対側円弧で代数全体へ跳ぶ活性化を見いだす。モジュラー交差積自体は既知である。",
+        "technicalStrength": "dS_2のギャップ定理を高次元半球条件へ拡張し、Takesaki理論から包含基準と反例を証明する。等調性、因子性、交換子回復が未解決な範囲を明記する。"
+      },
+      "totalScore": 68,
+      "abstractLines": [
+        "大域的de Sitter空間では、領域の因果的補集合と対応する可観測量代数の包含関係が自明でない。",
+        "円弧の補ギャップを分類し、共形ネットの領域代数を共通時計による真空モジュラー流と交差積にする。",
+        "半円以上のギャップだけが保護され、微小な反対側成分の追加で割当代数が全因子へ不連続に変わり得る。"
+      ],
+      "curiosity": "de Sitter空間の領域を少し変えたとき、重力的にドレスした可観測量代数の包含関係は保たれるか。",
+      "concept": "最大の補ギャップが因果的補集合を決める幾何学と、真空モジュラー流による領域代数の連続核を対応させる。",
+      "conclusion": "真空相関は一般の領域包含と連続核包含の両立を妨げるが、分離積状態なら有限ブール代数上で整合族を作れる。参照表現への依存は解消されない。",
+      "assessment": "幾何学的閾値、等調性の障害、代数の不連続変化を複数の定理で結んでいる。補助時計を実在の重力時計へ置き換える量子JT構成は未完成である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "結果と適用範囲、ギャップ定理、モジュラー交差積、包含基準と障害、分離積修復、活性化、議論、JT正準解析の付録を確認した。作用素環の各証明は独立再証明していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26194v1",
+        "https://arxiv.org/pdf/2607.26194v1"
+      ]
+    },
+    {
+      "rank": 6,
+      "arxivId": "2607.26126",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26126",
+      "title": "Iterative Gauging is Deconstruction",
+      "titleJa": "反復的ゲージ化は次元脱構築である",
+      "authors": [
+        "Sebastian Franco",
+        "Diego Rodriguez-Gomez"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 17
+      },
+      "scoreReasons": {
+        "broadImpact": "反復的ゲージ化による創発次元をクイバーの次元脱構築へ翻訳し、場の理論と高次元模型の構成に再利用できる。対象はこの対称性ゲージ化機構に限られる。",
+        "categoryImpact": "反復的ゲージ化で創発する次元の機構を、非一様結合まで含む標準的脱構築作用との等価性として確定する。新しい高次元相より既存構成の再解釈が中心である。",
+        "originality": "Goldstone場を双対化し、磁気高形式対称性の反復をクイバーの節点・リンク辞書へ変換する。次元脱構築と場の双対化は既知だが、二構成の直接同定が差分である。",
+        "technicalStrength": "磁気ゲージ化を任意の結合で再帰的に導き、電気ゲージ化が結合反転した双対表示を与えることも確認する。Abel群、古典作用、周期境界条件を主対象とする。"
+      },
+      "totalScore": 65,
+      "abstractLines": [
+        "量子場理論の対称性を反復的にゲージ化すると、追加の空間次元が創発する構成が知られている。",
+        "ヒッグス枝上のGoldstone場を双対化し、反復的ゲージ化の作用をクイバーによる標準的次元脱構築と比較する。",
+        "両作用は厳密に等価で、電気対称性から始めると結合定数を反転した双対変数表示になる。"
+      ],
+      "curiosity": "反復的な対称性ゲージ化で現れる追加次元は、新機構なのか既知の次元脱構築の別表示なのか。",
+      "concept": "Goldstone場の双対化により、反復ごとのゲージ場をクイバー節点へ、磁気対称性に結合する場をリンクへ写す。",
+      "conclusion": "反復的ゲージ化は次元脱構築と同じ作用を与え、最初に電気対称性を選ぶ違いは双対変数と結合反転に対応する。非可換一般化は未解決である。",
+      "assessment": "創発次元へ明示的なクイバー辞書を与え、電気・磁気の選択も双対枠として整理する。非Abel自由度、量子補正、一般境界条件への拡張は未構成である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、標準的脱構築、Goldstone双対化、磁気対称性の反復、電気ゲージ化、議論を確認した。省略された規格化係数と量子等価性は独立検証していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26126v1",
+        "https://arxiv.org/pdf/2607.26126v1"
+      ]
+    },
+    {
+      "rank": 7,
+      "arxivId": "2607.26868",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26868",
+      "title": "World-Line Actions in Weyl Geometry",
+      "titleJa": "Weyl幾何における世界線作用",
+      "authors": [
+        "Cezar Condeescu",
+        "Andrei Micu"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 16,
+        "originality": 17,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "Weyl対称相で固有時が定義できないことを作用原理から示し、スケール対称重力と粒子時計の解釈に関わる。結論は古典的な時間的世界線に限られる。",
+        "categoryImpact": "固有時に必要な逆質量次元、Weyl不変性、加法性、アフィン媒介の四条件が対称相で両立しないと示し、第二時計効果の前提を整理する。量子時計は扱わない。",
+        "originality": "一般Weyl場の開Wilson線を含む世界線作用を構成し、非局所性を拘束世界線場の消去として局所化する。Weyl自己平行線と補償場の発想は継承する。",
+        "technicalStrength": "可積分・非可積分の場合を分けて変分し、補助1次元計量を持つ二次作用との等価性と対称性破れ後のRiemann極限を確認する。量子化と時計の実験模型は未検証である。"
+      },
+      "totalScore": 64,
+      "abstractLines": [
+        "Weyl対称な幾何では、時間的曲線上の粒子作用と固有時を同時に整合的に定義できるかが問題となる。",
+        "一般のWeyl場に対する開Wilson線を加えた無次元作用と、補助世界線場を使う等価な二次作用を構成する。",
+        "対称相には満足な固有時が存在せず、自発的対称性の破れで質量を得るとRiemann的固有時が回復する。"
+      ],
+      "curiosity": "局所スケール対称性を保ったまま、粒子時計が測る加法的な固有時を定義できるか。",
+      "concept": "Weylゲージ場の開Wilson線で異なる世界線点のスケールを比較し、その非局所性を拘束された補助場へ移す。",
+      "conclusion": "Weyl不変性と固有時に必要な三条件は対称相で両立せず、固有時は定義できない。質量が生じる対称性破れ相では通常のRiemann幾何へ還元される。",
+      "assessment": "固有時の不在を変分原理と四条件の両立不能として示し、非局所作用を局所化もしている。古典的な時間的粒子に限定され、第二時計効果の大きさは計算しない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、Weylゲージ幾何、自己平行線、可積分・非可積分世界線作用、対称性破れ、固有時条件、結論を確認した。変分式と局所化の全計算は独立再導出していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26868v1",
+        "https://arxiv.org/pdf/2607.26868v1"
+      ]
+    },
+    {
+      "rank": 8,
+      "arxivId": "2607.26140",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26140",
+      "title": "CasimirRFM: A Mathematica package for Riemann-flat compactifications with Casimir energies",
+      "titleJa": "CasimirRFM：Riemann平坦コンパクト化とCasimirエネルギーのMathematicaパッケージ",
+      "authors": [
+        "Bruno Valeixo Bento"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論・計算",
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 16,
+        "originality": 16,
+        "technicalStrength": 17
+      },
+      "scoreReasons": {
+        "broadImpact": "高次元場のCasimirポテンシャルと局所エネルギー密度を同じ基盤で計算し、コンパクト化とモジュライ安定化に利用できる。Riemann平坦多様体に対象を絞る。",
+        "categoryImpact": "有限群の自由作用、許容スピン構造、モジュライ計量、表現トレースから1ループ量までを一体化し、Riemann平坦コンパクト化の計算障壁を下げる。物理例は一件である。",
+        "originality": "Schur補元による楕円体内格子点列挙とEwald和を、Casimirブレーンの局所密度および幾何・表現論処理へ統合する。個々の総和法と公式は既知である。",
+        "technicalStrength": "誤差目標付き打ち切り、一般のねじれ境界条件、スピン持上げを実装し、T^6/Z_8で自由度一致とボース・フェルミ相殺を検査する。広い性能比較と自動試験結果は示さない。"
+      },
+      "totalScore": 64,
+      "abstractLines": [
+        "Riemann平坦多様体へのコンパクト化では、幾何データと1ループCasimirエネルギーの計算が複雑になる。",
+        "有限群、スピン構造、コホモロジー、表現トレースを扱い、Ewald和で格子和を数値評価するパッケージを構築する。",
+        "Type IIB超重力のT^6/Z_8例でCasimirポテンシャルと局在エネルギー寄与を計算し、適用手順を示す。"
+      ],
+      "curiosity": "平坦だが位相的に非自明な内部空間で、Casimir効果とモジュライ幾何を一貫して自動計算できるか。",
+      "concept": "多様体を定める有限群の不変量とホロノミー表現を生成し、そのスペクトル情報をEwald格子和へ直接渡す。",
+      "conclusion": "CasimirRFMは幾何構成から低次元ポテンシャルと高次元局所密度までを統合計算できる。実証はT^6/Z_8に集中し、一般例での性能評価は残る。",
+      "assessment": "離散幾何から局所量子エネルギーまでを再利用可能な計算系へまとめ、具体例で相殺も確認する。平坦多様体と無質量スペクトルが中心で、比較試験は限られる。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、有限群と多様体関数、モジュライ・スピン構造、Ewald実装、表現トレース、Type IIBのT^6/Z_8例を確認した。Mathematicaコードの実行と数値再現はしていない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26140v1",
+        "https://arxiv.org/pdf/2607.26140v1"
+      ]
+    },
+    {
+      "rank": 9,
+      "arxivId": "2607.26919",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26919",
+      "title": "Quantum Fisher information of the Klein--Gordon, $\\phi^4$, and Dirac vacua",
+      "titleJa": "Klein–Gordon場、φ^4場、Dirac場の真空における量子Fisher情報",
+      "authors": [
+        "Preslav Asenov",
+        "Alessio Serafini"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 15,
+        "originality": 16,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "真空から質量を推定できる精度を量子Fisher情報で測り、量子計測と場の理論の接点を具体化する。扱うのは三つの場と低次摂動で、直接の測定手順は示さない。",
+        "categoryImpact": "非共形場のラグランジアン質量に対する真空量子Fisher情報を、自由スカラー、φ^4、自由Dirac場で次元別に与える。場の情報幾何全体では初期的な標本である。",
+        "originality": "Euclid相関関数法を非共形真空の質量推定へ適用し、相互作用による情報減少と発散を同じ指標で比較する。量子Fisher情報と摂動展開は既知である。",
+        "technicalStrength": "Klein–GordonとDirac伝播関数を積分し、φ^4補正は1次まで図式展開して複数次元を照合する。発散量の繰込み依存性、測定可能性、高次補正は未解決である。"
+      },
+      "totalScore": 63,
+      "abstractLines": [
+        "量子場の真空が質量パラメータについて保持する情報量は、場の種類と時空次元に依存する。",
+        "Euclid時空上の自由Klein–Gordon場、1次のφ^4摂動、自由Dirac場について量子Fisher情報を計算する。",
+        "次元ごとに質量依存性や紫外発散が異なり、φ^4相互作用は3空間次元で発散を生じさせる。"
+      ],
+      "curiosity": "異なる量子場の真空は、その質量を推定するための情報をどの次元でどれだけ保持するか。",
+      "concept": "真空状態の質量微分を量子Fisher情報へ写し、自由場の厳密結果とφ^4相互作用の1次補正を次元別に比較する。",
+      "conclusion": "真空の質量情報はスカラー場とDirac場で異なる次元依存性を示し、相互作用は情報量の減少にも紫外発散にもつながる。高次摂動での安定性は未確定である。",
+      "assessment": "三つの場を共通の推定指標で並べ、相互作用と次元の役割を解析式にした。紫外発散を有限な測定精度へ翻訳する繰込み規約を欠き、相互作用は1次に限る。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、量子Fisher情報の経路積分表示、三理論の次元別計算、結論、積分評価と伝播関数の付録を確認した。全積分係数と摂動図は独立再計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26919v1",
+        "https://arxiv.org/pdf/2607.26919v1"
+      ]
+    },
+    {
+      "rank": 10,
+      "arxivId": "2607.26343",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26343",
+      "title": "D-branes and nonlinear interactions in the $AdS$ pure spinor string",
+      "titleJa": "AdS純粋スピノル弦におけるDブレーンと非線形相互作用",
+      "authors": [
+        "Brenno Carlini Vallilo"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "AdS_5×S^5上のDブレーン境界相互作用を共変に扱い、弦理論とホログラフィーの非摂動的対象に役立つ。ゼロ流束の半BPS探針に範囲が限られる。",
+        "categoryImpact": "複素線形なZ_4整合対合からゼロ流束のD1、D3、D5、D7探針を7代表で再現し、物質・ゴースト境界結合の必要方程式まで進める。流束枝は対象外である。",
+        "originality": "曲がった超剰余類上で座標に依らず境界対合を分類し、埋め込みの全次数と四つのゴースト接着結合を同じ局所BRST束へ組み込む。既知の探針対称性を継承する。",
+        "technicalStrength": "実形式、超トレース、純粋スピノル錐を検査して7対合を作り、境界変分と未簡約BRST束から射影方程式を導く。一般探針での解と結合写像の大域的存在は未証明である。"
+      },
+      "totalScore": 63,
+      "abstractLines": [
+        "AdS_5×S^5の純粋スピノル弦では、Dブレーン境界条件を座標に依らず非線形相互作用まで記述する必要がある。",
+        "psu(2,2|4)のZ_4次数を交換する対合自己同型を用い、物質とゴーストの局所境界相互作用を構成する。",
+        "ゼロ流束の半BPSブレーン7種を再現し、世界体積上のDBI型整合方程式を導く。"
+      ],
+      "curiosity": "純粋スピノル弦の物質場とゴーストを同時に整合させるDブレーン境界相互作用はどう定式化できるか。",
+      "concept": "超代数の対合自己同型で許容ブレーンを分類し、その固定部分代数を境界超接続とゴースト接着条件へ持ち上げる。",
+      "conclusion": "ゼロ流束のLorentz型Dブレーンを代数的に統一し、非線形境界相互作用が満たすDBI型方程式を得た。流束付き構成と方程式の一般解は残る。",
+      "assessment": "探針の幾何、純粋スピノル錐、ゴースト相互作用を一つの対合構造で扱う。得られた非線形式は必要条件であり、物理的世界体積多重項と一般解は未提示である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、AdS純粋スピノル境界条件、7対合の分類、超接続と埋め込み、相互作用BRST方程式、結論、代数付録を確認した。行列表現と全変分は独立再計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26343v1",
+        "https://arxiv.org/pdf/2607.26343v1"
+      ]
+    },
+    {
+      "rank": 11,
+      "arxivId": "2607.26532",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26532",
+      "title": "Massive and massless particles in Mielke--Baekler geometries",
+      "titleJa": "Mielke–Baekler幾何における有質量粒子と無質量粒子",
+      "authors": [
+        "Carles Batlle",
+        "Roberto Casalbuoni",
+        "Daniele Dominici",
+        "José Figueroa-O'Farrill",
+        "Joaquim Gomis"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 15,
+        "originality": 16,
+        "technicalStrength": 18
+      },
+      "scoreReasons": {
+        "broadImpact": "捩率を持つ3次元時空でのスピン粒子作用を整備し、重力のゲージ形式と古典粒子力学に使える。Mielke–Baekler等質幾何への特化が波及範囲を狭める。",
+        "categoryImpact": "テレパラレル枝で有質量・無質量粒子の余随伴軌道、拘束自由度、共形対称性を統一的に分類する。3次元捩率重力の限定された部分問題である。",
+        "originality": "Wess–Zuminoスピン項による正則四次元軌道から臨界二次元軌道への縮退を、軌道分類と正準拘束解析の双方で一致させる。作用構成法自体は既知である。",
+        "technicalStrength": "Weitzenböck接続とLevi–Civita接続の二記述、Dirac括弧、質量ゼロ粒子のNoether方程式まで導く。量子化や粒子間相互作用は対象外である。"
+      },
+      "totalScore": 61,
+      "abstractLines": [
+        "Mielke–Baekler時空は、Lorentz計量と両立しながら捩率を持ち得る3次元等質幾何である。",
+        "余随伴軌道と非線形実現を用いて、有質量および無質量のスピン粒子の世界線作用を構成する。",
+        "スピン項により正則部門と臨界部門が生じ、臨界部門ではPapapetrou型力や異なる対称性構造が現れる。"
+      ],
+      "curiosity": "捩率を持つ3次元等質時空で、粒子のスピンは自由度と時空対称性をどのように変えるか。",
+      "concept": "等質空間の余随伴軌道から運動項を作り、Wess–Zumino項の係数で拘束構造が変わる部門を分離する。",
+      "conclusion": "正則部門ではスピンが縮約相空間を変形しても軌道は測地線となり、臨界部門では追加ゲージ対称性により物理相空間が四次元から二次元へ縮退する。",
+      "assessment": "軌道法、非線形実現、正準拘束、二つの接続による運動方程式を相互照合した堅固な解析である。テレパラレルな3次元等質背景に限定され、量子化は今後の課題となる。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、MB代数と平坦接続、余随伴軌道、有質量・無質量作用、正準拘束、Noether対称性、結論、ゲージ固定付録を確認した。全Dirac括弧は独立再計算していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26532v1",
+        "https://arxiv.org/pdf/2607.26532v1"
+      ]
+    },
+    {
+      "rank": 12,
+      "arxivId": "2607.26415",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26415",
+      "title": "Generalized Bergshoeff-de Roo identification in the Supergravity frame",
+      "titleJa": "超重力表示における一般化Bergshoeff–de Roo同定",
+      "authors": [
+        "Walter H. Baron",
+        "Fabian A. Portilla"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 16,
+        "originality": 15,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "弦有効作用の高階微分結合を物理的な超重力変数で生成し、煩雑な場の再定義を減らす。振幅照合や具体的背景への適用は今後の課題である。",
+        "categoryImpact": "一般化Bergshoeff–de Roo同定を標準超重力の枠へ移し、ヘテロ弦の六階微分補正を三結合へ圧縮する。現段階では一パラメータ族に限る。",
+        "originality": "拡張Lorentz群を初めから固定する一般化フレームにより、二重場理論で必要だった高次の場の再定義を回避する。基礎の同定法は既存研究を継承する。",
+        "technicalStrength": "一般化曲率と作用を導出してα'二次まで展開し、純重力の曲率三次項が消えることを検査する。三形式の二次補正と標準形式の同値性は未解決である。"
+      },
+      "totalScore": 60,
+      "abstractLines": [
+        "弦理論の有効作用に現れる高階微分結合は、多数の対称性により強く制約される。",
+        "二重場理論で作られた一般化Bergshoeff–de Roo同定を見直し、標準的な超重力表示で結合を生成する。",
+        "微分同相、Lorentz、ゲージ不変性とT双対性を利用する方法を超重力変数へ移す。"
+      ],
+      "curiosity": "二重場理論に依存せず、弦有効作用の高階微分項を超重力の対称性だけから系統的に生成できるか。",
+      "concept": "一般化された接続とゲージ自由度の同定を標準超重力変数へ翻訳し、T双対性を高階結合の再帰的制約として使う。",
+      "conclusion": "Lorentz共変な超重力変数のまま全階形式の作用を構成し、α'二次の六階微分補正を三結合で表した。補正三形式と標準形式の同値性は残る。",
+      "assessment": "一般化フレームの選択によって約三百項の中間表示を三結合へ圧縮する実用的な再定式化である。一方、ヘテロ弦以外への拡張と三形式の高次補正の除去可能性は未確定である。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、二重場理論での同定、超重力フレームとゲージ固定、一般化流束・曲率、微分展開、部分検査、結論を確認した。長大な補助計算は独立再導出していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26415v1",
+        "https://arxiv.org/pdf/2607.26415v1"
+      ]
+    },
+    {
+      "rank": 13,
+      "arxivId": "2607.26535",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26535",
+      "title": "Static topological dilatonic black hole with multiple horizons and its thermodynamics",
+      "titleJa": "多重地平線を持つ静的トポロジカル・ディラトンブラックホールとその熱力学",
+      "authors": [
+        "M. M. Stetsko"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 14,
+        "originality": 15,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "任意数の地平線と三重点を持つ解析解はブラックホール熱力学と非線形電磁場模型に有用だが、特定の無限級数型作用への依存が強い。",
+        "categoryImpact": "標準Einstein–Maxwell–ディラトン解の二地平線制限を越え、安定相と拡張相空間を調べる。中心的な量子重力問題より模型内分類への寄与である。",
+        "originality": "Maxwell不変量の無限級数で任意数の地平線を生み、追加安定相と三重点へ結ぶ。熱力学の各解析法とディラトン黒洞は既知の枠組みである。",
+        "technicalStrength": "エネルギー条件、Euclid作用、二つの統計集団、局所・大域安定性、Smarr関係を相互比較する。無限級数作用の収束域と微視的起源が制約となる。"
+      },
+      "totalScore": 57,
+      "abstractLines": [
+        "標準Einstein–Maxwell–ディラトン理論の静的ブラックホールは、通常二つまでの地平線を持つ。",
+        "Maxwell不変量の無限級数で表す非線形電磁場を導入し、解、エネルギー条件、各統計集団の熱力学を解析する。",
+        "任意数の地平線、追加安定相、三重点が現れ、Euclid法と拡張相空間の結果は整合する。"
+      ],
+      "curiosity": "非線形電磁場はディラトンブラックホールの地平線数と熱力学的相構造をどこまで豊かにできるか。",
+      "concept": "電磁不変量の全次数を含む作用により地平線方程式の根を増やし、その係数を熱力学的相の制御変数として追う。",
+      "conclusion": "非線形電磁場により地平線数に固定上限のない静的解が得られ、追加の安定相と三重点が生じ得る。作用級数の物理的選択原理は残る。",
+      "assessment": "解の因果構造から局所・大域熱力学まで多面的に調べている。豊富な相構造は自由度の高い非線形作用に由来し、弦理論的起源は示されない。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26535v1"
+      ]
+    },
+    {
+      "rank": 14,
+      "arxivId": "2607.26319",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26319",
+      "title": "Nucleon spectra and wave functions from holographic models with dual Einstein-dilaton and Starobinsky-dilaton gravities",
+      "titleJa": "Einstein–ディラトン重力とStarobinsky–ディラトン重力の双対ホログラフィー模型による核子スペクトルと波動関数",
+      "authors": [
+        "Adão S. da Silva Junior",
+        "Juan M. Z. Pretel",
+        "Henrique Boschi-Filho"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論・現象論",
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 12,
+        "originality": 11,
+        "technicalStrength": 15
+      },
+      "scoreReasons": {
+        "broadImpact": "核子スペクトルを重力背景と結び、ホログラフィックQCDとハドロン現象論に接続する。改善はスペクトル適合を主眼とし、他のQCD観測量への波及は不明である。",
+        "categoryImpact": "Einstein–ディラトン模型のパラメータを再調整し、Starobinsky項を加えた背景へ拡張する。中心課題の解決より既存ホログラフィー模型の適合改善である。",
+        "originality": "Starobinsky–ディラトン重力を核子スペクトルへ適用する組合せは非自明だが、軟壁模型と背景調整という中心手法は既知である。",
+        "technicalStrength": "二つの背景でスペクトルと波動関数を計算し、軟壁模型および実験値と比較する。新規パラメータ導入に対する予測力と系統誤差の評価が課題となる。"
+      },
+      "totalScore": 50,
+      "abstractLines": [
+        "改良ホログラフィックQCDは閉じ込めやハドロンスペクトルを記述するが、核子データとの一致には改善余地がある。",
+        "Einstein–ディラトン模型へ新パラメータを導入し、さらにStarobinsky–ディラトン重力を用いる模型へ拡張する。",
+        "両模型の核子スペクトルと波動関数を計算し、軟壁模型および実験データとの比較を改善する。"
+      ],
+      "curiosity": "重力側のディラトン背景と曲率補正を変えることで、核子励起スペクトルをどこまで再現できるか。",
+      "concept": "閉じ込めを表すディラトン背景へStarobinsky曲率項を組み込み、重力解から核子の有効ポテンシャルを作る。",
+      "conclusion": "再調整したEinstein–ディラトン模型と新しいStarobinsky–ディラトン模型は核子データとの比較を改善する。追加パラメータを越える予測的検証は残る。",
+      "assessment": "異なる重力背景で波動関数まで比較し、スペクトル適合の差を定量化できる。自由パラメータの追加が改善を担うため、模型選択の一意性は弱い。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26319v1"
+      ]
+    },
+    {
+      "rank": 15,
+      "arxivId": "2607.26931",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.26931",
+      "title": "Extended Phase Space Thermodynamics and Joule-Thomson Expansion of Regular AdS Black Holes in a String Cloud",
+      "titleJa": "弦雲中の正則AdSブラックホールの拡張相空間熱力学とJoule–Thomson膨張",
+      "authors": [
+        "Y. Elaima",
+        "A. Daassou",
+        "H. Lekbich",
+        "F. Oubbad"
+      ],
+      "primaryCategory": "hep-th",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 11,
+        "categoryImpact": 12,
+        "originality": 12,
+        "technicalStrength": 13
+      },
+      "scoreReasons": {
+        "broadImpact": "正則核と弦雲が黒洞の相転移と冷却過程を変える結果は、修正ブラックホール熱力学に有用だが、特定の静的AdS模型内にとどまる。",
+        "categoryImpact": "臨界比とJoule–Thomson反転曲線への二つの変形パラメータの効果を計算する。平均場臨界指数を再現し、分野の標準像を変える前進ではない。",
+        "originality": "量子的着想を持つ正則核と弦雲を同じ拡張相空間へ入れる組合せに差分がある。圧力同定、臨界解析、等エンタルピー曲線は標準手法である。",
+        "technicalStrength": "熱容量、臨界点、圧縮率比、臨界指数、反転曲線を一貫した状態方程式から計算する。正則解の物質源整合性とパラメータ全域の検査を欠く。"
+      },
+      "totalScore": 48,
+      "abstractLines": [
+        "正則AdSブラックホールでは、特異点を除く核と周囲の弦雲が熱的安定性を変える。",
+        "宇宙定数を圧力とみなす拡張相空間で臨界点を解析し、等エンタルピーのJoule–Thomson膨張を計算する。",
+        "正則化尺度と弦雲密度は臨界圧縮率比や冷却領域を変える一方、臨界指数は平均場型となる。"
+      ],
+      "curiosity": "正則核と弦雲という二つの変形は、AdSブラックホールの相転移と加熱・冷却境界をどう変えるか。",
+      "concept": "正則化尺度と無次元の弦雲密度を独立な制御量とし、状態方程式と等エンタルピー曲線へ効果を分離して写す。",
+      "conclusion": "二つの変形は安定域、普遍圧縮率比、Joule–Thomson反転曲線を変えるが、臨界指数は平均場普遍類に残る。微視的起源との対応は未提示である。",
+      "assessment": "相転移とJoule–Thomson過程を同じ状態方程式から整理している。正則核と弦雲を仮定した模型依存性が強く、量子重力への一般的帰結は限定される。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.26931v1"
+      ]
+    }
+  ],
+  "audit": {
+    "listingUrl": "https://arxiv.org/list/hep-th/pastweek",
+    "announcementDate": "2026-07-30",
+    "selectionRule": "公式hep-th一覧のNew submissionsのうち、主カテゴリがhep-thであるv1だけを評価し、Cross submissionsを除外する。",
+    "sourceCounts": {
+      "newPrimary": 15,
+      "crosslistsExcluded": 16,
+      "titleAuthorAbstractEvaluated": 15
+    },
+    "evaluationPolicy": "全15件の原題、全著者、要旨、主カテゴリ、コメントを読み、著者属性を使わず論文内容だけで評価した。",
+    "scoreRubric": "Daily arXiv rubric 3.0：広範な影響、カテゴリ内の影響、独創性、技術的強度を各0〜25の整数で採点し、高得点には本文中の具体的成果、比較、検証、限界を要する。",
+    "fullTextPolicy": "全要旨の比較後に決定的順位規則で上位12件を固定し、その12件だけの公式v1本文の主要節を確認する。最終上位10件には全文根拠を必須とする。",
+    "fullTextEvaluatedCount": 12,
+    "authorPolicy": "著者の知名度、所属、受賞歴、引用数、キャリア段階を採点に使用しない。",
+    "rankingTieBreak": "総合点、広範な影響、独創性、技術的強度、カテゴリ内の影響、arXiv IDの昇順で順位を決める。",
+    "generatedAtJst": "2026-08-03T23:37:11+09:00"
+  }
+}
