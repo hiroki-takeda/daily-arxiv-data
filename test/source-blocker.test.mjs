@@ -304,12 +304,55 @@ test("structured blocker uses its host observation time and is exposed to orches
       message,
     })],
     category: CATEGORY,
-    now: new Date("2026-07-28T02:00:00.000Z"),
+    now: new Date("2026-07-27T09:17:18.956Z"),
   });
   assert.equal(state.kind, "source_incomplete");
+  assert.equal(state.delayHours, 0.25);
   assert.equal(state.observedAt, "2026-07-27T09:02:18.957Z");
-  assert.equal(state.retryAt, "2026-07-28T03:02:18.957Z");
+  assert.equal(state.retryAt, "2026-07-27T09:17:18.957Z");
+  assert.equal(state.shouldDefer, true);
+  assert.equal(state.remainingMs, 1);
   assert.equal(state.sourceBlocker.receipt.arxivId, RECEIPT.arxivId);
+
+  const elapsed = computeSourceRetryBackoff({
+    attempts: [attempt({
+      at: "2026-07-27T09:02:20.000Z",
+      attemptId: "run-source",
+      message,
+    })],
+    category: CATEGORY,
+    now: new Date("2026-07-27T09:17:18.957Z"),
+  });
+  assert.equal(elapsed.shouldDefer, false);
+  assert.equal(elapsed.remainingMs, 0);
+});
+
+test("token-free source probes retry after 15 minutes, then use a bounded 4h to 72h schedule", () => {
+  const observations = [
+    "2026-07-27T01:00:00.000Z",
+    "2026-07-27T02:00:00.000Z",
+    "2026-07-27T03:00:00.000Z",
+    "2026-07-27T04:00:00.000Z",
+    "2026-07-27T05:00:00.000Z",
+    "2026-07-27T06:00:00.000Z",
+  ];
+  const attempts = observations.map((observedAt, index) => attempt({
+    at: new Date(Date.parse(observedAt) + 1_000).toISOString(),
+    attemptId: `run-source-${index + 1}`,
+    message: encodeSourceBlockerEventMessage(RECEIPT, {
+      observedAt: new Date(observedAt),
+    }),
+  }));
+  const expected = [0.25, 4, 18, 36, 72, 72];
+  for (const [index, delayHours] of expected.entries()) {
+    const state = computeSourceRetryBackoff({
+      attempts: attempts.slice(0, index + 1),
+      category: CATEGORY,
+      now: new Date("2026-07-27T07:00:00.000Z"),
+    });
+    assert.equal(state.delayHours, delayHours);
+    assert.equal(state.sourceFailureCount, index + 1);
+  }
 });
 
 test("source failure count excludes ordinary generation failures", () => {
@@ -331,6 +374,51 @@ test("source failure count excludes ordinary generation failures", () => {
   });
   assert.equal(state.failureCount, 3);
   assert.equal(state.sourceFailureCount, 1);
+  assert.equal(state.delayHours, 0.25);
+});
+
+test("ordinary and source failures advance independent retry schedules", () => {
+  const sourceAttempts = [
+    "2026-07-27T09:00:00.000Z",
+    "2026-07-27T10:00:00.000Z",
+  ].map((observedAt, index) => attempt({
+    at: new Date(Date.parse(observedAt) + 1_000).toISOString(),
+    attemptId: `run-source-mixed-${index + 1}`,
+    message: encodeSourceBlockerEventMessage(RECEIPT, {
+      observedAt: new Date(observedAt),
+    }),
+  }));
+  const firstOrdinary = attempt({
+    at: "2026-07-27T11:00:00.000Z",
+    attemptId: "run-ordinary-mixed-one",
+    stage: "category_source_resume",
+    message: "Source resume failed after prefetch completed.",
+  });
+  const secondOrdinary = attempt({
+    at: "2026-07-27T12:00:00.000Z",
+    attemptId: "run-ordinary-mixed-two",
+    stage: "category_source_resume",
+    message: "A later source resume failed after prefetch completed.",
+  });
+
+  const firstState = computeSourceRetryBackoff({
+    attempts: [...sourceAttempts, firstOrdinary],
+    category: CATEGORY,
+    now: new Date("2026-07-27T13:00:00.000Z"),
+  });
+  assert.equal(firstState.failureCount, 3);
+  assert.equal(firstState.sourceFailureCount, 2);
+  assert.equal(firstState.kind, "generation_failure");
+  assert.equal(firstState.delayHours, 18);
+
+  const secondState = computeSourceRetryBackoff({
+    attempts: [...sourceAttempts, firstOrdinary, secondOrdinary],
+    category: CATEGORY,
+    now: new Date("2026-07-27T13:00:00.000Z"),
+  });
+  assert.equal(secondState.failureCount, 4);
+  assert.equal(secondState.sourceFailureCount, 2);
+  assert.equal(secondState.delayHours, 36);
 });
 
 test("elapsed cooldown remains active history but no longer requests deferral", () => {

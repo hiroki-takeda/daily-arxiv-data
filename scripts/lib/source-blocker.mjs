@@ -2,6 +2,7 @@ export const SOURCE_BLOCKER_SCHEMA_VERSION = "1.0";
 export const SOURCE_BLOCKER_STATUS = "source_incomplete";
 export const SOURCE_BLOCKER_MESSAGE_PREFIX = "DAILY_ARXIV_SOURCE_BLOCKER_V1:";
 export const SOURCE_RETRY_BACKOFF_HOURS = Object.freeze([18, 36, 72]);
+export const SOURCE_PROBE_RETRY_BACKOFF_HOURS = Object.freeze([0.25, 4, 18, 36, 72]);
 export const MODEL_SOURCE_FAILURE_CLASS = "all_official_full_text_pathways_unavailable";
 export const HOST_SOURCE_PROBE_FAILURE_CLASS = "host_source_probe_failed";
 export const ORPHANED_GENERATION_STALE_HOURS = 5;
@@ -408,8 +409,20 @@ export function computeSourceRetryBackoff({ attempts, category, now = new Date()
   const latest = orderedFailures.at(-1);
   const failureCount = orderedFailures.length;
   const sourceFailureCount = orderedFailures.filter(({ sourceBlocker }) => sourceBlocker !== null).length;
-  const delayHours = SOURCE_RETRY_BACKOFF_HOURS[
-    Math.min(failureCount - 1, SOURCE_RETRY_BACKOFF_HOURS.length - 1)
+  const ordinaryFailureCount = failureCount - sourceFailureCount;
+  // A structured source blocker is handled first by a token-free host probe.
+  // Retry that probe soon enough to absorb normal arXiv propagation lag, while
+  // keeping model, repair, and orphaned-run failures on the conservative
+  // token-saving schedule. Ordinary failures therefore neither advance nor
+  // shorten the independent source-probe sequence.
+  const retrySchedule = latest.sourceBlocker === null
+    ? SOURCE_RETRY_BACKOFF_HOURS
+    : SOURCE_PROBE_RETRY_BACKOFF_HOURS;
+  const retryFailureCount = latest.sourceBlocker === null
+    ? ordinaryFailureCount
+    : sourceFailureCount;
+  const delayHours = retrySchedule[
+    Math.min(retryFailureCount - 1, retrySchedule.length - 1)
   ];
   const delayMs = delayHours * MILLISECONDS_PER_HOUR;
   const retryAtMs = Date.parse(latest.observedAt) + delayMs;
