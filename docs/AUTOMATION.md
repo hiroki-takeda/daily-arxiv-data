@@ -250,6 +250,22 @@ service停止、plist削除、古いdirty agent worktree整理は対象削除を
 
 日々の指示は不要です。通常の日課は公開ページを見るだけです。週1回程度、または通知が失敗を示した時に次を確認します。
 
+### 公開済み過去版の文章訂正
+
+過去版の誤訳や不自然な日本語だけを訂正する場合は、自動runやpublisherを使わず、人が修正版カテゴリreportを確認した後に次の手動専用コマンドを使います。
+
+```bash
+node scripts/apply-published-prose-correction.mjs \
+  YYYY-MM-DD \
+  quant-ph \
+  /tmp/YYYY-MM-DD-quant-ph.corrected.json \
+  --confirm-published-prose-only
+```
+
+対象にできるのは最新日より前のschema 1.4版だけです。変更できる値は`titleJa`、`abstractLines`、`curiosity`、`concept`、`conclusion`、`assessment`、4キーの`scoreReasons`、`fullTextReviewStatus`に限られます。対象カテゴリの`data/reports/YYYY-MM-DD-<category>.json`と`public/data/YYYY-MM-DD.json`だけを、事前検証と捕捉可能な失敗時の両ファイルrollbackを伴う一括処理で更新します。`current.json`と`index.json`、`paperType`、点数、順位、評価根拠の種別、URL、監査時刻、run情報は変更しません。
+
+二つのrenameの間にSIGKILLや電源断が起きた場合、未commitの片方だけが変わっている可能性があります。この場合はcommitやpushをせず、`git diff -- data/reports/YYYY-MM-DD-<category>.json public/data/YYYY-MM-DD.json`と`npm run validate`で不整合を検出し、確認済みの同じ訂正入力でコマンドを再実行します。それでも検証できなければ、Git上の公開済み二ファイルを人が確認して復元してからやり直します。コマンド自体はGit操作を行わないため、差分確認、commit、pushは別の承認済み手順です。
+
 ログイン直後にネットワークやSSH認証がまだ利用できなければ、その追いつき確認は安全に失敗します。常駐retryは行わず、次の11:30または16:30の定時runで再試行します。
 
 ```bash

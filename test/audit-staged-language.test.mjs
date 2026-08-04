@@ -292,6 +292,101 @@ test("language audit reports leaf and category prose issues without modifying th
   assert.equal(readFileSync(reportPath, "utf8"), before);
 });
 
+test("language audit reports the complete lexical-template repetition set", async () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const papers = reports["quant-ph"].papers;
+  const subjects = ["量子相関", "ブラックホール", "重力波", "位相転移", "量子補正", "宇宙膨張"];
+  const targets = ["冷却原子", "Kerr時空", "LISA観測", "格子模型", "表面符号", "初期宇宙"];
+  const limits = ["有限温度", "摂動展開", "低周波", "有限体積", "独立雑音", "等方性"];
+  for (let index = 0; index < 6; index += 1) {
+    papers[index].assessment =
+      `${subjects[index]}は${targets[index]}へ応用できるが、${limits[index]}の仮定に依存する。`;
+  }
+
+  const { root, staging } = await fixture(reports);
+  const reportPath = join(staging, `${DATE}-quant-ph.json`);
+  const before = readFileSync(reportPath, "utf8");
+  const output = join(root, "quant-ph-language-audit-1.json");
+  const result = runAudit({ root, staging, output });
+
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(readFileSync(output, "utf8"));
+  assert.equal(audit.count, 1);
+  const [issue] = audit.issues;
+  assert.equal(issue.scope, "category");
+  assert.equal(issue.slug, "quant-ph");
+  assert.equal(issue.path, "assessment");
+  assert.match(issue.message, /category-level template skeleton for 6 of 20 papers/);
+  assert.deepEqual(issue.affectedPapers.map(({ index }) => index), [0, 1, 2, 3, 4, 5]);
+  assert.equal(readFileSync(reportPath, "utf8"), before);
+});
+
+test("language audit reports a category-wide short template skeleton", async () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const papers = reports["quant-ph"].papers;
+  const subjects = [
+    "量子相関", "重力波", "宇宙膨張", "位相転移", "量子補正", "熱輸送", "時空曲率",
+    "境界応答", "誤差閾値", "粒子生成", "場強度", "光子統計", "真空崩壊",
+  ];
+  const limits = [
+    "有限温度", "低周波", "初期条件", "有限体積", "独立雑音", "弱結合", "球対称性",
+    "摂動領域", "局所模型", "断熱近似", "低密度", "短時間", "線形応答",
+  ];
+  for (let index = 0; index < subjects.length; index += 1) {
+    papers[index].conclusion = `${subjects[index]}を示した。ただし、${limits[index]}に限られる。`;
+  }
+
+  const { root, staging } = await fixture(reports);
+  const output = join(root, "quant-ph-language-audit-1.json");
+  const result = runAudit({ root, staging, output });
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(readFileSync(output, "utf8"));
+  assert.equal(audit.count, 1);
+  const [issue] = audit.issues;
+  assert.equal(issue.scope, "category");
+  assert.equal(issue.path, "conclusion");
+  assert.match(issue.message, /category-level template skeleton for 13 of 20 papers.*shared short skeleton/);
+  assert.deepEqual(issue.affectedPapers.map(({ index }) => index), Array.from({ length: 13 }, (_, index) => index));
+});
+
+test("language audit reports a template shared by the full-text-reviewed subset", async () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const reviewed = reports["quant-ph"].papers.filter((paper) => paper.fullTextEvaluated);
+  reviewed.forEach((paper, index) => {
+    paper.fullTextReviewStatus =
+      `主要節${index + 1}の導出を確認した。ただし、独立検証${index + 1}は実施していない。`;
+  });
+
+  const { root, staging } = await fixture(reports);
+  const output = join(root, "quant-ph-language-audit-1.json");
+  const result = runAudit({ root, staging, output });
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(readFileSync(output, "utf8"));
+  assert.equal(audit.count, 1);
+  const [issue] = audit.issues;
+  assert.equal(issue.scope, "category");
+  assert.equal(issue.path, "fullTextReviewStatus");
+  assert.match(issue.message, /category-level template skeleton for 10 of 10 papers.*shared short skeleton/);
+  assert.deepEqual(issue.affectedPapers.map(({ index }) => index), Array.from({ length: 10 }, (_, index) => index));
+});
+
+test("language audit surfaces normalized abstract-line reuse as a prose-only issue", async () => {
+  const reports = validReportSet();
+  const paper = reports["quant-ph"].papers[0];
+  paper.abstractLines[2] =
+    "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復したが、条件を満たさない雑音成分は除去できない。";
+  paper.conclusion =
+    "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復した。ただし、条件を満たさない雑音成分は除去できない。";
+  const { root, staging } = await fixture(reports);
+  const output = join(root, "quant-ph-language-audit-1.json");
+  const result = runAudit({ root, staging, output });
+  assert.equal(result.status, 0, result.stderr);
+  const audit = JSON.parse(readFileSync(output, "utf8"));
+  assert.equal(audit.count, 1);
+  assert.equal(audit.issues[0].path, "conclusion");
+  assert.match(audit.issues[0].message, /normalized trigram coverage/);
+});
+
 test("language audit rejects score defects instead of emitting prose repairs", async () => {
   const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
   const papers = reports["quant-ph"].papers;

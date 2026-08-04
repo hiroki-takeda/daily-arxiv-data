@@ -11,6 +11,7 @@ import {
   SCORE_KEYS,
   findCategoryProseDiversityIndices,
   findCategoryStructuralDiversityIndices,
+  findCategoryTemplateSkeletonIndices,
   parseJsonFile,
   validateDate,
   validateModelPolicy,
@@ -167,6 +168,7 @@ function categoryEntries(report, path) {
 function recordCategoryIssue({ issues, categoryIssues, slug, original, path, message, paperIndices }) {
   const key = `${slug}:category:${path}`;
   let issue = categoryIssues.get(key);
+  const existingIssue = issue !== undefined;
   if (issue === undefined) {
     issue = {
       scope: "category",
@@ -179,9 +181,11 @@ function recordCategoryIssue({ issues, categoryIssues, slug, original, path, mes
     issues.push(issue);
   }
   const existing = new Set(issue.affectedPapers.map(({ index }) => index));
+  let added = 0;
   for (const paperIndex of paperIndices) {
     if (existing.has(paperIndex)) continue;
     existing.add(paperIndex);
+    added += 1;
     issue.affectedPapers.push({
       index: paperIndex,
       rank: original.papers[paperIndex].rank,
@@ -189,6 +193,9 @@ function recordCategoryIssue({ issues, categoryIssues, slug, original, path, mes
     });
   }
   issue.affectedPapers.sort((left, right) => left.index - right.index);
+  if (existingIssue && added > 0) {
+    issue.message = `${issue.message}; additional ${path} diversity findings bring the combined affected-paper count to ${issue.affectedPapers.length}`;
+  }
 }
 
 try {
@@ -286,6 +293,14 @@ try {
           ? findCategoryProseDiversityIndices(values)
           : error.message.includes("must not reuse a punctuation-anchored sentence skeleton")
             ? findCategoryStructuralDiversityIndices(values)
+            : error.message.includes("must not reuse a category-level template skeleton")
+              ? findCategoryTemplateSkeletonIndices(
+                values,
+                values.length,
+                path === "fullTextReviewStatus"
+                  ? { minimumPaperCount: 8, shortMinimumMatches: 8 }
+                  : {},
+              )
             : undefined;
         if (repeatedEntryIndices === undefined) {
           fail(`Could not resolve category diversity failure: ${error.message}`);

@@ -154,7 +154,7 @@ helperは`https://arxiv.org/e-print/<ID>v1`だけを取得し、最終URLが同�
 
 情報を失わず冗長な出力を避けるため、文字数上限を`titleJa` 100字、`abstractLines`各120字、`curiosity` 100字、`concept` 140字、`conclusion` 180字、各`scoreReasons` 180字、`assessment` 160字、`fullTextReviewStatus` 200字とします。上限へ合わせて文を水増しせず、一つのフィールドへ一つの役割だけを書きます。
 
-`titleJa`、`abstractLines`、`curiosity`、`concept`、`conclusion`、`scoreReasons`、`assessment`、`fullTextReviewStatus`は、固有名・数式・標準略語だけを英字で残し、文の骨格を自然な日本語で書きます。一般語を英単語のまま日本語の助詞や「する」へ接続しません。一般的な専門語も、定着した日本語または片仮名にします。例えば`quantum`は「量子」、`stochastic thermodynamics`は「確率熱力学」、`macroscopic system`は「巨視的系」、`scalar`は「スカラー」、`black hole`は「ブラックホール」、`approach`は「アプローチ」、`accessする`は「アクセスする」、`biasされる`は「偏りが生じる」、`playする`は「行う」とし、意味に合う日本語または定着した片仮名へ直します。`Kerr`、`Horndeski`、`Virasoro`、`LISA`、`QNM`のような固有名・装置名・標準略語は英字のまま使えます。日本語の語境界へASCII空白を挿入せず、「量子 宇宙論」「de Sitter 時空」「128 無秩序 シミュレーション」ではなく「量子宇宙論」「de Sitter時空」「128個の無秩序実現に対するシミュレーション」のように、助数詞や助詞も補って自然な文にします。英語固有名の内部空白（`de Sitter`、`Little Red Dots`など）だけは保持します。
+`titleJa`、`abstractLines`、`curiosity`、`concept`、`conclusion`、`scoreReasons`、`assessment`、`fullTextReviewStatus`は、固有名・数式・標準略語だけを英字で残し、文の骨格を自然な日本語で書きます。一般語を英単語のまま日本語の助詞や「する」へ接続しません。一般的な専門語も、定着した日本語または片仮名にします。例えば`quantum`は「量子」、`stochastic thermodynamics`は「確率熱力学」、`macroscopic system`は「巨視的系」、`scalar`は「スカラー」、`black hole`は「ブラックホール」、`approach`は「アプローチ」、`accessする`は「アクセスする」、`biasされる`は「偏りが生じる」、`playする`は「行う」、通常語としての`fit`は「フィット」、`echo`は「エコー」とし、意味に合う日本語または定着した片仮名へ直します。`Kerr`、`Horndeski`、`Virasoro`、`LISA`、`QNM`のような固有名・装置名・標準略語は英字のまま使えます。日本語の語境界へASCII空白を挿入せず、「量子 宇宙論」「de Sitter 時空」「128 無秩序 シミュレーション」ではなく「量子宇宙論」「de Sitter時空」「128個の無秩序実現に対するシミュレーション」のように、助数詞や助詞も補って自然な文にします。英語固有名の内部空白（`de Sitter`、`Little Red Dots`など）だけは保持します。文章フィールドでは「応答を解析。」「予測値を比較、」のようにサ変名詞で活用を打ち切らず、「応答を解析した。」「予測値を比較し、」のように述語または接続形を完結させます。
 
 `title`にはarXivの原題を一字一句そのまま保存し、`titleJa`には日本語表示題名だけを入れます。画面は`titleJa`、`title`、著者名の順にそれぞれ一度だけ表示するため、二つの題名を一つのフィールドへ重ねたり、英語と日本語を継ぎ合わせたりしません。例えば`Quantum stochastic thermodynamics of macroscopic systems: an algebraic approach`の`titleJa`は「巨視的系の量子確率熱力学：代数的アプローチ」、`Black holes in Kerr spacetime`の`titleJa`は「Kerr時空のブラックホール」とします。英語の掛詞を字面だけで訳さず、物理的意味を優先します。例えば`Spinning the Large-Charge Bootstrap`は「大電荷ブートストラップを回転させる」ではなく「スピンを持つ大電荷ブートストラップ」、`Massless fermionic current of Schwinger pairs`は「無質量フェルミオンSchwinger対の電流」ではなく「Schwinger対生成による無質量フェルミオン電流」とします。摂動論の`one-loop`は「1ループ」、模型の`truncation`は文脈に応じて「模型の打ち切り」とし、「一ループ」「模型切断」のような非標準表記を避けます。
 
@@ -162,7 +162,7 @@ helperは`https://arxiv.org/e-print/<ID>v1`だけを取得し、最終URLが同�
 
 全論文へ同じ文型を当てはめることも禁止します。特に`curiosity`の「〜では届かなかった何を、どの仕組みで実現できるか」、未全文確認`assessment`の「要旨は題名に焦点を絞り、比較可能な問いへ具体化している」「誤差評価、条件依存性、既存法との差の全体は本文確認を要する」、全文確認済み`assessment`の「問題設定から中心手法、定量的または厳密な主結果までを結んだ点が強み」のような雛形を使いません。各論文で、固有の未解決量・機構・成果・検証・制約を名指しします。
 
-`concept`へ`abstractLines[1]`、`conclusion`へ`abstractLines[2]`、各`scoreReasons`や`assessment`へいずれかの`abstractLines`を一文そのままコピーしてはいけません。同じ事実を根拠に使う場合も、そのフィールドの役割に応じて、なぜ方法上の核なのか、なぜその点数帯なのか、何が総合評価を制限するのかを明示します。「従来の到達点と異なる具体的な差分は」「波及先はこの成果が直接扱う対象と隣接する理論・実装課題である」「本文の主要節で成立条件を確認した」のような、論文を入れ替えても成立する枠文は禁止です。
+`concept`へ`abstractLines[1]`を一文そのままコピーしてはいけません。同様に、`curiosity`、`conclusion`、各`scoreReasons`、`assessment`へいずれかの`abstractLines`を一文そのままコピーしたり、「したが」を「した。ただし」に変えただけのような接続語差分で再利用したりしてはいけません。同じ事実を根拠に使う場合も、そのフィールドの役割に応じて、なぜ方法上の核なのか、なぜその点数帯なのか、何が総合評価を制限するのかを明示します。「従来の到達点と異なる具体的な差分は」「波及先はこの成果が直接扱う対象と隣接する理論・実装課題である」「本文の主要節で成立条件を確認した」のような、論文を入れ替えても成立する枠文は禁止です。
 
 採点確定後にだけ`data/distinguished-authors.json`を適用します。著名著者情報はpublisherが決定的に付加するため、レポートへ`eminentAuthors`を書きません。
 
@@ -281,9 +281,9 @@ node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category stagi
 
 どれかの構造監査が`issues=0`の場合だけ、不自然な日本語をカテゴリ全体について一括列挙する文章専用の固定言語監査を、番号順に最大5回実行します。各言語監査は処理開始前に、現在のレポートを正規の構造validatorで再検証し、ホスト指定の`runId`と一致することも確認します。構造、得点、順位、全文確認状態のいずれかが変化していれば、文章監査を行わず異常終了します。言語監査のsourceを読まず、非ゼロの監査出力に列挙された全フィールドを、一つずつではなく1回のbatchで修正します。修正batchは最大4回です。
 
-出力中の通常項目は指定された1論文の`path`だけを修正します。ただし、監査の`message`はそのフィールドで最初に表面化した診断であり、その語だけを直せばフィールド全体が適合するという意味ではありません。列挙された現在値全体を読み直し、未翻訳の一般英語、日本語語境界のASCII空白、不自然な定型句、評価作業の来歴表現、およびその他の指摘をすべて除き、論文固有の事実を保った自然な日本語へ直します。引用された語だけの置換や全レポートへの一律な置換表を使わず、対象外の良好な文章は書き換えません。
+出力中の通常項目は指定された1論文の`path`だけを修正します。ただし、監査の`message`はそのフィールドで最初に表面化した診断であり、その語だけを直せばフィールド全体が適合するという意味ではありません。列挙された現在値全体を読み直し、未翻訳の一般英語、日本語語境界のASCII空白、サ変活用の欠落、abstract行の接続語だけを変えた再利用、不自然な定型句、評価作業の来歴表現、およびその他の指摘をすべて除き、論文固有の事実を保った自然な日本語へ直します。引用された語だけの置換や全レポートへの一律な置換表を使わず、対象外の良好な文章は書き換えません。
 
-`scope: "category"`で`path`が文章フィールドの場合、`affectedPapers`に列挙された論文が同一文や句読点を軸にした同一の文骨格を過剰に再利用していることを示します。論文固有の事実を保ったまま、列挙された対象を同じbatchで異なる自然な日本語構文へ書き直します。言語監査は文章フィールドだけを対象とし、`totalScore`、`scores`、`rank`、全文確認tuple、件数、URLは変更しません。
+`scope: "category"`で`path`が文章フィールドの場合、`affectedPapers`に列挙された論文が同一文、句読点を軸にした文骨格、または内容語だけを差し替えた短い共通骨格を過剰に再利用していることを示します。論文固有の事実を保ったまま、列挙された対象を同じbatchで異なる自然な日本語構文へ書き直します。言語監査は文章フィールドだけを対象とし、`totalScore`、`scores`、`rank`、全文確認tuple、件数、URLは変更しません。
 
 ```bash
 node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-1.json" <category> <evaluation-run-id>

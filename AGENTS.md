@@ -38,7 +38,7 @@ Do not restore or create alternate ChatGPT Sites, Next.js, Vinext, Vite, Cloudfl
 
 - Never add credentials, API keys, tokens, private keys, `.env` files, PDFs, symlinks, or nested `.git` directories.
 - Never use `git add -A`, force push, force checkout, or `git reset --hard`.
-- Dated reports and dated public editions are immutable.
+- Dated reports and dated public editions are immutable during every automated run. A user-approved historical prose correction may use only `scripts/apply-published-prose-correction.mjs`; it must leave `current.json`, `index.json`, scores, identities, source/evaluation metadata, and `paperType` unchanged.
 - Author identity and reputation never affect scores. Registry badges are deterministic and non-scoring.
 - Production reports use schema 1.4, Daily arXiv rubric 3.0, and primary-category New submission `v1` records only.
 - Screen every abstract, review no more than 12 full texts per category, and require full-text evidence for every final top-10 paper.

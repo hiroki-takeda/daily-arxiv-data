@@ -1318,11 +1318,15 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /画面は`titleJa`、`title`、著者名の順/);
   assert.match(specification, /Kerr black hole[^。\n]{0,40}Kerrブラックホール/);
   assert.match(specification, /一般語を英単語のまま日本語の助詞や「する」へ接続しません/);
+  assert.match(specification, /`fit`は「フィット」、`echo`は「エコー」/);
+  assert.match(specification, /サ変名詞で活用を打ち切らず/);
   assert.match(specification, /`fullTextReviewStatus`は、固有名・数式・標準略語だけを英字で残し/);
   assert.match(specification, /英字で残すのは固有名・数式・標準略語に限り/);
   assert.match(specification, /別論文へそのまま移せる定型文を禁止/);
   assert.match(specification, /abstractLines\[0\].*言い換えにはしません/);
   assert.match(specification, /`concept`へ`abstractLines\[1\]`.*一文そのままコピーしてはいけません/);
+  assert.match(specification, /接続語差分で再利用したりしてはいけません/);
+  assert.match(specification, /内容語だけを差し替えた短い共通骨格/);
   assert.match(specification, /全体の35%超へ同じ総合点/);
   assert.match(specification, /`totalScore`、`scores`、`rank`/);
   assert.match(specification, /assessment.*点数や`scoreReasons`の反復/);

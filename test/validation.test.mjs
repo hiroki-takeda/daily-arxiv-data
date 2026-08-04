@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   CATEGORIES,
   comparePapers,
+  findCategoryTemplateSkeletonIndices,
   findTotalScoreDistributionIssues,
   validateDate,
   validateJstTimestamp,
@@ -15,6 +16,33 @@ function rejectsMutation(mutator, pattern) {
   const reports = validReportSet();
   mutator(reports);
   assert.throws(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }), pattern);
+}
+
+function makeCategoryProseDiverse(reports) {
+  for (const report of Object.values(reports)) {
+    report.papers.forEach((paper, index) => {
+      const number = index + 1;
+      paper.abstractLines = [
+        `固有の背景を示す論文第${number}要約一`,
+        `固有の方法を示す論文第${number}要約二`,
+        `固有の結果を示す論文第${number}要約三`,
+      ];
+      paper.curiosity = `固有の未解決課題を問う論文第${number}記述`;
+      paper.concept = `固有の方法上の要点を示す論文第${number}項目`;
+      paper.conclusion = `固有の主要結論と成立限界を示す論文第${number}記述`;
+      paper.assessment = `固有の長所と主要な限界を比較する論文第${number}評価`;
+      paper.scoreReasons = {
+        broadImpact: `複数領域への波及経路を示す論文第${number}根拠`,
+        categoryImpact: `主分野における前進を示す論文第${number}根拠`,
+        originality: `既存手法との差分を示す論文第${number}根拠`,
+        technicalStrength: `中心手法を支える検証を示す論文第${number}根拠`,
+      };
+      if (paper.fullTextEvaluated) {
+        paper.fullTextReviewStatus = `固有の導出検証限界を確認した論文第${number}記録`;
+      }
+    });
+  }
+  return reports;
 }
 
 test("a complete production report set passes", () => {
@@ -98,7 +126,7 @@ test("schema 1.4 requires exact Japanese score reasons and the stable rubric mar
   rejectsMutation((reports) => { reports["hep-th"].papers[0].scoreReasons.originality = "English only"; }, /natural Japanese/);
   rejectsMutation((reports) => {
     reports["hep-th"].papers[0].scoreReasons.broadImpact = "主題の分野横断的な射程を評価。";
-  }, /generic rationale phrase/);
+  }, /generic rationale phrase|missing sahen inflection/);
   for (const phrase of [
     "従来の到達点と異なる具体的な差分は、固有の方法を導入した。",
     "固有の成果を得た。波及先はこの成果が直接扱う対象と隣接する理論・実装課題である。",
@@ -240,6 +268,26 @@ test("schema 1.4 translates general English terms while preserving proper names 
   assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
 });
 
+test("schema 1.4 translates fit and echo when they are ordinary prose terms", () => {
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].scoreReasons.technicalStrength =
+      "三準位緩和fitと光子数校正により、検査中の緩和率と測定誤差を定量化した。";
+  }, /general English prose term "fit"/);
+  rejectsMutation((reports) => {
+    reports["quant-ph"].papers[0].fullTextReviewStatus =
+      "主要導出、Hahn echo、無作為化基準試験、検査誘起緩和を確認した。";
+  }, /general English prose term "echo"/);
+
+  const accepted = validReportSet();
+  accepted["quant-ph"].papers[0].scoreReasons.technicalStrength =
+    "三準位緩和のフィットと光子数校正により、検査中の緩和率と測定誤差を定量化した。";
+  accepted["quant-ph"].papers[0].fullTextReviewStatus =
+    "主要導出、Hahnエコー、無作為化基準試験、検査誘起緩和を確認した。";
+  accepted["quant-ph"].papers[1].fullTextReviewStatus =
+    "FIT法とECHO系列の較正手順を確認し、独立実装との一致範囲を精査した。";
+  assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
+});
+
 test("schema 1.4 rejects ASCII spaces at Japanese word boundaries", () => {
   rejectsMutation((reports) => {
     reports["gr-qc"].papers[0].concept = "全 相対論的 離心 波形を用いて環境効果を識別する。";
@@ -269,6 +317,34 @@ test("schema 1.4 rejects known literal or nonstandard Japanese phrases", () => {
       reports["hep-th"].papers[0].assessment = `中心成果は${phrase}を含むが、適用範囲には制約が残る。`;
     }, /known unnatural Japanese phrase/);
   }
+});
+
+test("schema 1.4 rejects only high-confidence missing sahen inflections", () => {
+  for (const phrase of [
+    "有限系の応答を解析。",
+    "理論予測と観測値を比較、適用範囲を評価した。",
+    "主定理を証明；数値例で境界条件を検証した。",
+  ]) {
+    rejectsMutation((reports) => {
+      reports["hep-th"].papers[0].concept = phrase;
+    }, /missing sahen inflection/);
+  }
+
+  for (const phrase of [
+    "有限系の応答を解析する。",
+    "有限系の応答を解析し、既知極限と比較した。",
+    "有限系の応答が解析され、境界条件も確認された。",
+    "有限系の応答を解析している。",
+  ]) {
+    const accepted = validReportSet();
+    accepted["hep-th"].papers[0].concept = phrase;
+    assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
+  }
+
+  const nominalLabels = validReportSet();
+  nominalLabels["hep-th"].papers[0].paperType = "理論・数値解析";
+  nominalLabels["hep-th"].papers[0].titleJa = "Kerr時空における数値解析";
+  assert.doesNotThrow(() => validateProductionReportSet(nominalLabels, { date: DATE, policy: validPolicy() }));
 });
 
 test("schema 1.4 requires a Japanese display title rather than a mixed or repeated original", () => {
@@ -365,6 +441,162 @@ test("schema 1.4 rejects repeated score-reason scaffolding around distinct claim
     () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
     /scoreReasons\.broadImpact.*sentence skeleton/,
   );
+});
+
+test("schema 1.4 rejects a category template skeleton hidden by lexical substitutions", () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const subjects = ["量子相関", "ブラックホール", "重力波", "位相転移", "量子補正", "宇宙膨張"];
+  const targets = ["冷却原子", "Kerr時空", "LISA観測", "格子模型", "表面符号", "初期宇宙"];
+  const limits = ["有限温度", "摂動展開", "低周波", "有限体積", "独立雑音", "等方性"];
+  for (let index = 0; index < 6; index += 1) {
+    reports["quant-ph"].papers[index].assessment =
+      `${subjects[index]}は${targets[index]}へ応用できるが、${limits[index]}の仮定に依存する。`;
+  }
+  assert.throws(
+    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+    /papers\.assessment.*category-level template skeleton for 6 of 20 papers/,
+  );
+});
+
+test("schema 1.4 rejects a short template skeleton shared by most of a category", () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const subjects = [
+    "量子相関", "重力波", "宇宙膨張", "位相転移", "量子補正", "熱輸送", "時空曲率",
+    "境界応答", "誤差閾値", "粒子生成", "場強度", "光子統計", "真空崩壊",
+  ];
+  const limits = [
+    "有限温度", "低周波", "初期条件", "有限体積", "独立雑音", "弱結合", "球対称性",
+    "摂動領域", "局所模型", "断熱近似", "低密度", "短時間", "線形応答",
+  ];
+  for (let index = 0; index < subjects.length; index += 1) {
+    reports["quant-ph"].papers[index].conclusion =
+      `${subjects[index]}を示した。ただし、${limits[index]}に限られる。`;
+  }
+  assert.throws(
+    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+    /papers\.conclusion.*category-level template skeleton for 13 of 20 papers.*shared short skeleton/,
+  );
+});
+
+test("schema 1.4 checks template reuse within the full-text-reviewed subset", () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const reviewed = reports["quant-ph"].papers.filter((paper) => paper.fullTextEvaluated);
+  reviewed.forEach((paper, index) => {
+    paper.fullTextReviewStatus =
+      `主要節${index + 1}の導出を確認した。ただし、独立検証${index + 1}は実施していない。`;
+  });
+  assert.equal(reviewed.length, 10);
+  assert.throws(
+    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+    /papers\.fullTextReviewStatus.*category-level template skeleton for 10 of 10 papers.*shared short skeleton/,
+  );
+});
+
+test("schema 1.4 rejects abstract-line reuse disguised by connective substitutions", () => {
+  const abstractLines = [
+    "信号と同じHilbert空間で作用する雑音は検出不能誤りとして感度を損なう。",
+    "次元を受動的に拡張し信号を傷つけず消失化できる必要十分条件を導いた。",
+    "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復したが、条件を満たさない雑音成分は除去できない。",
+  ];
+  for (const [path, value] of [
+    ["curiosity", "信号と同じHilbert空間で作用する雑音は検出不能誤りとして感度を損なうとき、支配条件は何か。"],
+    ["concept", "次元を受動的に拡張し信号を傷つけず消失化できる必要十分条件を導いたことで、測定設計を整理した。"],
+    ["conclusion", "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復した。ただし、条件を満たさない雑音成分は除去できない。"],
+    ["assessment", "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復したことが主要な成果である一方、条件を満たさない雑音成分は除去できない。"],
+    ["scoreReasons.broadImpact", "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復したため、量子計測への波及が見込まれる。条件を満たさない雑音成分は除去できない。"],
+  ]) {
+    rejectsMutation((reports) => {
+      const paper = reports["quant-ph"].papers[0];
+      paper.abstractLines = abstractLines;
+      if (path.startsWith("scoreReasons.")) paper.scoreReasons.broadImpact = value;
+      else paper[path] = value;
+    }, /normalized trigram coverage/);
+  }
+});
+
+test("the latest prose gates apply to daily reports starting on 2026-08-03", () => {
+  function reportSet(date) {
+    const reports = validReportSet({ date });
+    const paper = reports["quant-ph"].papers[0];
+    paper.abstractLines[2] =
+      "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復したが、条件を満たさない雑音成分は除去できない。";
+    paper.conclusion =
+      "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復した。ただし、条件を満たさない雑音成分は除去できない。";
+    return reports;
+  }
+
+  assert.doesNotThrow(() => validateProductionReportSet(reportSet("2026-08-02"), {
+    date: "2026-08-02",
+    policy: validPolicy(),
+  }));
+  assert.throws(() => validateProductionReportSet(reportSet("2026-08-03"), {
+    date: "2026-08-03",
+    policy: validPolicy(),
+  }), /normalized trigram coverage/);
+});
+
+test("schema 1.4 abstract reuse check permits field-specific reasoning over shared terminology", () => {
+  const reports = validReportSet();
+  const paper = reports["quant-ph"].papers[0];
+  paper.abstractLines = [
+    "信号と同じHilbert空間で作用する雑音は検出不能誤りとして感度を損なう。",
+    "次元を受動的に拡張し信号を傷つけず消失化できる必要十分条件を導いた。",
+    "単一光子位相測定で標準量子限界を回復したが、変換不能成分は除去できない。",
+  ];
+  paper.curiosity = "量子センシングで信号と雑音を同時に変形せず、誤り位置だけを識別できる条件は何か。";
+  paper.concept = "補助Hilbert空間への等長写像を用い、信号生成子を保存する雑音射影を構成する。";
+  paper.conclusion = "消失化できる雑音部分では感度が回復する一方、直交条件を破る成分には別の訂正機構が要る。";
+  paper.assessment = "必要十分条件と光学実証を結んだ点は強いが、改善幅は変換可能な雑音重みに支配される。";
+  paper.scoreReasons.broadImpact = "雑音を位置既知誤りへ変える設計則は量子計測と誤り訂正を接続するが、対象は射影条件を満たす成分に限られる。";
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }));
+});
+
+test("schema 1.4 abstract reuse check counts repeated trigrams instead of treating them as a set", () => {
+  const reports = validReportSet();
+  const paper = reports["quant-ph"].papers[0];
+  paper.abstractLines[0] = "量子相関量子相関量子相関量子相関量子相関量子相関量子相関量子相関を解析した。";
+  paper.curiosity = "量子相関の実験で境界条件を変えたとき、識別可能性はどこまで保たれるか。";
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }));
+});
+
+test("category template check does not equate distinct prose merely because it contains ただし", () => {
+  const values = [
+    "ただし、有限温度では補正項が残る。",
+    "結論は頑健である。ただし境界条件の変更は未検討である。",
+    "観測量を再現したが、ただし低周波域には較正誤差がある。",
+    "摂動論の範囲では成立する。ただし強結合極限へは外挿できない。",
+    "主要な縮退を解いた。ただし、別の対称性を課す場合は追加解析を要する。",
+    "数値収束を確認している。ただし格子間隔への依存性は残っている。",
+    "予測値は一致した。ただし独立なデータ集合による検証は今後の課題である。",
+    "誤差閾値を改善した。ただし、相関雑音を含む模型には直接適用できない。",
+    "解析解が得られるのは球対称の場合である。ただし回転を弱く加えた展開も可能である。",
+    "中心結果は初期条件に依存しない。ただし終状態の分類には追加仮定を用いる。",
+    "測定回数を削減できる。ただし装置損失が大きい領域では優位性が消える。",
+    "位相構造を特定した。ただし臨界点近傍の有限サイズ効果は分離していない。",
+    "背景から信号を分離した。ただし、系統誤差の事前分布には感度がある。",
+    "散乱振幅の極構造から共鳴幅を決定した。",
+    "開放境界で保存則が破れる条件を演算子代数から導いた。",
+    "二つの観測チャネルを同時適合し、縮退方向を制限した。",
+    "非摂動解と数値発展を比較すると遷移時刻が一致した。",
+    "補助モードを消去することで有効作用の局所項を分離した。",
+    "長時間相関の減衰指数は初期状態の選択で変化した。",
+    "検出効率を含む尤度を構成し、信頼区間の被覆率を評価した。",
+  ];
+  assert.equal(findCategoryTemplateSkeletonIndices(values, values.length), undefined);
+});
+
+test("schema 1.4 category template check permits common terminology with distinct grammar", () => {
+  const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
+  const prose = [
+    "量子相関を冷却原子で測定し、有限温度における減衰率を得た。",
+    "Kerr時空の摂動方程式から、ブラックホールの応答を導いた。",
+    "重力波の低周波成分はLISA観測へ接続するが、雑音模型に依存する。",
+    "有限体積の格子模型では、位相転移の臨界指数が変化する。",
+    "表面符号に独立雑音を加えると、量子補正の閾値が低下した。",
+    "初期宇宙の等方性を仮定して、宇宙膨張の観測量を予測した。",
+  ];
+  prose.forEach((value, index) => { reports["quant-ph"].papers[index].assessment = value; });
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }));
 });
 
 test("schema 1.4 structural diversity permits shared terminology and exactly 25 percent reuse", () => {
