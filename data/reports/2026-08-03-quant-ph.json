@@ -1,0 +1,2053 @@
+{
+  "audit": {
+    "announcementDate": "2026-08-03",
+    "authorPolicy": "著者の知名度、所属、受賞、引用数、キャリア段階は採点に使用しない",
+    "evaluationPolicy": "著者の属性を用いず、題名、全著者、要旨、主カテゴリ、コメントと、上位候補では公式v1全文だけを根拠に評価",
+    "fullTextEvaluatedCount": 12,
+    "fullTextPolicy": "全要旨比較後の決定的上位12件だけを公式v1全文候補に固定し、最終上位10件は全件全文確認する",
+    "generatedAtJst": "2026-08-04T11:13:03+09:00",
+    "listingUrl": "https://arxiv.org/list/quant-ph/pastweek",
+    "rankingTieBreak": "totalScore desc, broadImpact desc, originality desc, technicalStrength desc, categoryImpact desc, arXiv ID asc",
+    "scoreRubric": "Daily arXiv rubric 3.0：broadImpact、categoryImpact、originality、technicalStrengthを各0〜25の整数で評価し、高得点には論文固有の全文証拠と検証条件を要求",
+    "selectionRule": "公式スナップショットのquant-ph primary New v1全件を評価し、総合点、broadImpact、originality、technicalStrength、categoryImpact、arXiv IDの順で決定的に順位付け",
+    "sourceCounts": {
+      "crosslistsExcluded": 15,
+      "newPrimary": 45,
+      "titleAuthorAbstractEvaluated": 45
+    }
+  },
+  "crosslistsExcluded": 15,
+  "evaluatedCount": 45,
+  "evaluationRun": {
+    "modelDisplayName": "GPT-5.6-Sol",
+    "modelId": "gpt-5.6-sol",
+    "modelSelectionVerified": true,
+    "reasoningEffort": "high",
+    "runId": "run-20260804T020707Z-6fe1877d0a9d"
+  },
+  "fullTextEvaluatedCount": 12,
+  "label": "量子物理学",
+  "papers": [
+    {
+      "abstractLines": [
+        "qLDPC符号で高符号化率と高速な耐故障処理を同時に得ることが課題である。",
+        "非可換群に基づくミトン符号、論理手術、魔法状態注入、高速復号器を共同設計した。",
+        "300物理量子ビットの符号で1巡当たり約10^-11、540物理量子ビットの手術で約10^-10の論理誤り率を得た。"
+      ],
+      "arxivId": "2607.28795",
+      "arxivVersion": "v1",
+      "assessment": "符号構成から論理演算、回路雑音復号、二方式の装置配置までを定量的に接続した。原子損失と待機雑音を除くため、実機性能の推定には隔たりがある。",
+      "authors": [
+        "Aditya Bhardwaj",
+        "Muzhou Ma",
+        "Nadine Meister",
+        "Robbie King",
+        "Dolev Bluvstein",
+        "John Preskill",
+        "Madelyn Cain",
+        "Qian Xu",
+        "Hsin-Yuan Huang"
+      ],
+      "concept": "非可換群の作用を論理演算の対称性として利用し、符号探索から手術・復号・装置配置までを一つの設計問題にまとめる。",
+      "conclusion": "ミトン符号は符号化率20%を保ち、並列手術と魔法状態注入を備えた高処理量qLDPCプロセッサーを構成できる。性能値はPauli型回路雑音模型に限られる。",
+      "curiosity": "qLDPC符号は高い符号化率を保ったまま、実時間復号と汎用論理演算を実装できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、非可換な持上げ積構成、論理ガジェット、望遠鏡型復号、回路雑音実験、装置配置、付録の実時間解析を確認した。原子損失を含む実機動作は再現していない。",
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 1,
+      "scoreReasons": {
+        "broadImpact": "符号、復号、論理演算を統合し、中性原子では群作用に沿う移動、超伝導では3層配線という別個の実装経路へ接続するが、非局所結合を要する。",
+        "categoryImpact": "低率の表面符号と演算機能の乏しいqLDPC記憶の間に対し、符号化率20%、並列手術、実時間復号を同時に示す大きな前進である。",
+        "originality": "可換な1×2持上げ積符号の距離6上限を非可換群で越え、その群作用から全論理量子ビットへ再利用できる手術ガジェットを導く。",
+        "technicalStrength": "複数距離の記憶曲線、150億回の手術標本、既存復号器比較、信頼区間が主張を支える。一方、待機雑音と原子損失を除き、実時間値の一部はFPGA外挿である。"
+      },
+      "scores": {
+        "broadImpact": 21,
+        "categoryImpact": 23,
+        "originality": 20,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28795v1",
+        "https://arxiv.org/pdf/2607.28795v1"
+      ],
+      "submissionType": "new",
+      "title": "High-rate qLDPC processors",
+      "titleJa": "高符号化率qLDPCプロセッサー",
+      "totalScore": 84,
+      "url": "https://arxiv.org/abs/2607.28795"
+    },
+    {
+      "abstractLines": [
+        "未知のd次元量子状態についてスペクトル、von Neumannエントロピー、階数を推定・検定する標本数を問う。",
+        "Haar無作為射影の挟み積から難例を作り、対称群代数のJucys–Murphy元でモーメント整合を解析した。",
+        "三課題に対し任意のγ>0でΩ(d^(2-γ))の標本複雑性下界を得た。"
+      ],
+      "arxivId": "2607.29680",
+      "arxivVersion": "v1",
+      "assessment": "三つの代表的なユニタリ不変量へ同じ難例構成からほぼ二次の下界を与え、量子統計の予想を覆す。精度εへの最適依存性は未解決である。",
+      "authors": [
+        "Marco Fanizza",
+        "Ryan O'Donnell",
+        "Chirag Wadhwa"
+      ],
+      "concept": "典型的スペクトルは離れているのに有限標本では識別できない二つの状態混合を、高次対称多項式のモーメント消去で構成する。",
+      "conclusion": "一般のd次元状態では、定数精度のスペクトル・von Neumannエントロピー推定と階数検定にd^(2-o(1))コピーが必要である。ε依存性と非エンタングル測定の最適限界は残る。",
+      "curiosity": "固有ベクトルを捨てて固有値だけを求めても、状態全体の復元より本質的に容易になるのか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、無作為射影積の難例、Jucys–Murphyモーメント整合、三角識別度による識別不能性、スペクトル・エントロピー・階数分離の各証明を確認した。ε依存性は未解決である。",
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 2,
+      "scoreReasons": {
+        "broadImpact": "スペクトルとエントロピーの推定限界を、状態学習、量子源圧縮、エンタングルメント診断へ結び付ける。結果は一般状態のコピー模型に限られる。",
+        "categoryImpact": "従来Ω(d)以下だった三課題の下界をΩ(d^(2-γ))へ引き上げ、スペクトルだけでもトモグラフィーとほぼ同数のコピーを要することを示す。",
+        "originality": "点対混合では超線形下界を得られない障壁を、無作為射影の挟み積による混合対混合難例とJucys–Murphyモーメント消去で越える。",
+        "technicalStrength": "識別不能性を三角識別度と高次モーメントで証明し、Haar集中から三種類の量の分離を別々に導く。定数精度に限り、最適なε依存性は証明しない。"
+      },
+      "scores": {
+        "broadImpact": 19,
+        "categoryImpact": 22,
+        "originality": 21,
+        "technicalStrength": 22
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29680v1",
+        "https://arxiv.org/pdf/2607.29680v1"
+      ],
+      "submissionType": "new",
+      "title": "Spectrum Estimation is Almost as Hard as Tomography",
+      "titleJa": "スペクトル推定はトモグラフィーとほぼ同程度に困難である",
+      "totalScore": 84,
+      "url": "https://arxiv.org/abs/2607.29680"
+    },
+    {
+      "abstractLines": [
+        "敵対者が適応的に提示する多数の観測量を、未知量子状態の少数コピーから逐次推定する問題を扱う。",
+        "測定後損傷を量子Efron–Stein分解で定量化し、異なる依存性を持つ二つのアルゴリズムを構成した。",
+        "観測量数、次元、精度について古典的評価率に一致し、次元非依存の一方は既知の最適率に達する。"
+      ],
+      "arxivId": "2607.29686",
+      "arxivVersion": "v1",
+      "assessment": "二つの相補的なプロトコルで量子と古典の標本率の隔たりを閉じ、損傷解析自体も再利用可能である。集合測定とGibbs状態更新の計算資源は保証しない。",
+      "authors": [
+        "Sitan Chen",
+        "Ryan O'Donnell",
+        "Angelos Pelecanos",
+        "John Wright"
+      ],
+      "concept": "測定系列をEfron–Stein型の直交成分へ分解し、各応答が後続推定へ与える損傷を加算可能な量として制御する。",
+      "conclusion": "オンライン影トモグラフィーはO(log(m)√log(d)/ε^3)またはO(√m/ε^2)コピーで実行でき、後者は次元非依存で最適である。保証は標本複雑性に限る。",
+      "curiosity": "適応的な観測要求が量子状態を損傷しても、古典データと同じ標本効率を保てるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入の既知上下界、励起分解、損傷の課金論法、行列乗法重み型と次元非依存型の両プロトコル、主要補題の証明を確認した。計算効率は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 3,
+      "scoreReasons": {
+        "broadImpact": "量子状態推定と古典的適応データ解析に同じ標本率を与え、測定損傷を追う励起エネルギー法をオンライン学習や多コピー計測へ移せる。",
+        "categoryImpact": "従来はm、d、εの全依存性が古典率より劣ったオンライン影トモグラフィーで、二つの上界の最小値を古典率へ一致させる。",
+        "originality": "穏和測定補題による最悪時評価に代え、量子Efron–Stein励起分解で履歴ごとの測定損傷を加算する枠組みを二種類の測定へ実装した。",
+        "technicalStrength": "行列乗法重みと軟二値測定、コンパクト雑音POVMという異なる構成を完全な補題列で証明し、次元非依存率を既知下界と一致させる。ただし計算時間は解析しない。"
+      },
+      "scores": {
+        "broadImpact": 19,
+        "categoryImpact": 22,
+        "originality": 20,
+        "technicalStrength": 22
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29686v1",
+        "https://arxiv.org/pdf/2607.29686v1"
+      ],
+      "submissionType": "new",
+      "title": "Online Shadow Tomography Matching the Classical Bounds",
+      "titleJa": "古典的限界に一致するオンライン影トモグラフィー",
+      "totalScore": 83,
+      "url": "https://arxiv.org/abs/2607.29686"
+    },
+    {
+      "abstractLines": [
+        "局所ランダム量子回路がユニタリー2デザインへ収束する速さを、二次モーメント演算子のスペクトルギャップで比較する。",
+        "局所Haar圧縮、KAKパラメータ境界、M行列への変換、不変な四点不等式錐を組み合わせた比較証明を構成した。",
+        "3頂点以上の任意の連結グラフで、iSWAP回路が全てのエルミートな二体ユニタリー回路集団以上のギャップを持つと証明した。"
+      ],
+      "arxivId": "2607.29551",
+      "arxivVersion": "v1",
+      "assessment": "既存予想を任意の連結グラフと辺依存ゲート分布まで解決し、局所代数から大域固有値比較へ至る証明も完備している。最適ギャップ値は未決定で、高次モーメントや多体ゲートには未拡張である。",
+      "authors": [
+        "Yanying Liang",
+        "Haoran Zhu"
+      ],
+      "concept": "iSWAPの変換後生成子が保つ全頂点対の四点不等式錐にPerron–Frobenius固有ベクトルを置き、辺ごとの摂動を成分別に比較する。",
+      "conclusion": "3頂点以上の全連結グラフで、均一なiSWAP回路は辺依存の混合を含む全エルミート二体ユニタリー集団の二次モーメントギャップ以上を達成する。最適値のグラフ依存性は別問題として残る。",
+      "curiosity": "回路の結合グラフによらず、2次モーメントを最も速く混合する単一の二体ゲートは存在するか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "主定理、局所Haar圧縮、二射影分解とKAK境界、基底状態変換後のM行列、四点不等式錐の不変性、Collatz–Wielandt比較、主定理への持上げ、局所計算付録を確認した。",
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 4,
+      "scoreReasons": {
+        "broadImpact": "ユニタリー2デザイン生成、無作為化ベンチマーク、スクランブリングでのゲート選択に理論的基準を与える。ただし高次モーメントと物理ゲート費用は扱わない。",
+        "categoryImpact": "任意の3頂点以上の連結グラフでiSWAPの二次モーメントギャップ最適性を証明し、辺ごとに異なるゲート分布と負固有値を持つ競合も包含する。",
+        "originality": "Boolean立方体上の非対称四点不等式錐を導入し、その半群不変性をPerron–Frobenius固有ベクトルの辺別比較証明へ転換する手法が新しい。",
+        "technicalStrength": "二量子ビットKAK計算、Loewner順序、既約M行列、錐の局所恒等式、Collatz–Wielandt評価、min–max持上げを連結し、退化境界も含めて予想を厳密に証明する。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 21,
+        "originality": 20,
+        "technicalStrength": 22
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29551v1",
+        "https://arxiv.org/pdf/2607.29551v1"
+      ],
+      "submissionType": "new",
+      "title": "iSWAP maximises the second-moment spectral gap in random quantum circuits",
+      "titleJa": "iSWAPはランダム量子回路の2次モーメントスペクトルギャップを最大化する",
+      "totalScore": 80,
+      "url": "https://arxiv.org/abs/2607.29551"
+    },
+    {
+      "abstractLines": [
+        "未知アイソメトリーチャネルの複素共役を、元のチャネルへの有限回アクセスだけで再現する限界を調べる。",
+        "表現論を用いて最適忠実度を導き、Schur変換と双対Clebsch–Gordan変換による回路を構成した。",
+        "並列方式が一般超チャネルに対しても最適で、問い合わせ回数の漸近則と多重コピー拡張を得た。"
+      ],
+      "arxivId": "2607.29054",
+      "arxivVersion": "v1",
+      "assessment": "一般超チャネルに対する厳密上界と実装可能な並列方式を一致させ、単一結果を低階数チャネルまで運んでいる。多重コピーでは漸近最適値にとどまる。",
+      "authors": [
+        "Satoshi Yoshida",
+        "Mio Murao"
+      ],
+      "concept": "群共変性で一般超チャネルを表現論的な小さい最適化へ縮約し、並列推定・再構成方式と最適値を一致させる。",
+      "conclusion": "未知アイソメトリーの複素共役は並列問い合わせで一般超チャネルの最適忠実度に達し、D>dでは誤差εにΘ(d(D-d)/ε)回を要する。多重コピーの有限nでの厳密最適値は残る。",
+      "curiosity": "適応性や不定因果順序は、未知アイソメトリーの反線形な複素共役変換に優位性を与えるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "Stiefel多様体上のSchur–Weyl分解、一般超チャネルSDPの主双対解、閉形式最大化、最適回路、低階数チャネル応用、多重コピー漸近証明を確認した。有限n多重コピー最適値は未解決である。",
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 5,
+      "scoreReasons": {
+        "broadImpact": "未知チャネルの反線形変換限界を、量子オラクル模型と低Kraus階数チャネルへ供給する。用途はチャネルアクセス模型を使う課題に限られる。",
+        "categoryImpact": "未解決だった未知アイソメトリー複素共役について、忠実度の閉形式とΘ(d[(D-d)/ε+1])の問い合わせ複雑性を決定する。",
+        "originality": "群を成さないStiefel多様体上の問題をSchurブロックへ分解し、適応・不定因果順序まで含む上界へ並列回路を一致させた。",
+        "technicalStrength": "SDPの実行可能な主問題・双対問題解、既知の状態転置とユニタリ極限、ダイヤモンド距離上下界、回路構成を揃える。有限n多重コピーでは漸近式だけである。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 21,
+        "originality": 19,
+        "technicalStrength": 21
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29054v1",
+        "https://arxiv.org/pdf/2607.29054v1"
+      ],
+      "submissionType": "new",
+      "title": "Optimal complex conjugation of unknown isometry channels",
+      "titleJa": "未知アイソメトリーチャネルの最適複素共役",
+      "totalScore": 78,
+      "url": "https://arxiv.org/abs/2607.29054"
+    },
+    {
+      "abstractLines": [
+        "自由フェルミオンを超える資源である非ガウス性には、厳密かつ測定可能な定量法が必要である。",
+        "相関行列のFrobeniusノルムからフェルミオンエントロピーを定義し、単調性と標本複雑性を解析した。",
+        "強単調性、漸近連続性、蒸留率上界を示し、ガウス性検定とMatchgate設計にも適用した。"
+      ],
+      "arxivId": "2607.29670",
+      "arxivVersion": "v1",
+      "assessment": "既知の相関行列量を資源理論、測定、性質検定、回路設計へ展開する統一性がある。強単調性には独立同時成果があり、混合状態では凸屋根構成に依存する。",
+      "authors": [
+        "Lorenzo Leone",
+        "Lennart Bittel"
+      ],
+      "concept": "二点相関だけで計算できるエントロピーを用い、ガウス操作下の減少性と二コピー測定による推定可能性を同じ量で保証する。",
+      "conclusion": "フェルミオンエントロピーは強単調性と漸近連続性を持ち、非ガウス性蒸留率を上から制限する。純粋ガウス性の耐性検定はほぼ線形標本へ改善され、設計形成には線形個のドーピングゲートが必要である。",
+      "curiosity": "フェルミオン非ガウス性を、資源理論の公理と実験的な測りやすさを両立して定量できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "強単調性、Bell標本化のモーメント境界、Fannes型連続性、耐性検定、Matchgate設計下界と各付録証明を確認した。混合状態の内在的単調量と定数標本検定は未解決である。",
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 6,
+      "scoreReasons": {
+        "broadImpact": "二コピー測定可能な量を、フェルミオン資源蒸留、状態検定、Matchgate回路の擬似乱雑性へ結ぶ。ただし純粋状態とMajorana局所ゲートが中心である。",
+        "categoryImpact": "非ガウス性の強単調量を確立し、耐性ガウス性検定をO(n log n)、設計形成のドーピング下界をΩ(n)へ進める。",
+        "originality": "既知の相関行列由来エントロピーについて、状態サイズ非依存の純度推定と設計識別子を同じ高次モーメント境界から導く点が新しい。強単調性は独立同時発見である。",
+        "technicalStrength": "ガウスプロトコル分解、全状態に一様なモーメント母関数、連続性、設計のトレース距離下界を証明する。検定にはε_A≤ε_B²/(64n)の約束があり、一般混合状態量は凸屋根に依存する。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 20,
+        "originality": 18,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29670v1",
+        "https://arxiv.org/pdf/2607.29670v1"
+      ],
+      "submissionType": "new",
+      "title": "Fermionic entropy: an efficiently measurable strong monotone for non-Gaussianity",
+      "titleJa": "フェルミオンエントロピー：効率的に測定できる非ガウス性の強単調量",
+      "totalScore": 75,
+      "url": "https://arxiv.org/abs/2607.29670"
+    },
+    {
+      "abstractLines": [
+        "消失誤りはPauli誤りより訂正しやすいが、回路途中の消失検査はハードウェア費用を増やす。",
+        "ウォーキング表面符号を時間反転したムーンウォーキング回路と、ゲート省略を扱う分枝限定復号器を構成した。",
+        "終端三状態読出しだけでも、指定条件下で消失型の論理誤り率スケーリングを得られると示した。"
+      ],
+      "arxivId": "2607.29443",
+      "arxivVersion": "v1",
+      "assessment": "漏洩作用、検査頻度、回路方向、復号を横断して消失優位の成立条件を切り分けた。利点は理想三状態読出しと真のゲート省略作用に依存し、復号器も低速である。",
+      "authors": [
+        "Margaret Pavlovich",
+        "Ivan Rojkov",
+        "Chen Wang",
+        "Shruti Puri"
+      ],
+      "concept": "漏洩量子ビットを含む二量子ビットゲートを省略し、その因果的な誤り枝を終端読出しから復号するよう回路方向を選ぶ。",
+      "conclusion": "ムーンウォーキング表面符号は、漏洩時に二量子ビットゲートが省略されるなら、途中検査なしでp_L∝p^ℓの消失型抑制を保てる。誤読出し、計算部分空間への自然復帰、現実的な漏洩誘起位相誤りは含まない。",
+      "curiosity": "消失位置を回路途中で測らずに、表面符号の二倍の誤り訂正能力を維持できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "3種の漏洩作用、4検査日程、3表面符号回路、Pauli包絡、分枝限定復号、距離3全列挙、距離11までの回路雑音計算を確認した。読出し誤りと漏洩状態からの自然復帰は未評価である。",
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 7,
+      "scoreReasons": {
+        "broadImpact": "途中消失検査の装置負担を終端三状態読出しへ移し、漏洩型量子ビットの耐故障設計へ届く。ただし代表的な中性原子漏洩作用では最適抑制を得ない。",
+        "categoryImpact": "表面符号で消失誤りの距離ℓを保つ回路・雑音・復号条件を示し、追加深さなしのムーンウォーキング回路を構成する。",
+        "originality": "既知のウォーキング回路の時間反転が漏洩のPauli包絡を変える点を利用し、漏洩位置の排他性を分枝限定復号へ組み込んだ。",
+        "technicalStrength": "低重み故障全列挙と距離3〜11のStim計算がp_L∝p^ℓを整合的に支持する。三状態読出しは理想化され、有限消失バイアスでの分枝限定最適性は保証されない。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 20,
+        "originality": 17,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29443v1",
+        "https://arxiv.org/pdf/2607.29443v1"
+      ],
+      "submissionType": "new",
+      "title": "Erasure surface code circuit without mid-circuit erasure checks",
+      "titleJa": "回路途中の消失検査を用いない消失表面符号回路",
+      "totalScore": 74,
+      "url": "https://arxiv.org/abs/2607.29443"
+    },
+    {
+      "abstractLines": [
+        "懸架フォノニック結晶は音響損失を抑える一方、熱固定が弱く余分な雑音を生む。",
+        "ニオブ酸リチウムの懸架不要な結晶空洞を高インピーダンスマイクロ波共振器へ結合した。",
+        "約30 MHzの結合率と最大約180の協同性を測定し、品質係数は極低温で10^4を超えた。"
+      ],
+      "arxivId": "2607.29666",
+      "arxivVersion": "v1",
+      "assessment": "基板固定、GHz閉じ込め、強い電気機械結合を同じ素子で成立させ、二基板と広い温度域で裏付けた。統合後の品質係数低下が量子転送をなお制限する。",
+      "authors": [
+        "Joey Frey",
+        "Paul Burger",
+        "Trond Hjerpekjøn Haug",
+        "Johan Kolvik",
+        "Raphaël Van Laer"
+      ],
+      "concept": "放射損失を結晶バンド構造で抑え、懸架工程に頼らず高インピーダンス共振器の電場を圧電音響モードへ集中する。",
+      "conclusion": "懸架不要のフォノニック結晶でもg_em/2π≈30 MHz、協同性180の強結合へ到達できる。熱輸送改善とマイクロ波―光変換の忠実度は直接測定していない。",
+      "curiosity": "基板へ固定したまま熱を逃がし、マイクロ波とGHz音響の強結合も同時に得られるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "音響円錐下の設計、有限要素最適化、室温形状掃引、10 mKでの二基板測定、磁場掃引による反交差、損失分析、低励起付録を確認した。熱伝導と量子状態変換は未測定である。",
+      "paperType": "実験",
+      "primaryCategory": "quant-ph",
+      "rank": 8,
+      "scoreReasons": {
+        "broadImpact": "熱固定された音響素子をマイクロ波回路へ強結合し、超伝導―光量子中継、GHz検出、古典フィルターへ別々の利用経路を与える。",
+        "categoryImpact": "基板から浮かせないフォノニック結晶で、機械・マイクロ波両損失を上回るg_emと協同性180を初めて実証する。",
+        "originality": "全反射と幾何学的軟化で基板放射を避け、高インピーダンスNbTiN共振器と一体化して懸架不要素子の強結合障壁を越えた。",
+        "technicalStrength": "シリコン・サファイア、室温・10 mK、駆動強度依存、反交差フィットを比較する。統合でQ_μは75000から1200へ低下し、低励起では周波数揺らぎが残る。"
+      },
+      "scores": {
+        "broadImpact": 19,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29666v1",
+        "https://arxiv.org/pdf/2607.29666v1"
+      ],
+      "submissionType": "new",
+      "title": "Release-free phononic crystal with strong microwave coupling",
+      "titleJa": "強いマイクロ波結合を持つ懸架不要のフォノニック結晶",
+      "totalScore": 73,
+      "url": "https://arxiv.org/abs/2607.29666"
+    },
+    {
+      "abstractLines": [
+        "固有の非エルミート性を持つハミルトニアンを性質指定から実験構成することは難しい。",
+        "非対称AKLT状態を表す行列積状態対から親ハミルトニアンを作り、単一光子の虚時間発展で検証した。",
+        "左右基底状態と四種の秩序変数を測定し、別模型では零エネルギーモードの入れ替わりに伴う相転移を観測した。"
+      ],
+      "arxivId": "2607.28964",
+      "arxivVersion": "v1",
+      "assessment": "状態指定から親演算子生成、左右状態再構成、秩序変数測定までを光学実験で閉じている。相転移の実測は3量子ビットであり、熱力学的相転移とは異なる。",
+      "authors": [
+        "Yuntao Xiao",
+        "Yuchen Guo",
+        "Xiaojian Huang",
+        "Huixia Gao",
+        "Dengke Qu",
+        "Lei Xiao",
+        "Kunkun Wang",
+        "Shuo Yang",
+        "Peng Xue"
+      ],
+      "concept": "二つの行列積状態を左右零モードに固定する親演算子を構成し、光学的虚時間発展で両側の基底状態を抽出する。",
+      "conclusion": "非エルミート親ハミルトニアンを単一光子系で生成でき、設計した左右状態の相関と零モードの順位交替を読み出せる。多体極限での相と開放系相転移との関係は定まっていない。",
+      "curiosity": "望む左右固有状態と相転移を持つ非エルミート系を、親状態から逆向きに実験設計できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "親ハミルトニアン構成、受動光学による虚時間発展、状態トモグラフィー、4秩序変数、N=3の準位交差、直接MPS準備による交差検証を確認した。多体極限は実験していない。",
+      "paperType": "実験・理論",
+      "primaryCategory": "quant-ph",
+      "rank": 9,
+      "scoreReasons": {
+        "broadImpact": "調整可能な非エルミート親ハミルトニアンを、フォトニック量子シミュレーションと非平衡相設計へ接続する。実証は単一光子の小規模符号化に限られる。",
+        "categoryImpact": "行列積状態対から逆設計した非エルミート親ハミルトニアンを実験生成し、左右状態の相関と準位交差を直接測った。",
+        "originality": "既存の親ハミルトニアン理論を、左右状態別の虚時間発展と双直交秩序変数を備えた受動光学実装へ初めて移した。",
+        "technicalStrength": "状態トモグラフィー、4秩序変数、エンタングルメントスペクトル、直接MPS準備を相互照合する。相転移はN=3実験とN≤10数値に基づき、損失への系統誤差解析は限定的である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 19,
+        "originality": 18,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28964v1",
+        "https://arxiv.org/pdf/2607.28964v1"
+      ],
+      "submissionType": "new",
+      "title": "Parent Hamiltonian and intrinsic phase transition in non-Hermitian photonic systems",
+      "titleJa": "非エルミートフォトニック系の親ハミルトニアンと内在的相転移",
+      "totalScore": 73,
+      "url": "https://arxiv.org/abs/2607.28964"
+    },
+    {
+      "abstractLines": [
+        "反磁性基底状態を持つシリコン色中心では、電子スピン雑音を避けつつ励起状態から核スピンへ光学接続できる可能性がある。",
+        "同位体純化28Si中の単一イオン化格子間アルミニウム集団を吸収・発光・時間分解・磁場分光で調べた。",
+        "通信C・L帯の一重項・三重項発光、25.5 msの三重項寿命、微細構造とアルミニウム核の超微細構造を測定した。"
+      ],
+      "arxivId": "2607.28943",
+      "arxivVersion": "v1",
+      "assessment": "通信帯シリコン色中心の励起超微細構造を直接分解し、複数の分光法で準位模型を拘束した実験成果である。集団測定に留まり、99%以上の核スピン保存性と単発読出しは模型予測である。",
+      "authors": [
+        "Austin Woolverton",
+        "Nicholas Brunelle",
+        "Mehdi Keshavarz",
+        "Laurent Bergeron",
+        "Evan R. MacQuarrie",
+        "Yehudah Ackermann",
+        "Melanie Gascoine",
+        "Nikolay V. Abrosimov",
+        "Stephanie Simmons",
+        "Daniel Higginbottom",
+        "Michael Thewalt"
+      ],
+      "concept": "反磁性基底状態で電子スピン由来の記憶雑音を避け、交換分裂した準安定三重項の接触超微細結合を核スピン選択的な光学遷移へ用いる。",
+      "conclusion": "単一イオン化格子間アルミニウムは通信帯発光と分解可能な励起超微細構造を持つ。三重項の25.5 ms寿命は記憶操作に有利だが、発光速度と遠隔もつれ生成率を強く制限する。",
+      "curiosity": "通信波長で発光するシリコン欠陥は、核スピン記憶へ選択的に結合できる超微細励起状態を持つか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "二試料の作製、吸収・発光・磁場・時間分解分光、Debye–Waller因子、温度依存寿命の二推定、微細・超微細Hamiltonian適合、核スピン保存分岐比の計算と発光速度の制約を確認した。",
+      "paperType": "実験",
+      "primaryCategory": "quant-ph",
+      "rank": 10,
+      "scoreReasons": {
+        "broadImpact": "通信帯シリコン光回路と長寿命核スピン記憶を同一材料で結ぶ候補を示す。ただし25.5 msの発光寿命は、遠隔もつれ生成や読出し速度を制限する。",
+        "categoryImpact": "反磁性基底状態を持つ通信帯シリコン色中心で、励起状態の超微細構造を光学的に初めて分解し、核スピン選択遷移の材料条件を実測した。",
+        "originality": "旧来の発光帰属を交換分裂した一重項・三重項へ改め、長寿命三重項のアルミニウム核超微細構造を直接の発光線として同定する。",
+        "technicalStrength": "二つの同位体純化試料で吸収、共鳴発光、磁場分光、温度・時間分解測定を組み合わせ、2.75(3) μeVの接触結合を適合した。単一欠陥操作と核スピン読出しは未実証である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 19,
+        "originality": 17,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28943v1",
+        "https://arxiv.org/pdf/2607.28943v1"
+      ],
+      "submissionType": "new",
+      "title": "Optically Resolved Excited State Hyperfine Structure of a Silicon Colour Centre in the Telecom Bands",
+      "titleJa": "通信波長帯シリコン色中心の光学分解された励起状態超微細構造",
+      "totalScore": 72,
+      "url": "https://arxiv.org/abs/2607.28943"
+    },
+    {
+      "abstractLines": [
+        "異なる波長と量子ビット符号化を使う量子ノード間には相互変換界面が必要である。",
+        "単一40Ca+イオンと854 nm偏光光子のもつれを生成し、1550 nmへ周波数変換して時間ビンへ符号化した。",
+        "最終状態トモグラフィーで96.3(4.2)%のもつれ忠実度を確認した。"
+      ],
+      "arxivId": "2607.29609",
+      "arxivVersion": "v1",
+      "assessment": "異種量子ノード間の二つの不整合を一つの実験界面で解消した。忠実度は高いが、ネットワーク距離での運用性能までは測っていない。",
+      "authors": [
+        "Christian Haen",
+        "Julian Groß-Funk",
+        "Max Bergerhoff",
+        "Pascal Baumgart",
+        "Jonas Meiers",
+        "Tobias Bauer",
+        "Christoph Becher",
+        "Jürgen Eschner"
+      ],
+      "concept": "周波数変換とMach–Zehnder型時間ビン符号器を直列化し、原子側を保持したまま光子側の波長と基底だけを移す。",
+      "conclusion": "原子・光子もつれは通信C帯の時間ビンへ高忠実度で移せる。実用網に必要な長時間位相安定性と損失込みの速度は今後の検証対象である。",
+      "curiosity": "原子記憶と偏光でもつれた光子を、もつれを壊さず通信帯の時間ビンへ変換できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "実験",
+      "primaryCategory": "quant-ph",
+      "rank": 11,
+      "scoreReasons": {
+        "broadImpact": "原子量子記憶と通信光ファイバーを波長・符号化の両面で接続し、異種量子中継網の相互運用へ直接寄与する。",
+        "categoryImpact": "Ca+イオンとのもつれを保った光子を854 nm偏光から1550 nm時間ビンへ変換する界面を実証した。",
+        "originality": "周波数変換後にファイバー干渉計で符号化を移す構成は既存技術の統合だが、単一原子記憶とのもつれ保持は初実証である。",
+        "technicalStrength": "最終状態の量子トモグラフィーで96.3(4.2)%忠実度を得るが、長距離伝送後の安定性と繰返し率は示されない。"
+      },
+      "scores": {
+        "broadImpact": 19,
+        "categoryImpact": 18,
+        "originality": 15,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29609v1"
+      ],
+      "submissionType": "new",
+      "title": "Telecom-compatible polarization-to-time-bin conversion of atom-photon entanglement for heterogeneous quantum networks",
+      "titleJa": "異種量子ネットワークに向けた原子・光子もつれの通信帯対応偏光・時間ビン変換",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2607.29609"
+    },
+    {
+      "abstractLines": [
+        "周期駆動量子系では低次Magnus展開が収束しにくい領域の有効Hamiltonian近似が難しい。",
+        "時間発展演算子を物理的演算子多様体へ制限し、停留作用原理で変分方程式を構成した。",
+        "三模型で低次Magnus展開より正確なFloquet Hamiltonianを得て、演算子集合の拡張で精度が向上した。"
+      ],
+      "arxivId": "2607.29418",
+      "arxivVersion": "v1",
+      "assessment": "非摂動的で対称性を組み込みやすい時間発展近似を複数模型で示した。大規模系で必要な演算子数と誤差保証が主要な制約である。",
+      "authors": [
+        "Ibsal Assi",
+        "Meenu Kumari",
+        "J. P. F. LeBlanc"
+      ],
+      "concept": "時間発展を演算子空間の変分軌道として扱い、選んだ物理演算子間で作用を停留させて高次効果を再総和する。",
+      "conclusion": "制限演算子多様体上の変分法は、Magnus展開が弱い駆動域でも有効Floquet Hamiltonianを改善する。精度は演算子プールの表現力に依存する。",
+      "curiosity": "展開次数に頼らず、対称性を守ったまま時間発展演算子を系統的に近似できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 12,
+      "scoreReasons": {
+        "broadImpact": "時間発展演算子を直接近似する方法はFloquet系に加え、非平衡多体系と量子シミュレーションへ再利用できる。",
+        "categoryImpact": "低次Magnus展開が不正確な駆動域で、対称性を保つ系統的な有効Hamiltonian近似を与える。",
+        "originality": "演算子多様体上の停留作用でMagnus項を制限空間内に再総和する発想が、通常の次数打切りと異なる。",
+        "technicalStrength": "Rabi、Lipkin–Meshkov–Glick、1次元Ising模型で比較するが、誤差上界と演算子プール選択の頑健性は不明である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29418v1"
+      ],
+      "submissionType": "new",
+      "title": "A Variational Framework for Time-Dependent Quantum Systems with Applications to Floquet Hamiltonians",
+      "titleJa": "Floquet Hamiltonianへの応用を持つ時間依存量子系の変分枠組み",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2607.29418"
+    },
+    {
+      "abstractLines": [
+        "非弾性散乱後の電子密度行列は高次元位相空間の走査を要し、電子顕微鏡での復元が難しい。",
+        "軌道角運動量ソーターで状態空間を離散部分空間へ制限し、射影測定から密度行列を再構成した。",
+        "炭素膜の体積プラズモン散乱で対称性破れと散乱状態のコヒーレンス変化を観測した。"
+      ],
+      "arxivId": "2607.29565",
+      "arxivVersion": "v1",
+      "assessment": "量子光学のトモグラフィーを電子顕微鏡の材料散乱へ実装した点が強い。簡略化は測定を可能にする一方、完全な横モード状態は失う。",
+      "authors": [
+        "Amir H. Tavabi",
+        "Alessio D'Errico",
+        "Paolo Rosi",
+        "Giovanni Bertoni",
+        "Enzo Rotunno",
+        "Luca Belsito",
+        "Alberto Roncaglia",
+        "Stefano Frabboni",
+        "Gian Carlo Gazzadi",
+        "Peter Tiemeijer",
+        "Rafal E. Dunin-Borkowski",
+        "Ebrahim Karimi",
+        "Vincenzo Grillo"
+      ],
+      "concept": "連続横位相空間を軌道角運動量の有限基底へ射影し、ソーターの出力強度を密度行列要素へ対応させる。",
+      "conclusion": "軌道角運動量部分空間のトモグラフィーは非弾性電子散乱のコヒーレンスと対称性破れを捉える。部分空間外の情報は復元されない。",
+      "curiosity": "非弾性散乱で混合化した電子波の量子状態を、測定数を抑えて顕微鏡内で復元できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "実験",
+      "primaryCategory": "quant-ph",
+      "rank": 13,
+      "scoreReasons": {
+        "broadImpact": "電子顕微鏡の非弾性散乱を密度行列として測り、量子計測、材料分光、構造化電子ビームを橋渡しする。",
+        "categoryImpact": "高次元位相空間を軌道角運動量部分空間へ縮約し、非弾性散乱後電子の量子トモグラフィーを実現する。",
+        "originality": "電子軌道角運動量ソーターで有限の射影基底を物理的に作り、プラズモン散乱のコヒーレンスを再構成する点が新しい。",
+        "technicalStrength": "炭素膜の体積プラズモン励起から密度行列と対称性破れを再構成する。縮約で除いたモードが系統誤差へ与える量は定量化されていない。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29565v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum tomography of inelastic electron scattering \\emph{via} orbital angular momentum states",
+      "titleJa": "軌道角運動量状態による非弾性電子散乱の量子トモグラフィー",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2607.29565"
+    },
+    {
+      "abstractLines": [
+        "量子リザバーの過去入力記憶は、有限回測定から各遅延を識別できる精度に制約される。",
+        "遅延空間の量子Fisher情報行列を導入し、Clifford経路とSinger巡回Pauli代数で可解リザバーを作った。",
+        "局所Pauli有限ショット読出しで、無作為Isingリザバーより線形・非線形遅延課題を改善した。"
+      ],
+      "arxivId": "2607.29219",
+      "arxivVersion": "v1",
+      "assessment": "記憶容量を状態空間ではなく実際の可読性で定義した点が明快である。汎用的な量子優位性より、構造化リザバーの設計原理に主眼がある。",
+      "authors": [
+        "Ce Wang",
+        "Xingze Qiu"
+      ],
+      "concept": "各遅延が量子状態を互いにFisher直交な方向へ動かすようPauli演算子を巡回させ、散逸で記憶窓を整形する。",
+      "conclusion": "Fisher直交化は測定効率のよい量子リザバーを解析的に設計できる。優位性は構成したClifford型力学と選んだ課題で示されている。",
+      "curiosity": "異なる時刻の入力痕跡が同じ測定方向へ重なることを避け、有限ショットで記憶を読めるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 14,
+      "scoreReasons": {
+        "broadImpact": "有限測定下の時系列学習を量子推定理論へ接続し、量子機械学習と多体センシングの設計に使える。",
+        "categoryImpact": "遅延ごとの記憶可読性を量子Fisher情報行列で定量化し、測定効率を最適化する設計原理を示す。",
+        "originality": "Clifford軌道とSinger巡回Pauli代数で遅延方向を統計的に直交化し、記憶窓を解析的に調整する。",
+        "technicalStrength": "可解模型、Gill–Massar限界、有限ショット計算を組み合わせるが、一般雑音と学習課題への頑健性は限定的である。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29219v1"
+      ],
+      "submissionType": "new",
+      "title": "Fisher-Orthogonal Memory in Quantum Reservoir Computing",
+      "titleJa": "量子リザバー計算におけるFisher直交記憶",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2607.29219"
+    },
+    {
+      "abstractLines": [
+        "ボース多体系にはガウス状態と行列積状態の双方を含む計算可能な変分表現が求められる。",
+        "ガウス変換で拡張したボース行列積状態族を定義し、期待値と構造を解析した。",
+        "純粋ガウス状態と有限次元行列積状態を部分族として含み、効率計算と厳密親Hamiltonianを備える。"
+      ],
+      "arxivId": "2607.28753",
+      "arxivVersion": "v1",
+      "assessment": "連続変数とテンソルネットワークの表現力を構造的に統合している。応用例での収束速度と従来手法に対する計算優位性はまだ定量化が限られる。",
+      "authors": [
+        "Erickson Tjoa",
+        "J. Ignacio Cirac"
+      ],
+      "concept": "局所テンソルの有限補助空間を全体的ガウス変換で被覆し、Wick構造と行列積縮約を同時に利用する。",
+      "conclusion": "ガウス拡張ボース行列積状態は二大状態族を包含し、変分計算と親Hamiltonian構成を可能にする。実用精度に必要な資源増加は未提示である。",
+      "curiosity": "連続変数のガウス相関と強い非ガウス多体相関を、同じ効率的状態表現で記述できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 15,
+      "scoreReasons": {
+        "broadImpact": "連続変数量子系とテンソルネットワークを同じ変分族で扱い、場の理論、量子光学、多体系計算へ利用できる。",
+        "categoryImpact": "全純粋ガウス状態と有限次元行列積状態を包含し、効率的期待値計算と厳密親Hamiltonianを両立する。",
+        "originality": "ガウス変換をボース行列積構造へ組み込み、二つの標準的状態族を一つの計算可能な表現へ統合する。",
+        "technicalStrength": "効率計算と親Hamiltonianの存在を示す一方、結合次元・エネルギー打切りに対する計算量と数値収束の規模は定量化されていない。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 19,
+        "originality": 18,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28753v1"
+      ],
+      "submissionType": "new",
+      "title": "Gaussian-augmented bosonic matrix-product states: theory and applications",
+      "titleJa": "ガウス拡張ボース行列積状態：理論と応用",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2607.28753"
+    },
+    {
+      "abstractLines": [
+        "複数の連続課題を同じ量子系へ符号化すると、測定前に利用できる総情報量と課題別配分を同時に評価する必要がある。",
+        "有限台の事前分布に対し、方向別量子Fisher長と重み付き量子Fisher情報行列からHolevo情報の非漸近上界を導いた。",
+        "真空と二偏光モードの模型で、励起数や位相拡散、未分解混線が情報量と異方性へ与える効果を計算した。"
+      ],
+      "arxivId": "2607.28961",
+      "arxivVersion": "v1",
+      "assessment": "有限台の多変数課題を一次元上界の連鎖で扱う構成は明快で、相関事前分布と任意課題数にも拡張される。一方、上界の鋭さと達成法は未解決で、転移の実証は三準位模型に限られる。",
+      "authors": [
+        "Zishuo Ren",
+        "Ziyang Chen",
+        "Hong Guo"
+      ],
+      "concept": "各課題方向の局所量子Fisher感度を事前分布で積分し、対角成分から総Holevo情報を、行列の固有値から配分の異方性を診断する。",
+      "conclusion": "独立な有限台課題では、方向別Fisher長の和と重み付き量子Fisher行列の跡が共同Holevo情報を上から制約する。固有値は配分構造の診断量だが、課題別境界は達成可能前線ではない。",
+      "curiosity": "一つの量子資源を複数課題へ割り当てるとき、総情報量と配分自由度を同じ幾何学で制約できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "二課題の主定理と連鎖則・単調性・Jensen不等式による証明、相関事前分布と任意課題数への拡張、三準位光位相模型と三雑音計算、達成可能性に関する限界を確認した。",
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 16,
+      "scoreReasons": {
+        "broadImpact": "通信・計測・識別を共同Holevo情報へ写す枠組みは広いが、個別性能との定量関係や測定・符号化の達成法がなく、直ちに設計限界とはならない。",
+        "categoryImpact": "有限台で滑らかさを課さない事前分布に対し、局所量子Fisher情報から多課題の測定非依存な共同情報上界を与え、相関事前分布と任意課題数も扱う。",
+        "originality": "重み付き量子Fisher行列の跡を容量上界、行列式と条件数を配分診断へ分ける視点は独自性がある。ただし構造転移は特定模型での固有値再配分である。",
+        "technicalStrength": "一次元有限台上界を連鎖則、量子Fisher情報の単調性、二段のJensen不等式で多変数化している。上界の鋭さは未評価で、数値検証は真空と二偏光の三準位模型に限られる。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28961v1",
+        "https://arxiv.org/pdf/2607.28961v1"
+      ],
+      "submissionType": "new",
+      "title": "The Shape of Information: Global Information Geometric Limits in Multi-task Quantum Systems",
+      "titleJa": "情報の形：多重課題量子系における大域情報幾何学的限界",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2607.28961"
+    },
+    {
+      "abstractLines": [
+        "未知パラメータを持つ既知生成子Hamiltonianの時間発展を、前向き呼出しだけで厳密反転する費用を調べる。",
+        "固有値の加法関係と対称セクター分解を使い、反転プロトコルを代数的に構成した。",
+        "固定固有基底の一パラメータ族では最適問い合わせ数を決定し、一般族にも構造依存の削減条件を得た。"
+      ],
+      "arxivId": "2607.29382",
+      "arxivVersion": "v1",
+      "assessment": "任意ユニタリーの最悪限界を物理的生成子の構造で破る条件を明示した。一般多パラメータHamiltonianに対する必要十分条件は未解決である。",
+      "authors": [
+        "Jizhe Lai",
+        "Mingrui Jing",
+        "Erdong Huang",
+        "Xin Wang"
+      ],
+      "concept": "未知位相の整数線形結合を前向き発展の列で打ち消す問題へ変換し、固有値関係が許す最短の反転式を探す。",
+      "conclusion": "時間発展族の代数構造は厳密反転の問い合わせ数を大幅に下げ得る。一パラメータ族では最適だが、一般族の完全分類は残る。",
+      "curiosity": "未知ユニタリー一般では高価な厳密反転が、Hamiltonian生成子の既知構造によってどこまで速くなるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 17,
+      "scoreReasons": {
+        "broadImpact": "未知結合の時間反転をエコー検証、相関関数測定、受動多モード通信へ適用し、量子制御とオラクル理論を結ぶ。",
+        "categoryImpact": "任意ユニタリーのΘ(d^2)回という反転費用を、既知生成子の固有値代数に応じて厳密に削減する。",
+        "originality": "固有値間の加法関係から一パラメータ族の最適問い合わせ数を完全に決定する点が構造依存の新しさである。",
+        "technicalStrength": "最適構成、対称セクター縮約、位相整列条件を扱うが、一般多パラメータ族では十分条件に留まる。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 19,
+        "originality": 18,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29382v1"
+      ],
+      "submissionType": "new",
+      "title": "Algebraic Speedups for Exact Inversion of Hamiltonian Evolutions",
+      "titleJa": "Hamiltonian時間発展の厳密反転に対する代数的高速化",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2607.29382"
+    },
+    {
+      "abstractLines": [
+        "量子非線形光学では損失が単一光子変換の高効率化を妨げる。",
+        "超強結合回路QEDの二模型で、非エルミート有効Hamiltonianの完全吸収条件を用いて変換を最適化した。",
+        "単一光子から相関二原子励起または二光子Fock状態へのほぼ決定的変換を予測した。"
+      ],
+      "arxivId": "2607.29313",
+      "arxivVersion": "v1",
+      "assessment": "散逸スペクトルから量子非線形過程を最適化する接続が興味深い。近決定的という性能は理論模型内のパラメータ調整に依存する。",
+      "authors": [
+        "Samuel Napoli",
+        "Andrea Zappalá",
+        "Franco Nori",
+        "Salvatore Savasta",
+        "Daniele Lamberto"
+      ],
+      "concept": "強い非線形性が線形散乱へ刻む完全吸収点を探し、有効非エルミートHamiltonian内の損失のない部分空間へ変換経路を合わせる。",
+      "conclusion": "完全吸収条件は二種の単一光子変換を高効率化できる。提案は超強結合回路QED模型に基づき、実験的な変換忠実度は未測定である。",
+      "curiosity": "散逸を単なる損失でなく、少数光子非線形変換の最適条件を作る資源として使えるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 18,
+      "scoreReasons": {
+        "broadImpact": "単一光子レベルの周波数変換を非エルミート設計へ結び、回路QED、量子光源、光子変換器に応用可能である。",
+        "categoryImpact": "超強結合回路QEDで完全吸収条件を使い、単一光子から二原子励起または二光子対への高効率変換を設計する。",
+        "originality": "非線形量子過程の最適点を線形応答の完全吸収零点から求め、エルミート部分空間の出現へ結び付ける。",
+        "technicalStrength": "二つの模型で実験調整可能パラメータを走査するが、雑音、パラメータ不確かさ、超強結合近似の感度は不明である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29313v1"
+      ],
+      "submissionType": "new",
+      "title": "Non-Hermitian Quantum Nonlinear Optics with Single Photons",
+      "titleJa": "単一光子による非エルミート量子非線形光学",
+      "totalScore": 68,
+      "url": "https://arxiv.org/abs/2607.29313"
+    },
+    {
+      "abstractLines": [
+        "標準レーザーと量子設計レーザーのコヒーレンスは内部光子数の多項式で制限される。",
+        "通常結合の線形増幅器を縦続し、標準的な出力ビーム統計を課さない方式を解析した。",
+        "総励起数μに対してコヒーレンスが理論上指数的に増え、二段でも標準μ^2則を上回る。"
+      ],
+      "arxivId": "2607.28716",
+      "arxivVersion": "v1",
+      "assessment": "既知限界の前提を特定し、通常結合で大きく越える別経路を提示した。理想増幅器列の損失感度と有用な出力課題は未確定である。",
+      "authors": [
+        "Lucas A. Ostrowski",
+        "Giacomo Pantaleoni",
+        "Howard M. Wiseman",
+        "Dominic W. Berry"
+      ],
+      "concept": "各増幅段が前段の位相情報を再増幅する一方、出力統計への制約を外してコヒーレンス尺度だけを累積させる。",
+      "conclusion": "縦続線形増幅器は総励起数に対し指数的なコヒーレンスを理論上生成できる。実用性は非標準統計と各段雑音の許容度に左右される。",
+      "curiosity": "レーザーらしい統計を捨てれば、同じ総励起資源から従来限界を超える位相コヒーレンスを作れるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 19,
+      "scoreReasons": {
+        "broadImpact": "レーザーコヒーレンスの資源限界を見直し、量子光源、干渉計、増幅器列の設計へ影響し得る。",
+        "categoryImpact": "標準的ビーム統計を要求しなければ、総励起数に対して指数的なコヒーレンス尺度を得られると示す。",
+        "originality": "特殊な利得機構ではなく通常結合の線形増幅器を縦続し、出力統計の制約を外すことで既知のμ^4限界を越える。",
+        "technicalStrength": "二段でもμ^2則を越える解析を与えるが、損失・雑音を含む有限装置で指数則が保たれる範囲は不明である。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28716v1"
+      ],
+      "submissionType": "new",
+      "title": "Cascading amplifiers can create exponentially large coherence",
+      "titleJa": "増幅器の縦続接続は指数関数的に大きなコヒーレンスを生成できる",
+      "totalScore": 68,
+      "url": "https://arxiv.org/abs/2607.28716"
+    },
+    {
+      "abstractLines": [
+        "n粒子へ施された未知置換の偶奇識別で、量子優位性の資源がもつれか局所次元かを問う。",
+        "積準備、局所量子合成、一般確率模型を比較し、成功確率と必要次元を解析した。",
+        "積状態でも量子優位があり、閾値未満ではもつれがあっても無作為推測を越えないと示した。"
+      ],
+      "arxivId": "2607.29073",
+      "arxivVersion": "v1",
+      "assessment": "量子優位性の原因を操作資源ごとに分解した概念的成果である。別のオラクル課題へ次元原理が一般化する範囲は未提示である。",
+      "authors": [
+        "Jayashree Karmakar",
+        "Biswadeep Chatterjee",
+        "Rafiuddin Gazi",
+        "Ananya Chakraborty",
+        "Snehasish Roy Chowdhury",
+        "Manik Banik",
+        "Tamal Guha",
+        "Sahil Gopalkrishna Naik",
+        "Kunika Agarwal"
+      ],
+      "concept": "準備もつれ、測定もつれ、局所状態空間を独立に変えられる一般確率模型で、成功可能性の必要資源を切り分ける。",
+      "conclusion": "確率的優位性の存在を決める基礎資源は局所系の線形次元であり、もつれだけでは次元不足を補えない。主張は指定された識別課題に対するものである。",
+      "curiosity": "置換パリティの量子優位性は、本当に多体もつれから生じるのか、それとも各粒子の状態空間次元なのか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 20,
+      "scoreReasons": {
+        "broadImpact": "量子優位性をもつれでなく局所状態空間次元へ帰属し、通信複雑性と一般確率論の資源分析へ広がる。",
+        "categoryImpact": "置換パリティ識別で、積状態でも量子確率的優位が生じる条件と次元下限を決定する。",
+        "originality": "局所量子・最小テンソル積模型や一般確率模型を比較し、準備・測定もつれなしの完全成功例を分離する。",
+        "technicalStrength": "次元閾値以下では任意のもつれも無効という不可能性を示す。結論は指定された操作制約と次元条件に依存し、その外側の領域は分類しない。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29073v1"
+      ],
+      "submissionType": "new",
+      "title": "On the Origin of Beyond-Classical Advantage in the Parity-Permutation Problem",
+      "titleJa": "置換パリティ問題における古典超越優位性の起源",
+      "totalScore": 68,
+      "url": "https://arxiv.org/abs/2607.29073"
+    },
+    {
+      "abstractLines": [
+        "素数pに対するn! mod pの計算には平方根規模の時間障壁があった。",
+        "p-1の約数qを利用してJacobi和を厳密な代数形式で再構成する量子アルゴリズムを作った。",
+        "約数条件下で指数1/2を破り、n! mod p^2とWilson商にも同じ漸近評価を拡張した。"
+      ],
+      "arxivId": "2607.29453",
+      "arxivVersion": "v1",
+      "assessment": "条件付きながら既知の指数障壁を越える明確な量子数論成果である。高速化を支える約数条件が適用可能な素数を制限する。",
+      "authors": [
+        "Yann Tal"
+      ],
+      "concept": "乗法指標が作るJacobi和を量子手順でコンパクトに復元し、その代数情報から階乗積を短い区間へ分解する。",
+      "conclusion": "p-1に適切な約数がある素数では法付き階乗の平方根指数を破れる。全素数を一様に扱う方法は予想として残る。",
+      "curiosity": "法付き階乗の算術構造を量子干渉で取り出し、平方根時間より速く厳密計算できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 21,
+      "scoreReasons": {
+        "broadImpact": "有限体上の計算とJacobi和を量子アルゴリズムへ結び、計算数論と量子複雑性に有用である。",
+        "categoryImpact": "約数条件の下でn! mod pの平方根指数障壁を初めて破り、p^2とWilson商へも拡張する。",
+        "originality": "Jacobi和を数値近似でなくコンパクトな代数形式として厳密再構成する量子手順が中心的差分である。",
+        "technicalStrength": "有界誤り時間評価と拡張結果を与えるが、定数cとq|(p-1)条件により一様な高速化には至らない。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 18,
+        "originality": 19,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29453v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum Algorithms for Modular Factorials",
+      "titleJa": "法付き階乗の量子アルゴリズム",
+      "totalScore": 68,
+      "url": "https://arxiv.org/abs/2607.29453"
+    },
+    {
+      "abstractLines": [
+        "量子熱機関の有限時間内的摩擦を仕事抽出に使う実験は未確立だった。",
+        "捕捉40Ca+イオンで射影測定を非熱的エネルギー源とし、条件付き圧縮・膨張または熱化を行った。",
+        "測定角と行程時間の調整によりOtto限界を越え、効率と出力の両方を高める運転を報告した。"
+      ],
+      "arxivId": "2607.28702",
+      "arxivVersion": "v1",
+      "assessment": "量子内的摩擦の役割を装置上で損失から資源へ変えた点が明確である。情報処理費用を含む熱力学的利得の範囲は限定される。",
+      "authors": [
+        "Jinfeng Wei",
+        "Yingying Hong",
+        "Dehua Liu",
+        "Xi Wang",
+        "Zhe Wang",
+        "Yiling Zhan",
+        "Kaifeng Cui",
+        "Jintao Bu",
+        "Jianhui Wang",
+        "Leilei Yan",
+        "Gang Chen"
+      ],
+      "concept": "高温浴を測定バックアクションで置き換え、得られた情報に応じてユニタリー行程と熱化を選び、コヒーレンスの仕事寄与を制御する。",
+      "conclusion": "単一イオン情報エンジンでは内的摩擦がOtto効率限界と通常の効率・出力相反を越える資源になり得る。測定・フィードバック費用の全収支は別問題である。",
+      "curiosity": "有限時間量子機関で散逸を生む内的摩擦を、効率と出力を高める資源へ転換できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "実験",
+      "primaryCategory": "quant-ph",
+      "rank": 22,
+      "scoreReasons": {
+        "broadImpact": "情報から仕事への変換と有限時間熱機関を捕捉イオンで結び、量子熱力学と制御実験に利用できる。",
+        "categoryImpact": "40Ca+イオンで測定を非熱的高温源として使い、内的摩擦が効率と出力を同時に高める領域を実証する。",
+        "originality": "通常は損失とされる測定誘起コヒーレンスと内的摩擦を調整資源へ反転する機関サイクルが特徴である。",
+        "technicalStrength": "任意初期状態からの定常化とエネルギー収支を測るが、単一イオン模型を超える規模と制御費用は評価されない。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 16,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28702v1"
+      ],
+      "submissionType": "new",
+      "title": "Experimental Demonstration of a Measurement-Feedback Quantum Information Engine",
+      "titleJa": "測定フィードバック量子情報エンジンの実験実証",
+      "totalScore": 67,
+      "url": "https://arxiv.org/abs/2607.28702"
+    },
+    {
+      "abstractLines": [
+        "ゲージ制約が無秩序なし局在中の状態複雑性と量子資源の成長をどう制限するかを調べる。",
+        "1+1次元U(1)およびSU(2)格子ゲージ理論を三種のRényi量と非ガウス性で解析した。",
+        "中間結合でべき緩和、強結合で二重対数成長を見いだし、後者を配置空間計数上界で支えた。"
+      ],
+      "arxivId": "2607.28730",
+      "arxivVersion": "v1",
+      "assessment": "複数の資源指標と厳密計数を用いて遅い緩和の起源を比較した。熱力学極限で二重対数則が保たれる範囲は重要な未決点である。",
+      "authors": [
+        "Devendra Singh Bhakuni",
+        "Giovanni Cataldi",
+        "Jad C. Halimeh",
+        "Emanuele Tirrito"
+      ],
+      "concept": "ゲージ電荷セクターが到達可能な配置空間を分断するため、資源単調量の成長を配置数の組合せ上界で制約する。",
+      "conclusion": "可換・非可換ゲージ理論の無秩序なし局在では、結合に応じてべき緩和から二重対数成長へ移る。結果は1+1次元の調査模型に基づく。",
+      "curiosity": "外部無秩序がなくても、ゲージ不変性だけで量子状態の複雑化を極端に遅らせられるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 23,
+      "scoreReasons": {
+        "broadImpact": "ゲージ理論、局在、量子資源診断を結び、近年の格子ゲージ量子シミュレーションで観測可能な指標を与える。",
+        "categoryImpact": "U(1)とSU(2)格子ゲージ理論で、安定化子Rényiエントロピーなど三指標の局在緩和則を比較する。",
+        "originality": "強結合での二重対数成長を配置空間の計数上界へ結び、可換・非可換理論に共通する資源制約を示す。",
+        "technicalStrength": "厳密計数で上界を検証する一方、有限サイズ補正と長時間領域への外挿誤差は定量化されていない。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 16,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28730v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum Resources in Disorder-Free Localization Dynamics of Gauge Theories",
+      "titleJa": "ゲージ理論の無秩序なし局在ダイナミクスにおける量子資源",
+      "totalScore": 67,
+      "url": "https://arxiv.org/abs/2607.28730"
+    },
+    {
+      "abstractLines": [
+        "希ガス核スピンは日単位で保持できる一方、非古典状態の準備と読出しが難しい。",
+        "アルカリ金属と希ガス集団のコヒーレントなスピン交換を用いるスクイージング手順を設計した。",
+        "既存技術で10^20個以上の核スピンをスクイーズし、磁場操作で日単位の保存と測定が可能と予測した。"
+      ],
+      "arxivId": "2607.29046",
+      "arxivVersion": "v1",
+      "assessment": "原子数と保存時間を同時に拡大する魅力的な計測資源提案である。主要性能は理論予測であり、巨視的集団での量子雑音測定が必要である。",
+      "authors": [
+        "He-bin Zhang",
+        "Yuanjiang Tang",
+        "Yong-Chun Liu"
+      ],
+      "concept": "光学操作可能なアルカリ電子スピンで量子相関を作り、スピン交換衝突をコヒーレントな写像として希ガス核へ移す。",
+      "conclusion": "熱蒸気セルで巨大な核スピンスクイージングと長期保存を両立できる可能性がある。予測は衝突・磁場雑音を抑えられる提案条件に依存する。",
+      "curiosity": "環境から隔離された巨視的核スピン集団を、長寿命を損なわず強くスクイーズできるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論提案",
+      "primaryCategory": "quant-ph",
+      "rank": 24,
+      "scoreReasons": {
+        "broadImpact": "長寿命核スピンの巨視的スクイージングは精密計測、量子記憶、基礎対称性試験へ複数の利用先を持つ。",
+        "categoryImpact": "アルカリ金属と希ガスのコヒーレントなスピン交換で10^20個超の核スピンをスクイーズする方式を提案する。",
+        "originality": "操作しやすいアルカリ電子スピンを媒介に、孤立性の高い希ガス核スピンへスクイージングを転送・保存する。",
+        "technicalStrength": "既存技術での到達可能性を数値評価するが、衝突雑音、磁場不均一、読出し効率を含む実験検証はない。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29046v1"
+      ],
+      "submissionType": "new",
+      "title": "Nuclear Spin Squeezing Based on Spin-Exchange Collisions",
+      "titleJa": "スピン交換衝突に基づく核スピンスクイージング",
+      "totalScore": 66,
+      "url": "https://arxiv.org/abs/2607.29046"
+    },
+    {
+      "abstractLines": [
+        "単一光子の経路もつれによるBell不等式違反は、共有位相基準より検出装置の限界が問題となる。",
+        "一般化検出演算子で損失、暗計数、モード不整合、位相雑音を含む相関関数を閉形式化した。",
+        "on–off検出の効率閾値0.83を得て、現行通信帯装置ではモード重なり0.92が必要と見積もった。"
+      ],
+      "arxivId": "2607.29012",
+      "arxivVersion": "v1",
+      "assessment": "長年の概念論争を装置パラメータの実行可能条件へ絞り込んだ。実験実証でなく、最も厳しいモード純度と取出し効率の相反が残る。",
+      "authors": [
+        "Christoph F. Wildfeuer"
+      ],
+      "concept": "局所発振器を測定設定でなく共有座標系として扱い、損失を変位振幅の再尺度化へ吸収して全検出欠陥を同じ演算子族で比較する。",
+      "conclusion": "検出効率より光子と局所発振器のモード重なりが現在の主要障壁で、オン・オフ検出が偶奇性検出より頑健である。両性能を同時達成した光源は未報告である。",
+      "curiosity": "現在の通信帯単一光子技術は、抜け穴を抑えた経路もつれBell違反へ実際に届くか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 25,
+      "scoreReasons": {
+        "broadImpact": "単一光子非局所性を通信帯装置の具体的要件へ落とし、基礎試験と量子通信の検出設計に役立つ。",
+        "categoryImpact": "損失、暗計数、モード不整合、位相雑音を含むN00N状態のBell違反閾値を閉形式で比較する。",
+        "originality": "損失前後の変位操作を等価化し、オン・オフ検出が光子数分解による偶奇性検出より現実条件で強いことを示す。",
+        "technicalStrength": "解析相関式と現在装置値の見積りを示すが、光源の結合効率とモード純度を同時測定した実証例はない。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29012v1"
+      ],
+      "submissionType": "new",
+      "title": "Bell violation with path-entangled number states under realistic detection",
+      "titleJa": "現実的検出条件下の経路もつれ数状態によるBell不等式違反",
+      "totalScore": 66,
+      "url": "https://arxiv.org/abs/2607.29012"
+    },
+    {
+      "abstractLines": [
+        "多準位系の高速ゲートでは多数のコヒーレント誤差を単純な制御波形で同時抑制する必要がある。",
+        "指定次数のMagnus誤差生成子全体を、少数の独立波形係数へ射影して最小化した。",
+        "トランズモンで3パラメータ波形がDRAGを上回り、17パラメータ補正へ近い誤差抑制と帯域頑健性を示した。"
+      ],
+      "arxivId": "2607.28922",
+      "arxivVersion": "v1",
+      "assessment": "実装しやすい波形と多誤差抑制の間をうまく接続した。装置ドリフトや非Markov雑音での優位性はまだ示されていない。",
+      "authors": [
+        "Razvan Stanescu",
+        "Hugo Ribeiro"
+      ],
+      "concept": "個別誤差係数でなく計算部分空間へ射影したMagnus生成子そのものを目的関数にし、少数基底波形へ圧縮する。",
+      "conclusion": "誤差生成子レベルの圧縮は少数係数でも高速トランズモンゲートを大きく改善する。性能は摂動次数と採用した帯域模型の範囲に依存する。",
+      "curiosity": "複雑な最適制御波形を使わず、漏洩を含む多くの誤差チャネルを高速ゲートで同時に消せるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 26,
+      "scoreReasons": {
+        "broadImpact": "少数制御係数で多準位ゲートの漏洩と計算誤差を抑え、超伝導量子ビットのパルス実装に有用である。",
+        "categoryImpact": "Magnus展開の全射影誤差生成子を圧縮し、3パラメータで17パラメータ補正へ近い高速トランズモンゲートを得る。",
+        "originality": "誤差チャネルを個別に切るのでなく、残留固有位相を含む生成子全体を少数波形係数へ圧縮する。",
+        "technicalStrength": "DRAGとの格子最適化比較と帯域制限感度を示すが、雑音模型は例示的で実機較正を含まない。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28922v1"
+      ],
+      "submissionType": "new",
+      "title": "Error-Generator-Level Compression for Fast Quantum Gates",
+      "titleJa": "高速量子ゲートのための誤差生成子レベル圧縮",
+      "totalScore": 66,
+      "url": "https://arxiv.org/abs/2607.28922"
+    },
+    {
+      "abstractLines": [
+        "位置を直接知らせない量子ビット消失は、追加の漏洩検出ユニットなしでは訂正が難しい。",
+        "支持を消失位置から除いた安定化子の反交換を用いて検出条件を導き、最尤推論を集合被覆へ緩和した。",
+        "回転表面符号の計算では、同一条件の複数試行を集計した推論が低消失率で雑音を伴う検出ユニットを上回った。"
+      ],
+      "arxivId": "2607.29603",
+      "arxivVersion": "v1",
+      "assessment": "消失が検査の反交換へ変わる代数機構は明確で、推論問題の定式化も一般的である。性能評価は同一条件の300試行を事後集計し、単一実行中の消失位置推定を実装していない。",
+      "authors": [
+        "Shin Nishio",
+        "Takeaki Uno",
+        "Fumiyoshi Kobayashi",
+        "Takahiko Satoh",
+        "Dan E. Browne"
+      ],
+      "concept": "消失後に検査演算子の可換性が崩れる組合せを観測し、その非決定的検査集合を最小の消失位置集合へ写す。",
+      "conclusion": "非絡み合いゲート模型では、消失で反交換化する検査対から損失パターンを統計的に識別できる。実時間の単発推論が未構成なため、検出ユニット不要の運用上の優位性はまだ確立していない。",
+      "curiosity": "通常の反復シンドロームだけから、どの物理量子ビットが失われたかを十分正確に逆推定できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "非絡み合い仮定、穿孔検査の反交換定理、最尤・集合被覆定式化、二つの推論法、回転表面符号の装置別計算、フック誤り付録を確認した。単発オンライン推論は未構成である。",
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 27,
+      "scoreReasons": {
+        "broadImpact": "捕捉イオンと中性原子の消失対策から専用補助量子ビットを除く可能性がある。ただし単発運用がなく、現時点の効果は統計診断に限られる。",
+        "categoryImpact": "穿孔した安定化子の反交換を消失検出条件へ変換し、損失位置推定を最尤問題と集合被覆緩和として定式化する。",
+        "originality": "消失で検査演算子の可換性が崩れ、シンドロームが確率化することを位置署名として使う発想は、専用検出回路と異なる。",
+        "technicalStrength": "十分条件と二つのヒューリスティックを回路雑音下で比較するが、各損失条件につき300試行の頻度を使う。単発シンドロームからは同じ分類量を得られず、装置誤り率も複数実験の合成値である。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29603v1",
+        "https://arxiv.org/pdf/2607.29603v1"
+      ],
+      "submissionType": "new",
+      "title": "Qubit Loss Inference with Stabilizer Codes without Leakage Detection Units",
+      "titleJa": "漏洩検出ユニットを用いない安定化子符号での量子ビット消失推論",
+      "totalScore": 65,
+      "url": "https://arxiv.org/abs/2607.29603"
+    },
+    {
+      "abstractLines": [
+        "大運動量移行は重力位相を増やすが、運動量縞を細かくして検出分解能に弱くなる。",
+        "瞬間無損失パルス、Gaussian源、Gaussian検出ぼけの可解模型で古典Fisher情報を導いた。",
+        "鏡なし方式の優位条件、最適移行次数、光子運動量に依らない分解能感度床を得た。"
+      ],
+      "arxivId": "2607.28749",
+      "arxivVersion": "v1",
+      "assessment": "大きい運動量ほど良いという設計直観に明確な検出限界を与えた。閉形式結果の適用は理想化されたパルスとGaussian模型に制約される。",
+      "authors": [
+        "Asad Ali",
+        "Saif Al-Kuwari"
+      ],
+      "concept": "位相利得nと縞周期1/nを同じFisher情報で競合させ、検出ぼけが消す位相情報から最適nを解析する。",
+      "conclusion": "縞読出しには分解能で決まる最適運動量移行と感度床があり、鏡なし方式の利点は主に短基線装置に限られる。実パルス誤差は模型外である。",
+      "curiosity": "原子へ与える運動量を増やし続けても、検出器の有限分解能を含めれば重力感度は改善するか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 28,
+      "scoreReasons": {
+        "broadImpact": "原子干渉重力計の運動量移行と検出器設計を結び、短基線センシングや精密重力測定へ具体的指針を与える。",
+        "categoryImpact": "大運動量移行で細かくなる運動量縞と有限分解能の競合から、最適移行次数と感度床を導く。",
+        "originality": "鏡なし方式と通常方式を連続補間し、同じ移行量で鏡なしが勝つ分解能条件を閉形式化する。",
+        "technicalStrength": "位相平均近似を10^-8水準で数値確認するが、瞬間・無損失パルスとGaussian源・ぼけの模型に限定される。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 17,
+        "originality": 15,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28749v1"
+      ],
+      "submissionType": "new",
+      "title": "Detection-resolution limits of large-momentum-transfer atom gravimetry",
+      "titleJa": "大運動量移行原子重力計の検出分解能限界",
+      "totalScore": 65,
+      "url": "https://arxiv.org/abs/2607.28749"
+    },
+    {
+      "abstractLines": [
+        "局所保存則が結合で大域保存量へ変わる多体系では、もつれと数揺らぎを分ける必要がある。",
+        "結合キックBose–Hubbard系に対応する乱雑行列模型を作り、対称性分解もつれを摂動解析した。",
+        "単一パラメータの普遍的もつれ転移を得て、数エントロピーを帯状発展演算子による局在へ結び付けた。"
+      ],
+      "arxivId": "2607.29165",
+      "arxivVersion": "v1",
+      "assessment": "保存則がもつれ統計へ与える寄与を分解した解析が有用である。普遍式の非摂動域における厳密性は限定される。",
+      "authors": [
+        "J. Himmelsbach",
+        "M. F. I. Kieler",
+        "A. Bäcker"
+      ],
+      "concept": "総粒子数セクター内を局所粒子数で再分解し、セクター内もつれとセクター間数エントロピーへ寄与を分離する。",
+      "conclusion": "局所保存則の破れは一パラメータで記述できるもつれ転移と数空間の局在を生む。強結合域の式は摂動結果の外挿を含む。",
+      "curiosity": "局所粒子数保存を結合で破るとき、真の量子もつれと保存量由来の古典的混合はどう成長するか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 29,
+      "scoreReasons": {
+        "broadImpact": "保存量を持つカオス多体系のもつれを解析し、量子熱化、乱雑行列、冷却原子模型へ利用できる。",
+        "categoryImpact": "二つの局所保存則が一つの大域保存量へ破れる際の固有状態もつれ転移を単一パラメータで記述する。",
+        "originality": "対称性分解もつれで真のもつれと数揺らぎ由来の数エントロピーを分離し、帯状発展演算子の局在へ結ぶ。",
+        "technicalStrength": "摂動論と乱雑行列模型から全転移を外挿するが、非摂動域の解析式は厳密導出でなく外挿に依存する。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29165v1"
+      ],
+      "submissionType": "new",
+      "title": "Entanglement in bipartite systems with symmetry: coupled chaotic kicked Bose-Hubbard systems",
+      "titleJa": "対称性を持つ二部系のもつれ：結合されたカオス的キックBose–Hubbard系",
+      "totalScore": 65,
+      "url": "https://arxiv.org/abs/2607.29165"
+    },
+    {
+      "abstractLines": [
+        "離れた固体スピン量子ビット間の状態転送は媒介モードの損失に弱い。",
+        "YIG細線の非相反カイラルマグノンへ結合した二つのNV中心を、時間依存結合で暗状態追従させた。",
+        "現実的パラメータで数μm離れたNV中心間に0.95以上の忠実度を予測した。"
+      ],
+      "arxivId": "2607.29206",
+      "arxivVersion": "v1",
+      "assessment": "散逸性媒介を暗状態で回避する設計を具体的材料へ落とした。必要な時間依存距離制御の実装難度が主要な制約である。",
+      "authors": [
+        "Martijn Dols",
+        "Carlos Gonzalez-Ballestero",
+        "Mikhail Cherkasskii",
+        "Christian L. Degen",
+        "Victor A. S. V. Bittencourt",
+        "Silvia Viola Kusminskiy"
+      ],
+      "concept": "送信側と受信側の結合を逆順に変え、二量子ビット状態をカイラル連続モードの暗状態に保つ。",
+      "conclusion": "YIGのカイラルマグノンを介した数μmのNV状態転送は高忠実度で可能と予測される。温度、コヒーレンス、可動距離制御が厳しい条件となる。",
+      "curiosity": "損失のあるマグノン浴を占有せず、遠隔スピン間で任意量子状態を移せるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 30,
+      "scoreReasons": {
+        "broadImpact": "NV中心間のμm距離転送を磁性体マグノンへ委ね、固体量子配線とマグノニクスを橋渡しする。",
+        "categoryImpact": "カイラルな非相反マグノン浴の暗状態を用い、散逸を避ける任意スピン状態転送手順を提案する。",
+        "originality": "距離または磁場でNV・マグノン結合を時間変調し、浴との結合を保ちながら暗状態追従させる。",
+        "technicalStrength": "温度、位相緩和時間、寿命制約を含む数値実現性を示すが、機械的距離変調を含む実験実証はない。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 17,
+        "originality": 15,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29206v1"
+      ],
+      "submissionType": "new",
+      "title": "Chiral magnons for spin-qubit state transfer",
+      "titleJa": "スピン量子ビット状態転送のためのカイラルマグノン",
+      "totalScore": 63,
+      "url": "https://arxiv.org/abs/2607.29206"
+    },
+    {
+      "abstractLines": [
+        "通常の量子最適制御は終端時刻だけを最適化し、途中状態の追跡や測定を直接扱わない。",
+        "中間観測で随伴軌道に生じる不連続を含む変分条件を導き、Krotovアルゴリズムへ実装した。",
+        "XXXスピン鎖でDicke励起の伝播、追跡、無場リバイバルを複数時刻同時に制御した。"
+      ],
+      "arxivId": "2607.28783",
+      "arxivVersion": "v1",
+      "assessment": "複数時刻制御の変分構造を明確にし、単調更新へ落とした点が有用である。適用例と雑音模型の範囲は狭い。",
+      "authors": [
+        "Juan J. Omiste",
+        "Ignacio R. Solá"
+      ],
+      "concept": "各中間目標を作用の時刻局在項として加え、随伴状態の跳躍条件を用いて一つの制御場へ全目標の勾配を伝える。",
+      "conclusion": "中間時刻目標を含むKrotov法は伝播とリバイバルを同時制御できる。閉じたXXX鎖での数値例から実験雑音への拡張は残る。",
+      "curiosity": "終状態を保ちながら、途中の量子状態とパルス後の自然リバイバルも同時に指定できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 31,
+      "scoreReasons": {
+        "broadImpact": "途中時刻の状態制約を扱う制御法は量子輸送と時系列操作に有用だが、実証は一つのスピン鎖模型に限られる。",
+        "categoryImpact": "最終時刻だけでなく任意の複数中間時刻の観測量を同時最適化するKrotov法を導く。",
+        "originality": "中間観測が随伴状態へ生む不連続跳躍を変分条件へ明示的に組み込み、無場リバイバルも制御する。",
+        "technicalStrength": "単調最適化と測定窓ゼロ極限の収束を示すが、制御誤差と開放系雑音への頑健性は扱わない。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 17,
+        "originality": 15,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28783v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum Optimal Control at Intermediate Times: Controlling Revivals in Spin Chains",
+      "titleJa": "中間時刻の量子最適制御：スピン鎖のリバイバル制御",
+      "totalScore": 62,
+      "url": "https://arxiv.org/abs/2607.28783"
+    },
+    {
+      "abstractLines": [
+        "分散量子計算ではモジュール間もつれ対の雑音が格子手術の論理誤りを増やす。",
+        "二つの回転表面符号パッチのXX結合をH字型時空図で表し、バルクと継ぎ目の誤り率を導いた。",
+        "最小重み完全マッチングで閾値を推定し、符号距離と局所ゲート・もつれ対忠実度の選択指針を得た。"
+      ],
+      "arxivId": "2607.29186",
+      "arxivVersion": "v1",
+      "assessment": "分散符号の装置仕様を復号閾値へ変換する実用性がある。雑音相関と実際のもつれ生成過程を圧縮した模型が精度を制限する。",
+      "authors": [
+        "Nitish Kumar Chandra",
+        "Reza Nejabati",
+        "Eneet Kaur"
+      ],
+      "concept": "時空復号グラフのネットワーク継ぎ目へ異なる誤り重みを置き、装置別雑音源を有効な継ぎ目率へ写す。",
+      "conclusion": "分散XX格子手術では継ぎ目とバルクを分けた閾値解析が装置目標を与える。結論は回路雑音を近似した現象論模型に基づく。",
+      "curiosity": "モジュール間リンクだけが劣る量子計算機で、分散格子手術の符号距離をどう選ぶべきか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "数値",
+      "primaryCategory": "quant-ph",
+      "rank": 32,
+      "scoreReasons": {
+        "broadImpact": "小型量子モジュールをネットワーク化する際の必要局所ゲート忠実度とBell対忠実度を設計指標にできる。",
+        "categoryImpact": "異種雑音下の分散表面符号XX結合について、バルクと継ぎ目の論理誤りを分けて閾値を見積もる。",
+        "originality": "H字型時空図の継ぎ目雑音を局所CNOT、共有もつれ対、待機、読出しの寄与から有効率へまとめる。",
+        "technicalStrength": "最小重み完全マッチングで閾値を推定するが、回路レベル雑音は現象論的な二率へ近似される。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 17,
+        "originality": 13,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29186v1"
+      ],
+      "submissionType": "new",
+      "title": "Towards the Characterization of Logical Errors in Distributed Lattice Surgery",
+      "titleJa": "分散格子手術における論理誤りの特徴付けに向けて",
+      "totalScore": 61,
+      "url": "https://arxiv.org/abs/2607.29186"
+    },
+    {
+      "abstractLines": [
+        "相似スペクトルの量子Otto機関では効率が軌道非依存でも仕事量は揺らぐ。",
+        "二点測定仕事分布を端点エネルギーモーメントへ還元し、有限N等間隔梯子を閉形式で解析した。",
+        "高温と無限次元の極限が交換せず、平均出力と仕事信頼性が異なる最適運転点を選ぶと示した。"
+      ],
+      "arxivId": "2607.29050",
+      "arxivVersion": "v1",
+      "assessment": "理想基準模型で複数の不信頼性要因を解析的に分けた点が有用である。相似スペクトルという強い構造が一般装置への波及を抑える。",
+      "authors": [
+        "Gabriella G. Damas",
+        "Clebson Cruz",
+        "Norton G. de Almeida",
+        "Gao Xianlong",
+        "G. D. de Moraes Neto"
+      ],
+      "concept": "全準位間隔を同率で伸縮する相似性により、仕事分布を平衡端点のエネルギー統計へ写して有限サイズ効果を分離する。",
+      "conclusion": "有限Otto機関では最大平均出力と最大信頼性は一致せず、極限の順序にも依存する。弱い非相似性では効率揺らぎが再び現れる。",
+      "curiosity": "有限準位量子機関では、平均仕事が大きい運転点が一回ごとの出力信頼性も最大にするか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 33,
+      "scoreReasons": {
+        "broadImpact": "有限サイズ量子熱機関の仕事揺らぎを整理し、量子熱力学の小型装置評価に有用だが対象は相似スペクトルである。",
+        "categoryImpact": "有限準位Otto機関の仕事分布と信頼度を閉形式化し、高温極限と無限次元極限の非可換性を示す。",
+        "originality": "平均出力最適点と信号対幅の信頼性最適点を分離し、有限サイズ・不完全熱化・有限時間の寄与を切り分ける。",
+        "technicalStrength": "任意有限相似スペクトルから等間隔梯子、摂動的非相似まで扱うが、実験雑音模型との比較はない。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 16,
+        "originality": 15,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29050v1"
+      ],
+      "submissionType": "new",
+      "title": "Finite-size reliability of homothetic quantum Otto engines",
+      "titleJa": "相似量子Ottoエンジンの有限サイズ信頼性",
+      "totalScore": 61,
+      "url": "https://arxiv.org/abs/2607.29050"
+    },
+    {
+      "abstractLines": [
+        "導波路型SU(1,1)干渉計では光パラメトリック増幅のスペクトル多モード性が位相感度を変える。",
+        "Schmidtモード分解を用い、数検出とホモダイン検出を薄膜ニオブ酸リチウム導波路模型で計算した。",
+        "資源分散とコヒーレンス損失を分離し、入力信号と局所発振器のスペクトル最適化で劣化を緩和した。"
+      ],
+      "arxivId": "2607.29469",
+      "arxivVersion": "v1",
+      "assessment": "実導波路設計と量子感度式を結ぶ包括的解析である。装置非対称性やモード依存位相を含む実験条件への拡張が残る。",
+      "authors": [
+        "Sonu Jana",
+        "Swagatam Bag",
+        "Fabien Bretenaker",
+        "Nadia Belabas",
+        "Syamsundar De"
+      ],
+      "concept": "結合スペクトルをSchmidt対へ対角化し、各対を独立干渉計として足し合わせて検出方式ごとの感度損失を追う。",
+      "conclusion": "多モード感度劣化は数検出では資源分散、ホモダイン検出ではさらに局所発振器とのコヒーレンス不整合から生じる。結果は共通位相仮定に依存する。",
+      "curiosity": "現実の多モード導波路増幅器でも、SU(1,1)干渉計の量子位相感度を保てるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 34,
+      "scoreReasons": {
+        "broadImpact": "薄膜ニオブ酸リチウム導波路の量子干渉計設計に直結し、量子計測と集積フォトニクスへ利用できる。",
+        "categoryImpact": "SU(1,1)干渉計の多モード性が数検出とホモダイン検出の感度へ与える別々の劣化機構を整理する。",
+        "originality": "Schmidt基底で並列単一モード干渉計へ分解し、信号光と局所発振器のスペクトル整形で損失を緩和する。",
+        "technicalStrength": "導波路の結合スペクトルを数値設計へ取り込むが、同一増幅器とモード非依存位相という仮定がある。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 16,
+        "originality": 14,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29469v1"
+      ],
+      "submissionType": "new",
+      "title": "Phase Sensitivity of Spectrally Multimode SU(1,1) Interferometers with Waveguide based Optical Parametric Amplifier",
+      "titleJa": "導波路型光パラメトリック増幅器を用いたスペクトル多モードSU(1,1)干渉計の位相感度",
+      "totalScore": 60,
+      "url": "https://arxiv.org/abs/2607.29469"
+    },
+    {
+      "abstractLines": [
+        "局所次元が異なる複合系では、最小個数の局所識別不能直交状態集合の構成が未解決だった。",
+        "まずC^4⊗C^7で構成し、異次元二部系一般と三部系へ方法を拡張した。",
+        "二部系と5≤d1<d2<d3の三部系で最小非局所性を持つ状態集合を得た。"
+      ],
+      "arxivId": "2607.28998",
+      "arxivVersion": "v1",
+      "assessment": "明確な組合せ構成問題を広い異次元族で解いている。物理実装や操作的優位性より、局所識別理論の構成的進展である。",
+      "authors": [
+        "Ben-Hao Zhao",
+        "Dong-Huan Jiang",
+        "Yu-Guang Yang",
+        "Guang-Bao Xu"
+      ],
+      "concept": "局所測定で直交性を保つ制約を各次元ブロックへ配置し、どの党も最初の非自明測定を開始できない集合を組み立てる。",
+      "conclusion": "異次元の二部系一般と指定三部系で最小非局所性集合を構成できる。三部系の小さい局所次元やさらに多体系は範囲外である。",
+      "curiosity": "局所Hilbert空間の次元が揃わないとき、非局所識別不能性を生む最小の直交状態数はいくつか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 35,
+      "scoreReasons": {
+        "broadImpact": "局所識別不能状態の最小構成を量子通信と非局所性理論へ供給するが、利用範囲は有限次元識別に集中する。",
+        "categoryImpact": "局所次元が異なる二部系一般とd1<d2<d3の三部系で、最小濃度の非局所直交状態集合を構成する。",
+        "originality": "同次元でない局所空間へ最小非局所性構成を一般化し、具体例C^4⊗C^7から体系的方法を導く。",
+        "technicalStrength": "未解決だった構成問題に明示構成を与える一方、最小性の下界は与えず、三部系の構成はd1≥5の範囲に限られる。"
+      },
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 17,
+        "originality": 15,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28998v1"
+      ],
+      "submissionType": "new",
+      "title": "Construction of Sets of Orthogonal Quantum States with Minimal Nonlocality in Bipartite and Tripartite Systems of Unequal Local Dimensions",
+      "titleJa": "局所次元が異なる二部・三部系における最小非局所性直交量子状態集合の構成",
+      "totalScore": 60,
+      "url": "https://arxiv.org/abs/2607.28998"
+    },
+    {
+      "abstractLines": [
+        "量子回路のトランスパイルは固定設定が多く、回路ごとに有効な最適化パスを選べない。",
+        "MQT Bench回路とQiskitパスの組合せを特徴模型で標本化し、教師あり予測器を訓練した。",
+        "既定最適化水準に負けず、二量子ビットゲート数を平均でさらに19.1〜32.4%削減した。"
+      ],
+      "arxivId": "2607.29145",
+      "arxivVersion": "v1",
+      "assessment": "量子ソフトウェア最適化へ再現可能な自動調整手順を与える。特定ベンチマークとQiskitパス集合への依存が一般性を制限する。",
+      "authors": [
+        "Piotr Malkowski",
+        "Domenik Eichhorn",
+        "Joshua Ammermann",
+        "Rinor Kelmendi",
+        "Nick Poser",
+        "Patrick Hopf",
+        "Ina Schaefer"
+      ],
+      "concept": "パス構成空間を特徴模型で広く標本化し、回路特徴と各構成の削減効果を学習して実行前に選別する。",
+      "conclusion": "予測模型による自動調整はQiskit既定設定より回路を小さくできる。評価指標は主に二量子ビットゲート数で、装置別忠実度は含まれない。",
+      "curiosity": "回路構造を見て、どのトランスパイラーパス列が最も二量子ビットゲートを減らすか予測できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "数値・ソフトウェア",
+      "primaryCategory": "quant-ph",
+      "rank": 36,
+      "scoreReasons": {
+        "broadImpact": "回路別にトランスパイル経路を選ぶ方法は、多様なゲート型量子装置のコンパイル費用削減に利用できる。",
+        "categoryImpact": "Qiskitの固定最適化水準に代えて、回路特徴から二量子ビットゲート削減用パス集合を予測する。",
+        "originality": "特徴模型による構成サンプリングと教師あり学習を組み合わせた自動調整は有用だが、古典コンパイラーで一般的な枠組みの移植である。",
+        "technicalStrength": "数千回路で平均19.1〜32.4%の追加削減を報告するが、実機雑音やコンパイル時間を含む総費用は不明である。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 15,
+        "originality": 13,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29145v1"
+      ],
+      "submissionType": "new",
+      "title": "Transpiler Autotuning with Predictive Models for Quantum Circuit Optimization",
+      "titleJa": "量子回路最適化のための予測模型によるトランスパイラー自動調整",
+      "totalScore": 59,
+      "url": "https://arxiv.org/abs/2607.29145"
+    },
+    {
+      "abstractLines": [
+        "シリコンのフリップフロップ量子ビットの二体ゲートは、軌道漏洩と傍観量子ビットの残留双極子結合に乱される。",
+        "スピン・軌道力学を数値計算し、Makhlin不変量でゲート同値類を求めて電気的Rz補正を最適化した。",
+        "多量子ビット配置ではパルス、局所位相、装置幾何を同時設計する必要があると示した。"
+      ],
+      "arxivId": "2607.29123",
+      "arxivVersion": "v1",
+      "assessment": "多量子ビット化で現れる傍観結合を設計段階へ含めた点は実用的である。最適化は数値シミュレーションに基づき、装置較正誤差を含む実機性能は確立していない。",
+      "authors": [
+        "Lorenzo D'Onofrio",
+        "Elena Ferraro",
+        "Marco De Michielis"
+      ],
+      "concept": "物理発展をMakhlin不変量で局所同値な標準ゲートへ写し、不足する局所位相を実現可能な電気パルスで補う。",
+      "conclusion": "高忠実度ゲートには単一対だけでなくパルス、位相補償、配列幾何の共同最適化が必要である。結論は数値装置模型に基づく。",
+      "curiosity": "長距離双極子結合を使うシリコンドナー配列で、漏洩と傍観量子ビット誤差を同時に抑えられるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "数値",
+      "primaryCategory": "quant-ph",
+      "rank": 37,
+      "scoreReasons": {
+        "broadImpact": "シリコンドナー量子ビットの電気制御設計へ役立つが、成果はフリップフロップ方式に特化する。",
+        "categoryImpact": "軌道漏洩と傍観量子ビット結合を含め、sqrt(iSWAP)およびiSWAPの局所補正を共同最適化する。",
+        "originality": "Makhlin不変量で物理パルスから論理ゲート同値類を抽出し、配置と位相補償を同じ探索へ入れる。",
+        "technicalStrength": "公開シミュレーターで複数配置と制御波形を比較する。達成忠実度の装置較正誤差に対する感度と実機での再現性は検証されていない。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 16,
+        "originality": 13,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29123v1"
+      ],
+      "submissionType": "new",
+      "title": "Numerical Optimization of Two-Qubit Gates in Silicon Flip-Flop Qubit Arrays under Electrical Control",
+      "titleJa": "電気制御シリコン・フリップフロップ量子ビット配列における二量子ビットゲートの数値最適化",
+      "totalScore": 59,
+      "url": "https://arxiv.org/abs/2607.29123"
+    },
+    {
+      "abstractLines": [
+        "SQLへ変換した量子回路シミュレーションは、回路の多様性を持つ体系的評価基盤が不足していた。",
+        "部分回路テンプレートから一般回路を生成し、SQL負荷と静的・動的特徴を収録するInferQを構築した。",
+        "202,975回路を公開し、関係データベースが半数超でQiskit Aerより少ない最大メモリーを使うと報告した。"
+      ],
+      "arxivId": "2607.29134",
+      "arxivVersion": "v1",
+      "assessment": "大規模な公開負荷と複数エンジン比較により基盤研究を可能にする。量子物理上の前進より、評価インフラとしての寄与が中心である。",
+      "authors": [
+        "Andrei Ilinescu",
+        "Aadi Patwardhan",
+        "Rihan Hai"
+      ],
+      "concept": "量子ゲート網を結合・集約SQLへ機械変換し、回路グラフと問い合わせ計画の特徴から有利な実行エンジンを予測する。",
+      "conclusion": "InferQはSQL型量子回路シミュレーションの比較とエンジン選択を体系化する。性能結論は収録回路と比較した実装群の範囲に限られる。",
+      "curiosity": "関係データベースはどの回路構造なら専用量子シミュレーターより効率よくテンソル縮約できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "数値・ソフトウェア",
+      "primaryCategory": "quant-ph",
+      "rank": 38,
+      "scoreReasons": {
+        "broadImpact": "量子回路シミュレーションと関係データベース最適化を結び、計算基盤研究へ再利用できる。",
+        "categoryImpact": "SQLテンソル縮約を広い回路族で比較する202,975回路のベンチマークと特徴量集合を提供する。",
+        "originality": "回路を合成テンプレートから生成し、回路・グラフ・SQL・実行時特徴を同時記録するデータベース視点が特徴である。",
+        "technicalStrength": "四種の関係データベースとQiskit Aerを比較し予測精度も示すが、状態ベクトル法以外との比較範囲は不明である。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 13,
+        "originality": 15,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29134v1"
+      ],
+      "submissionType": "new",
+      "title": "InferQ: A Database-Oriented Benchmark for Quantum Circuits Simulation",
+      "titleJa": "InferQ：量子回路シミュレーションのデータベース指向ベンチマーク",
+      "totalScore": 59,
+      "url": "https://arxiv.org/abs/2607.29134"
+    },
+    {
+      "abstractLines": [
+        "相関駆動量子電池は散逸下でもエルゴトロピーを保持し得るが、実際の仕事抽出が難しい。",
+        "Hubbard–Holstein二量体を充電し、理想最適抽出と負荷へのスペクトル整合による放電を比較した。",
+        "現実的方式でも相当量を抽出できる一方、蓄電の微視的機構が適合負荷を制限すると示した。"
+      ],
+      "arxivId": "2607.29339",
+      "arxivVersion": "v1",
+      "assessment": "蓄電量だけでなく放電可能性を物理結合で評価した点がよい。小系模型と調整された負荷に依存し、拡張性は未知である。",
+      "authors": [
+        "Emil Östberg",
+        "Arvid Steen",
+        "Najmeh Abiri",
+        "Irene D'Amico",
+        "Claudio Verdozzi"
+      ],
+      "concept": "電池と負荷の遷移周波数を合わせ、理想的な全体ユニタリーの代わりに物理的結合だけで選択的にエネルギーを移す。",
+      "conclusion": "Hubbard–Holstein電池は散逸下でも仕事を保持するが、効率的放電には負荷との機構適合が必要である。一般性は二量体解析を超えて未確立である。",
+      "curiosity": "量子電池に蓄えたエルゴトロピーは、微調整できない現実の負荷へどこまで取り出せるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 39,
+      "scoreReasons": {
+        "broadImpact": "相関とフォノンを使う量子電池の抽出可能性を論じるが、二量体模型から一般装置への接続は限定的である。",
+        "categoryImpact": "Hubbard–Holstein二量体で散逸下のエルゴトロピー保存と、負荷へのスペクトル整合による現実的抽出を比較する。",
+        "originality": "充電機構が抽出可能な負荷の種類を制約するという、量子電池の非普遍性を具体模型で示唆する。",
+        "technicalStrength": "最適抽出と実現可能手順の差を数値化する一方、抽出忠実度の広い負荷条件と散逸模型に対する感度は定量化されていない。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 15,
+        "originality": 15,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29339v1"
+      ],
+      "submissionType": "new",
+      "title": "Charging and Discharging a Hubbard-Holstein Quantum Battery: Specific Mechanisms and General Insights",
+      "titleJa": "Hubbard–Holstein量子電池の充放電：個別機構と一般的洞察",
+      "totalScore": 58,
+      "url": "https://arxiv.org/abs/2607.29339"
+    },
+    {
+      "abstractLines": [
+        "弾性螺旋ナノリボンの配座は曲げエネルギーと表面上量子粒子の幾何ポテンシャルで変わり得る。",
+        "平均曲率とGauss曲率から弾性・量子ポテンシャルを導き、無次元比RHに対する配座順序を調べた。",
+        "二つの臨界値で安定配座の順序反転と局在状態の出現が起こり、電子注入が法線螺旋への転移を誘起すると予測した。"
+      ],
+      "arxivId": "2607.29623",
+      "arxivVersion": "v1",
+      "assessment": "幾何量子効果が巨視的配座を選ぶ明瞭な機構を示した。連続体模型の理想化が強く、実材料でのエネルギー尺度は未検証である。",
+      "authors": [
+        "Radha Balakrishnan",
+        "Rossen Dandoloff",
+        "Avadh Saxena"
+      ],
+      "concept": "曲率依存のda Costaポテンシャルを弾性曲げポテンシャルへ加え、配座ごとの全エネルギー順序を一つの無次元比で比較する。",
+      "conclusion": "量子幾何ポテンシャルは螺旋配座の安定順位を反転し、局在閾値以上で法線螺旋を選び得る。材料応答の自己無撞着性は模型外である。",
+      "curiosity": "曲面に閉じ込めた一電子の量子幾何エネルギーは、柔らかいナノリボン全体の形を変えられるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 40,
+      "scoreReasons": {
+        "broadImpact": "曲面量子力学と柔軟ナノ構造を結ぶが、対象は理想化された螺旋リボンの配座選択に限られる。",
+        "categoryImpact": "da Costa幾何ポテンシャルとCanham–Helfrich弾性を足し、電子注入による配座順序の反転を予測する。",
+        "originality": "量子粒子の曲率エネルギーが弾性配座の安定順序を逆転し、さらに局在閾値を作る機構が特徴である。",
+        "technicalStrength": "曲率から全ポテンシャルを解析導出するが、電子とリボン形状の自己無撞着応答や材料パラメータは扱わない。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 13,
+        "originality": 14,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29623v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum geometric potential induced conformational transitions in elastic helical nanoribbons",
+      "titleJa": "量子幾何ポテンシャルが誘起する弾性螺旋ナノリボンの配座転移",
+      "totalScore": 53,
+      "url": "https://arxiv.org/abs/2607.29623"
+    },
+    {
+      "abstractLines": [
+        "路側機の連合学習ではセンサーデータや大きな重み更新を送る通信量とプライバシーが問題となる。",
+        "交通状態を量子回路へ入力し、Pauli期待値スケッチを分類器で処理して分類器更新だけを共有した。",
+        "NGSIMで最良の対応古典スケッチより対数損失を14.4%下げ、SUMOでは通信量を7〜28分の1にした。"
+      ],
+      "arxivId": "2607.28799",
+      "arxivVersion": "v1",
+      "assessment": "実データ、交通シミュレーション、量子装置を一連の評価へ含めた。量子性が性能差の原因であることと厳密なプライバシー保護は示されていない。",
+      "authors": [
+        "Talha Azfar",
+        "Ruimin Ke"
+      ],
+      "concept": "各地点の交通要約をIQP回路の非線形Pauli特徴へ写し、特徴と原記録を局所に残して小さな分類器頭部だけを連合平均する。",
+      "conclusion": "量子特徴スケッチは二つの交通データ環境で小型通信と予測精度を両立した。広い古典カーネル比較と量子計算費用込みの優位性は未確立である。",
+      "curiosity": "路側機が生データを共有せず、少ない通信量で協調運転の安定性を判定できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "数値・実験",
+      "primaryCategory": "quant-ph",
+      "rank": 41,
+      "scoreReasons": {
+        "broadImpact": "帯域制約のある交通学習へ量子特徴を適用するが、物理学への波及より交通機械学習の用途が中心である。",
+        "categoryImpact": "IQP由来のPauli期待値を連合学習の小型特徴として使い、IBM量子装置も含めて評価する。",
+        "originality": "量子スケッチを共有せず分類器更新だけを送る構成は応用統合で、量子回路自体の新規性は限定的である。",
+        "technicalStrength": "NGSIMとSUMOで古典スケッチ・多層認識器を比較するが、同等計算費用での広い古典基準とプライバシー保証は不十分である。"
+      },
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 12,
+        "originality": 13,
+        "technicalStrength": 13
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28799v1"
+      ],
+      "submissionType": "new",
+      "title": "FedQML-Edge: Compact Quantum Feature Sketches for Communication-Constrained Roadside Federated Learning",
+      "titleJa": "FedQML-Edge：通信制約下の路側連合学習に向けた小型量子特徴スケッチ",
+      "totalScore": 51,
+      "url": "https://arxiv.org/abs/2607.28799"
+    },
+    {
+      "abstractLines": [
+        "IQP生成模型の潜在適応は新条件ごとの初期値が無作為だと学習効率を損なう。",
+        "Burgers方程式の物理情報ニューラルネットワークから潜在表現を抽出し、IQP回路の初期値へ転用した。",
+        "複数の粘性設定で無作為初期化より適応挙動と生成精度が改善した。"
+      ],
+      "arxivId": "2607.28866",
+      "arxivVersion": "v1",
+      "assessment": "初期化問題へ物理代理表現を使う実用的工夫である。検証範囲が一方程式に狭く、量子回路を用いる必然性は弱い。",
+      "authors": [
+        "Chen-Yu Liu",
+        "Leonardo Placidi",
+        "Marco Ballarin",
+        "Enrico Rinaldi"
+      ],
+      "concept": "低解像度解で訓練した物理情報ニューラルネットワークの内部座標を、共有IQPパラメータに付随する潜在変数へ写す。",
+      "conclusion": "物理情報を持つ潜在初期値はBurgers方程式のIQP生成適応を改善した。量子模型固有の利点と他方程式への転移性は示されていない。",
+      "curiosity": "古典物理代理模型が学んだ潜在構造は、量子生成回路の初期化を安定化できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "数値",
+      "primaryCategory": "quant-ph",
+      "rank": 42,
+      "scoreReasons": {
+        "broadImpact": "偏微分方程式の生成学習へ量子回路を使うが、Burgers方程式一例から物理計算一般への波及は未確定である。",
+        "categoryImpact": "IQP生成模型の低次元潜在変数を、物理情報ニューラルネットワークの表現で初期化する。",
+        "originality": "古典代理模型から量子潜在初期値を移す組合せは新用途だが、転移学習の中心発想は既知である。",
+        "technicalStrength": "複数の粘性値で無作為初期化を上回る。古典生成模型と計算資源を揃えた比較および試行間ばらつきの評価は含まれない。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 12,
+        "originality": 12,
+        "technicalStrength": 12
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28866v1"
+      ],
+      "submissionType": "new",
+      "title": "Generative IQP Circuit Learning with Physics-Informed Latent Initialization",
+      "titleJa": "物理情報を用いた潜在初期化による生成IQP回路学習",
+      "totalScore": 48,
+      "url": "https://arxiv.org/abs/2607.28866"
+    },
+    {
+      "abstractLines": [
+        "大規模電力網の共振モード探索は周波数ごとの非Hermiteアドミタンス行列対角化を要する。",
+        "行列を量子処理装置へ符号化し、実分散変分量子固有値法で複素固有値を抽出した。",
+        "5母線系では古典的周波数応答と近く一致したが、大規模網での実行結果は示されない。"
+      ],
+      "arxivId": "2607.29582",
+      "arxivVersion": "v1",
+      "assessment": "非Hermite電力網問題を量子変分法へ写した概念実証である。小規模古典再現から大陸規模での優位性を結論する証拠は不足する。",
+      "authors": [
+        "Ankit Kumar Das",
+        "Durgesh Pandey",
+        "P. Arumugam"
+      ],
+      "concept": "アドミタンス行列の複素固有モードを実分散目的関数の最小化へ変換し、変分量子回路と古典最適化で探索する。",
+      "conclusion": "実分散VQEは小さな5母線模型の共振固有値を再現した。対数メモリー符号化だけでは状態準備と測定を含む大規模高速化を保証しない。",
+      "curiosity": "非Hermiteな大規模電力網モード解析を、量子メモリー符号化で古典RAM制約から解放できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "数値提案",
+      "primaryCategory": "quant-ph",
+      "rank": 43,
+      "scoreReasons": {
+        "broadImpact": "電力網安定性への応用を目指すが、5母線模型から大陸規模網への計算上の経路は実証されていない。",
+        "categoryImpact": "非Hermiteアドミタンス行列の複素固有値を実分散VQEで求める既存型ハイブリッド応用である。",
+        "originality": "電力網の共振モードを開放量子系の非Hermite固有値問題へ写す用途は新しいが、中心アルゴリズムは継承している。",
+        "technicalStrength": "標準5母線系で厳密古典応答と一致するだけで、量子メモリー準備、回路深さ、誤差、古典スケーリング比較が不足する。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 10,
+        "originality": 11,
+        "technicalStrength": 10
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29582v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum computing-based solver for interacting power grids",
+      "titleJa": "相互作用する電力網の量子計算ソルバー",
+      "totalScore": 43,
+      "url": "https://arxiv.org/abs/2607.29582"
+    },
+    {
+      "abstractLines": [
+        "単一オンサイト欠陥を持つ最近接強束縛鎖は、平均二乗変位に非単調な輸送を示す。",
+        "永年方程式から固有値条件と正規化固有ベクトルを導き、暗・明部分空間へ分解した。",
+        "既報の占有確率と変位を再導出し、平均二乗変位を最小化する臨界欠陥強度を数値確認した。"
+      ],
+      "arxivId": "2607.29467",
+      "arxivVersion": "v1",
+      "assessment": "既知輸送現象へ明瞭な固有状態解釈を与える。新しい物理結果や一般欠陥系への拡張は限定的である。",
+      "authors": [
+        "Sayan Roy"
+      ],
+      "concept": "欠陥位置で振幅がゼロの暗状態と欠陥で混成する明状態を分け、各スペクトル寄与から時間依存変位を再構成する。",
+      "conclusion": "平均二乗変位の非単調性は明・暗スペクトル成分の競合として理解できる。結果は既報式の別導出で、単一欠陥有限鎖が対象である。",
+      "curiosity": "単一欠陥が輸送を最も強く抑える臨界強度は、固有状態スペクトルのどの再編成から生じるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論・数値",
+      "primaryCategory": "quant-ph",
+      "rank": 44,
+      "scoreReasons": {
+        "broadImpact": "単一欠陥輸送の教育的解析として有用だが、狭い強束縛模型の既知結果の再導出に留まる。",
+        "categoryImpact": "既報の占有確率と平均二乗変位をスペクトル分解から再現し、非単調性の固有状態起源を説明する。",
+        "originality": "暗部分空間と明部分空間への分離は見通しを改善するが、中心的な輸送結果自体は既知である。",
+        "technicalStrength": "永年方程式、正規化固有ベクトル、有限鎖数値を対応させるが、単一オンサイト欠陥に限られる。"
+      },
+      "scores": {
+        "broadImpact": 9,
+        "categoryImpact": 11,
+        "originality": 8,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29467v1"
+      ],
+      "submissionType": "new",
+      "title": "A spectral viewpoint on the single defect tight-binding chain",
+      "titleJa": "単一欠陥を持つ強束縛鎖のスペクトル的視点",
+      "totalScore": 42,
+      "url": "https://arxiv.org/abs/2607.29467"
+    },
+    {
+      "abstractLines": [
+        "H2+の二光子解離で生じる原子とイオンの空間もつれが、吸収機構にどう依存するかを調べる。",
+        "逐次二光子吸収と位相相関した同時二光子吸収を計算し、もつれ忠実度の周波数・時間依存を比較した。",
+        "光子周波数で忠実度を制御でき、長時間で飽和すると報告し、空間もつれの検出案を示した。"
+      ],
+      "arxivId": "2607.29556",
+      "arxivVersion": "v1",
+      "assessment": "吸収機構と解離もつれを比較する具体的問題を扱う。中心となる相関吸収形式の妥当性と実験可能性の裏付けが弱い。",
+      "authors": [
+        "Krishna Rai Dastidar"
+      ],
+      "concept": "二つの吸収経路が作る解離波束の位相相関を忠実度へ写し、レーザー周波数を波束重なりの制御変数にする。",
+      "conclusion": "相関二光子吸収はH2+解離片の空間もつれを周波数制御できると予測される。10^10 W/cm²超の高強度と採用した非局所場模型に依存する。",
+      "curiosity": "二光子が逐次または位相相関して吸収される違いは、解離片間の空間もつれをどれだけ変えるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "quant-ph",
+      "rank": 45,
+      "scoreReasons": {
+        "broadImpact": "分子イオン光解離の空間もつれ制御へ対象が限られ、他の量子技術への接続は提案段階である。",
+        "categoryImpact": "H2+の逐次二光子吸収と位相相関二光子吸収について、解離原子・イオン間もつれ忠実度を比較する。",
+        "originality": "著者らの非局所電磁場モードによる相関吸収形式を分子光解離へ延長したもので、中心機構は先行研究を継承する。",
+        "technicalStrength": "周波数・時間依存と検出案を計算する一方、高強度条件、相関吸収模型、忠実度定義に対する独立な検証は行っていない。"
+      },
+      "scores": {
+        "broadImpact": 9,
+        "categoryImpact": 10,
+        "originality": 8,
+        "technicalStrength": 11
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29556v1"
+      ],
+      "submissionType": "new",
+      "title": "Comparison of Spatial Entanglement between dissociated atom and ion : molecular ion photo-dissociated by sequential two-photon absorption and correlated two-photon absorption",
+      "titleJa": "逐次・相関二光子吸収で光解離した分子イオンにおける原子・イオン間空間もつれの比較",
+      "totalScore": 38,
+      "url": "https://arxiv.org/abs/2607.29556"
+    }
+  ],
+  "reportDate": "2026-08-03",
+  "schemaVersion": "1.4",
+  "slug": "quant-ph",
+  "totalNew": 45
+}

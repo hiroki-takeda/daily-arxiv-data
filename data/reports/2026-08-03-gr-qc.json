@@ -1,0 +1,300 @@
+{
+  "schemaVersion": "1.4",
+  "reportDate": "2026-08-03",
+  "evaluationRun": {
+    "modelId": "gpt-5.6-sol",
+    "modelDisplayName": "GPT-5.6-Sol",
+    "reasoningEffort": "high",
+    "modelSelectionVerified": true,
+    "runId": "run-20260804T020707Z-6fe1877d0a9d"
+  },
+  "slug": "gr-qc",
+  "label": "General Relativity and Quantum Cosmology",
+  "totalNew": 6,
+  "crosslistsExcluded": 15,
+  "evaluatedCount": 6,
+  "fullTextEvaluatedCount": 6,
+  "papers": [
+    {
+      "rank": 1,
+      "arxivId": "2607.28738",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.28738",
+      "title": "Obstructions to Traversable Wormholes in Einstein-Dirac Theory",
+      "titleJa": "Einstein–Dirac理論における通過可能ワームホールへの障害",
+      "authors": [
+        "Robert J. Weinbaum"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 20,
+        "originality": 18,
+        "technicalStrength": 20
+      },
+      "scoreReasons": {
+        "broadImpact": "物理的なDirac場が通過可能ワームホールを支えられるかを問い、重力解のエネルギー条件と場の量子状態の接点に具体的な制約を与える。静的球対称かつ漸近平坦な設定に限られる。",
+        "categoryImpact": "既報のEinstein–Dirac–Maxwell解で欠けた自己相互作用と正周波数条件を正し、部分ワームホールを両端漸近平坦な解へ延長できない障害を示す。静的球対称系に対する強い制約だが、一般的禁止定理ではない。",
+        "originality": "Dirac場によるANEC違反を継承しつつ、喉を作る球面パリティが左右の漸近端で反転する非局所的障害と、反射対称喉の独立な必要条件を組み合わせた点が新しい。",
+        "technicalStrength": "RK45解の制約残差を10^{-6}未満で確認し、広い周波数・質量・スピノル振幅走査と高密度再走査を実施した。反射対称条件も別の目的関数で調べるが、有限範囲の数値探索である。"
+      },
+      "totalScore": 74,
+      "abstractLines": [
+        "通過可能ワームホールにはANEC違反物質が必要であり、物理的なDirac場がその源になれるかが問題となる。",
+        "正周波数で定周波数・角運動量を持つDirac場を用い、静的球対称かつ漸近平坦な幾何を数値探索した。",
+        "片側だけ正しい漸近形を持つ部分解は得たが、両端を漸近平坦にした通過可能解は見つからなかった。"
+      ],
+      "curiosity": "ANECを破る正周波数Dirac場は、自己無撞着な時空では二つの漸近平坦領域を結ぶ喉を維持できるのか。",
+      "concept": "固定背景でのANEC違反可能性と自己無撞着なEinstein方程式の境界値問題を分け、正周波数条件を保ったまま両端の漸近条件が同時に成立するかを調べる。",
+      "conclusion": "物理的な定周波数Dirac場は局所的な喉を形成できても、調べた静的球対称条件では第二の漸近平坦端へ延長できない。結論は探索した場の状態と対称性の範囲に限られる。",
+      "assessment": "単一粒子Dirac場の物理条件を明確化し、左右端のパリティ不整合と反射対称条件から二重に障害を示す。有限の数値走査なので、対称性を緩めた全構成の非存在までは証明しない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "半古典的Dirac場、ANEC違反、Einstein–Dirac方程式、数値手順、パリティ障害、反射対称走査を確認した。数値解と全パラメータ空間は独立再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28738v1",
+        "https://arxiv.org/pdf/2607.28738v1"
+      ]
+    },
+    {
+      "rank": 2,
+      "arxivId": "2607.28930",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.28930",
+      "title": "Excitation region of Kerr black hole quasinormal modes from Stokes geometry",
+      "titleJa": "Stokes幾何から見たKerrブラックホール準固有モードの励起領域",
+      "authors": [
+        "Naritaka Oshita"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 19,
+        "originality": 18,
+        "technicalStrength": 19
+      },
+      "scoreReasons": {
+        "broadImpact": "QNM展開の収束領域をStokes幾何へ結び、重力波リングダウン開始時刻とブラックホール摂動論に具体的な利用経路を与える。連星合体への適用は特に極端質量比で示唆され、同程度質量では未解決である。",
+        "categoryImpact": "QNM励起半径を光子リングではなく反Stokes線上のWKB優勢解の切替えで定め、Schwarzschild値から極限Kerrの地平面近傍まで説明する。有限倍音ごとに半径が変わるため単一境界ではない。",
+        "originality": "既知のSchwarzschild収束半径とStokes量子化研究を継承し、反Stokes線の実半径交点を波源の有効励起位置として波形再構成に直接対応させた点が新しい。",
+        "technicalStrength": "解析的Stokes幾何をMST法によるQNM・分岐切断テール再構成と照合し、モード打切りと周波数切断の1%安定性も確認する。高減衰近似と極限回転での真空間近似が残る。"
+      },
+      "totalScore": 73,
+      "abstractLines": [
+        "ブラックホールのQNMが時空のどの領域で有効に励起されるかは、リングダウン展開の物理的解釈に関わる。",
+        "反Stokes線を横切るWKB解の優勢性の切替えからKerr時空の励起半径条件を導き、数値収束試験と比較した。",
+        "Schwarzschild極限の既知値を再現し、極限回転ではゼロ減衰モードに対応して収束半径が外側地平面へ近づく。"
+      ],
+      "curiosity": "KerrリングダウンのQNM展開が収束し始める半径は、光子リングではなくどの複素解析構造で決まるのか。",
+      "concept": "反Stokes線上で二つのWKB解の優勢性が交換する位置を励起境界とみなし、時間領域のQNM展開の収束半径と対応させる。",
+      "conclusion": "QNMの有効な励起領域は単一の幾何学的半径ではなく倍音数に依存し、極限Kerrではゼロ減衰モードのStokes構造が境界を支配する。広い回転率での有限倍音の挙動は残る。",
+      "assessment": "解析的なStokes構造を独立な波形再構成へ結び、光子リングとは異なる励起像を定量化した。高回転域では近似をゼロ減衰モードへ切り替える必要があり、有限倍音の統一計算は残る。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "Stokes現象、Teukolsky方程式、高倍音半径、MST波形再構成、極限Kerrのゼロ減衰モード、数値打切り検査を確認した。計算値は独立再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28930v1",
+        "https://arxiv.org/pdf/2607.28930v1"
+      ]
+    },
+    {
+      "rank": 3,
+      "arxivId": "2607.29427",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.29427",
+      "title": "Resolution of Infrared Entanglement Divergences via the Extended Uncertainty Principle",
+      "titleJa": "拡張不確定性原理による赤外量子もつれ発散の解消",
+      "authors": [
+        "Subhra Mondal",
+        "S. Shankaranarayanan"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 16,
+        "originality": 18,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "EUPの大距離補正を、調和鎖・質量ゼロスカラー場の零モード発散と量子もつれスペクトルへ接続する。量子情報と曲率時空へ波及するが、相互作用模型と修正交換関係の物理的妥当性に依存する。",
+        "categoryImpact": "背景Ricciスカラーに結び付く局在長が赤外発散を抑える機構を提示し、曲率と量子もつれの関係を具体化する。動的時空や一般の場に対する共変的定式化は示されていない。",
+        "originality": "EUPによる修正交換関係を継承し、位置分散の厳密な上限からモジュラーギャップと有限の量子もつれエントロピーを導く連鎖は非自明である。",
+        "technicalStrength": "EUP振動子の厳密解、平坦極限、分散式、数値正規化を確認し、Gaussian最大エントロピー上界と格子場計算を加える。多体系の上界は主にl_-≫1で有効で、真の基底状態を直接解いていない。"
+      },
+      "totalScore": 66,
+      "abstractLines": [
+        "質量ゼロ場の零モードは無限に非局在化し、量子もつれエントロピーに赤外発散を生じさせる。",
+        "EUPで修正した調和振動子を厳密に解き、その幾何学的閉じ込めを調和鎖と質量ゼロスカラー場へ拡張した。",
+        "位置分散の上限が離散的な量子もつれスペクトルと有限のモジュラーギャップを保ち、赤外発散を飽和させる。"
+      ],
+      "curiosity": "曲率に由来する大距離の量子運動学は、質量ゼロ場の零モード非局在化を有限な量子もつれへ変えられるか。",
+      "concept": "EUPが与える位置分散の上限を幾何学的な閉じ込めとして読み替え、長波長モードの蓄積を止めてモジュラーギャップを開く。",
+      "conclusion": "EUPを採用すると零モードの広がりが幾何学的局在長で制限され、調べた自由な一次元系では量子もつれエントロピーが有限値へ飽和する。一般の場と時空への普遍性は未確立である。",
+      "assessment": "厳密な単一振動子の局在機構を量子もつれ上界と場のモジュラーギャップへ展開した点が独創的である。多体系では近似参照状態に依存し、高次元・相互作用場での普遍性は確立していない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "EUP運動量、振動子厳密解、自由粒子極限、結合振動子のGaussian上界、調和鎖、1+1次元スカラー場、量子もつれスペクトルを確認した。数値図は独立再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29427v1",
+        "https://arxiv.org/pdf/2607.29427v1"
+      ]
+    },
+    {
+      "rank": 4,
+      "arxivId": "2607.28789",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.28789",
+      "title": "Extending the Comisso-Asenjo Energy Extraction Mechanism to Pure Lovelock Gravity",
+      "titleJa": "Comisso–Asenjoエネルギー抽出機構の純Lovelock重力への拡張",
+      "authors": [
+        "Chen Zhou",
+        "Ikhtiyor Eshtursunov",
+        "Sanjar Shaymatov",
+        "Chengxun Yuan"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 15,
+        "originality": 14,
+        "technicalStrength": 14
+      },
+      "scoreReasons": {
+        "broadImpact": "高次元Lovelockブラックホールの磁気リコネクションを高エネルギー天体過程へ接続するが、実在する四次元天体への直接経路はなく、有効回転計量の妥当性にも依存する。",
+        "categoryImpact": "Comisso–Asenjo機構を純Lovelock・Gauss–Bonnet回転時空へ拡張し、次元・スピン・磁化・磁場方向の依存性を系統化する。単一回転配置と近似計量が適用境界である。",
+        "originality": "Einstein重力で既知の磁気リコネクション抽出を継承し、純Lovelock次数と時空次元による効率の差、およびD=3N+1での一致を示した有用な拡張である。",
+        "technicalStrength": "ZAMO系から許容域・効率・出力を4種類の時空次元で計算し、Blandford–Znajek式とD=7のEinstein対応極限も比較する。回転計量は厳密な真空解でなく、動的磁気流体検証もない。"
+      },
+      "totalScore": 56,
+      "abstractLines": [
+        "回転ブラックホールの磁気リコネクションによるエネルギー抽出が、純Lovelock重力でどう変わるかを扱う。",
+        "単一回転する高次元ブラックホールについて、スピン、磁化、磁場方向、再結合位置を変えて効率と出力を計算した。",
+        "D=3N+1ではEinstein重力と一致し、D=6から9では次元の増加とともに高速回転時の効率が高まる。"
+      ],
+      "curiosity": "高次曲率項が支配する回転ブラックホールでは、磁気リコネクションによる回転エネルギー抽出は強まるのか。",
+      "concept": "局所的な再結合流の負エネルギー条件を純Lovelock回転時空へ移し、幾何の次元依存性を抽出効率と出力へ写す。",
+      "conclusion": "純Lovelock回転ブラックホールでは特定の高次元域で磁気リコネクション抽出が強まり、一部のパラメータではBlandford–Znajek過程を上回る。実在天体への対応は模型依存である。",
+      "assessment": "次元ごとのエルゴ領域をプラズマ抽出効率へ写し、多数の制御変数と競合機構を比較している。基礎計量が先頭次数の近似で、動的磁気流体や観測との接続もない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "純Lovelock回転計量、ZAMOプラズマ模型、抽出許容域、効率・出力、Blandford–Znajek比較、結論を確認した。近似計量と図の数値は独立検証していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.28789v1",
+        "https://arxiv.org/pdf/2607.28789v1"
+      ]
+    },
+    {
+      "rank": 5,
+      "arxivId": "2607.29350",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.29350",
+      "title": "Deviation of trajectories in nonrelativistic and relativistic cases and Shirokov effect",
+      "titleJa": "非相対論的・相対論的軌道偏差とShirokov効果",
+      "authors": [
+        "Yu. V. Pavlov",
+        "V. P. Vandeev"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 14,
+        "originality": 13,
+        "technicalStrength": 17
+      },
+      "scoreReasons": {
+        "broadImpact": "円軌道近傍の偏差と近点移動を、古典力学と一般相対論の対応として整理するため、天体軌道と時空計量の解析に有用である。静的球対称かつほぼ円形の軌道に範囲が限られる。",
+        "categoryImpact": "閉じた近円軌道を許す静的球対称計量を分類し、一般計量から近点移動を直接得る偏差式を与える。中心問題の解決というより、軌道偏差法とShirokov効果の体系化である。",
+        "originality": "既存の測地線偏差とBertrand型閉軌道問題を基礎に、Shirokov効果を消しながら標準エネルギー条件を満たす物質計量を逆構成した点が非自明である。",
+        "technicalStrength": "安定・限界・不安定軌道の一般解を解析導出し、Newton極限、Schwarzschild近似、既知の近点移動を再現する。構成計量のエネルギー条件も確認するが、線形近円軌道に限られる。"
+      },
+      "totalScore": 56,
+      "abstractLines": [
+        "円軌道からの微小偏差が閉軌道や近点移動をどう決めるかを、非相対論と一般相対論で比較する。",
+        "偏差方程式の一般解を求め、近円軌道が閉曲線となるポテンシャルと静的球対称計量の条件を導いた。",
+        "近点移動の明示式と宇宙定数効果の見積りを得て、Shirokov効果が消える球対称計量を特定した。"
+      ],
+      "curiosity": "近円軌道の相対論的偏差が非相対論的な閉軌道条件から外れる量は、時空計量のどの成分で決まるのか。",
+      "concept": "円軌道まわりの線形偏差方程式を両理論で同じ形式に整理し、閉軌道条件や効果の消失条件からポテンシャルと計量を逆算する。",
+      "conclusion": "静的球対称時空の近円軌道について近点移動と閉軌道条件を統一的に表し、Shirokov効果を消す計量を構成できる。強い非円形性や時間依存時空には直接及ばない。",
+      "assessment": "Newton系との対応、既知極限、効果消失計量を一つの偏差形式で結び、解析的な検査も揃う。微小な近円軌道と静的球対称性が強い制約で、一般軌道の非線形挙動は扱わない。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "公式HTMLでNewton偏差、測地線偏差、Kottler近点移動、閉軌道計量、Shirokov効果消失計量、エネルギー条件、結論を確認した。式は独立再導出していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29350v1",
+        "https://arxiv.org/pdf/2607.29350v1"
+      ]
+    },
+    {
+      "rank": 6,
+      "arxivId": "2607.29265",
+      "arxivVersion": "v1",
+      "submissionType": "new",
+      "url": "https://arxiv.org/abs/2607.29265",
+      "title": "The brachistochrone problem for a constant velocity traveler in static and spherically symmetric spacetimes",
+      "titleJa": "静的球対称時空における等速旅行者の最速降下線問題",
+      "authors": [
+        "Longfei Wang",
+        "Junji Jia"
+      ],
+      "primaryCategory": "gr-qc",
+      "paperType": "理論",
+      "scores": {
+        "broadImpact": 11,
+        "categoryImpact": 13,
+        "originality": 14,
+        "technicalStrength": 16
+      },
+      "scoreReasons": {
+        "broadImpact": "一般の静的球対称時空で等速移動の最短時間経路を扱い、相対論的光学と質量分布模型に応用できる。物理的な推進・加速機構を含まない理想化された運動学に留まる。",
+        "categoryImpact": "超相対論的旅行者の最速経路を一般計量で積分表示し、SISと相対論的Plummer模型で屈曲条件を求める。一般相対論の中心課題よりは測地線最適化の限定的拡張である。",
+        "originality": "Fermat原理と光学計量を継承し、局所速度一定の亜光速旅行者でも空間経路は同じで所要時間だけ1/v倍になることを、具体的な星系模型と結び付けた点が新しい。",
+        "technicalStrength": "一般の移動時間変分を光学測地線で照合し、SIS内部の解析解とSchwarzschild・Plummer数値解を比較する。境界を横切る混合経路、軸対称性、加速力学は検証範囲外である。"
+      },
+      "totalScore": 54,
+      "abstractLines": [
+        "静的球対称時空で局所速度が一定の旅行者について、二点間の固有移動時間を最小にする経路を考える。",
+        "一般計量で超相対論的経路を積分表示し、有限SISと相対論的Plummer質量分布へ適用した。",
+        "中心核内では直線となる場合がある一方、外側では曲がり、亜光速でも同じ光学測地線を通って時間が1/v倍になる。"
+      ],
+      "curiosity": "重力場の中を一定の局所速度で進むとき、中心へ近づく近道と重力赤方偏移の時間費用はどこで釣り合うのか。",
+      "concept": "移動時間汎関数を光学計量の測地線問題へ変換し、速度の大きさを経路形状から分離して時空の質量分布だけで屈曲を決める。",
+      "conclusion": "最速経路は選んだ質量分布と端点位置に応じて直線または屈曲し、一定の亜光速では超相対論的経路を保ったまま所要時間だけ伸びる。静的球対称性と等速仮定が必要である。",
+      "assessment": "一般の光学計量から解析解と数値的な星系模型を一貫して導き、直線から屈曲への条件を示す。等速という制約が強く、境界横断経路と推進の力学を除外している。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "移動時間変分、一般BT式、SIS解析解、Schwarzschild外部、Plummer模型、一般化Fermat原理、限界を確認した。数値積分と図は独立再現していない。",
+      "sourceUrls": [
+        "https://arxiv.org/abs/2607.29265v1",
+        "https://arxiv.org/pdf/2607.29265v1"
+      ]
+    }
+  ],
+  "audit": {
+    "listingUrl": "https://arxiv.org/list/gr-qc/pastweek",
+    "announcementDate": "2026-08-03",
+    "selectionRule": "primary category gr-qc のNew submissions v1を全件評価し、Cross submissionsを除外",
+    "sourceCounts": {
+      "newPrimary": 6,
+      "crosslistsExcluded": 15,
+      "titleAuthorAbstractEvaluated": 6
+    },
+    "evaluationPolicy": "著者属性を用いず、各論文の内容と論文内の先行研究比較だけを評価",
+    "scoreRubric": "Daily arXiv rubric 3.0：4軸を各0〜25の整数で採点し、24以上とtechnicalStrength 18以上には全文証拠を要求",
+    "fullTextPolicy": "abstract比較後の暫定上位min(12,totalNew)を固定候補とし、最終上位min(10,totalNew)は全件全文確認",
+    "fullTextEvaluatedCount": 6,
+    "authorPolicy": "著者の知名度、所属、受賞、引用数、キャリア段階は採点に不使用",
+    "rankingTieBreak": "totalScore, broadImpact, originality, technicalStrength, categoryImpact の降順、arXiv IDの昇順",
+    "generatedAtJst": "2026-08-05T09:45:53+09:00"
+  }
+}
