@@ -19,11 +19,12 @@
   → 未公開日が複数あれば公式pastweekから最古の1日を選び、確認済みの後続日も順序付き耐久キューへ先に保存
   → 公開済みならCodexを呼ばず終了
   → バッチ末尾の版固定PDF・e-printをHEAD確認。PDF未配信ならCodexを呼ばず16:30へ延期し、e-printだけ不調ならPDF fallbackを有効にして続行
-  → モデル専用の別worktreeをorigin/mainへ同期
-  → quant-ph → gr-qc → hep-thの順に、未完了カテゴリだけをGPT-5.6-Sol / Highで実行
-  → 各カテゴリのNew submissionsを全件一次評価
+  → quant-ph → gr-qc → hep-thの順に、未完了カテゴリだけを処理
+  → fresh generationなら、ホストが全IDの公式版固定absを1件ずつ礼儀正しく取得し、原題・自然順全著者・abstract・comments・primary categoryを厳格検証。全件揃わなければCodexを起動せず延期または安全停止
+  → 最初のモデル起動直前に専用worktreeをorigin/mainへ同期し、GPT-5.6-Sol / Highで実行
+  → 各カテゴリのNew submissionsを、そのホスト検証済みmetadataだけから全件一次評価
   → 各カテゴリの暫定上位12件までをv1 PDFと公式e-print本文で確認し、最終上位10件を全文確認済みにする
-  → 候補本文が取得不能なら全abstract評価済み暫定reportと候補ID集合を単一の原子的checkpointへ保護し、18→36→72時間の待機中はモデルを起動しない。待機後は全abstract評価を繰り返さず、e-print先取りまたは安全条件を満たす版固定公式PDF経路から固定候補の全文確認だけを再開
+  → 候補本文が取得不能なら全abstract評価済み暫定reportと候補ID集合を単一の原子的checkpointへ保護し、15分→4時間→18時間→36時間→72時間の公式source事前確認待ちではモデルを起動しない。待機後は全abstract評価を繰り返さず、e-print先取りまたは安全条件を満たす版固定公式PDF経路から固定候補の全文確認だけを再開
   → 1カテゴリずつ、最大4回の番号付き構造監査（最大3回の一括修正）で全論文の必須キー、得点分布、合計・順位、上位10件の全文確認状態を確定し、その後は最大5回の番号付き言語監査（最大4回のwhole-field一括修正）で文章だけを整え、validatorを通して保護checkpointへ保存
   → 中断時は完成済みカテゴリを再利用し、厳格検証できた失敗ドラフトは同じruntimeの次回runで修復だけを再開。同じjob・カテゴリの修復系列で終端失敗が4回に達した場合は、途中で有効な後継ドラフトのSHA-256が変わっていても回数をリセットせず、最新ドラフトを保護したまま72時間上限のbackoff後に未完了カテゴリを新規評価
   → 3カテゴリが揃ったらApplication Support内のホスト専用stagingへ安全に結合し、公式ID集合と再照合
@@ -71,7 +72,7 @@ npm run validate
 git diff --check
 ```
 
-各Codexカテゴリrunには、ホストから指定されたrun固有`/tmp`のカテゴリ専用stagingへ1レポートだけを書くよう要求します。Codex自身は`git add`、`commit`、`push`を行いません。シェルの外向き通信とWeb検索は`arxiv.org` / `export.arxiv.org`だけに制限し、リポジトリ、ChatGPT認証保存領域、publisher、checkpointを含むホスト制御領域への書込みを拒否します。現在のmacOS版Codexでは共通ツール用system tempがscratchとして書込み可能なため、`/tmp`全体を非信頼領域として扱い、公開用のホストstaging・lock・ログ・秘密情報は置きません。モデル終了後にホストが単一カテゴリを独立検証してcheckpointへ取り込み、3カテゴリが揃った後だけ、固定publisher controlから準備した隔離publication worktree内でホスト側ランナーが次を呼びます。
+各Codexカテゴリrunには、ホストから指定されたrun固有`/tmp`のカテゴリ専用stagingへ1レポートだけを書くよう要求します。Codex自身は`git add`、`commit`、`push`を行いません。モデルのシェル通信は上位候補の版固定本文確認に必要な`arxiv.org`だけに制限し、Web検索は無効にします。全abstract一次評価のmetadataはホスト入力だけを使い、`export.arxiv.org`、`/api/query`、全件absの再取得による補完は禁止します。リポジトリ、ChatGPT認証保存領域、publisher、checkpointを含むホスト制御領域への書込みを拒否します。現在のmacOS版Codexでは共通ツール用system tempがscratchとして書込み可能なため、`/tmp`全体を非信頼領域として扱い、公開用のホストstaging・lock・ログ・秘密情報は置きません。モデル終了後にホストが単一カテゴリを独立検証してcheckpointへ取り込み、3カテゴリが揃った後だけ、固定publisher controlから準備した隔離publication worktree内でホスト側ランナーが次を呼びます。
 
 ```bash
 node scripts/publish-edition.mjs YYYY-MM-DD /tmp/.../staging

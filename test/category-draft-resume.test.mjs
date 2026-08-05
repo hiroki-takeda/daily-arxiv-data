@@ -784,7 +784,7 @@ test("four terminally failed repairs retain the draft and fall back through capp
   assert.equal(execution.regenerationFallback.repairFailureCount, MAX_UNCHANGED_DRAFT_REPAIR_FAILURES);
   assert.equal(execution.regenerationFallback.protectedDraft.sha256, draft.sha256);
   assert.equal(execution.regenerationFallback.announcementNeeded, true);
-  assert.match(execution.prompt, /one resumable category stage/u);
+  assert.equal(execution.prompt, null, "fresh generation prompt waits for host metadata after backoff");
   assert.deepEqual(
     readdirSync(staging),
     [],

@@ -8,6 +8,7 @@ The only production path is:
 macOS launchd
 → scripts/run-local-automation.mjs in a pristine publisher worktree
 → host-side official arXiv date/ID snapshot
+→ host-side, version-fixed per-ID metadata prefetch and strict validation
 → Codex CLI in a separate agent worktree, writing one /tmp run root only
 → host-only staging and snapshot revalidation
 → publisher-worktree scripts/publish-edition.mjs
@@ -24,6 +25,9 @@ Do not restore or create alternate ChatGPT Sites, Next.js, Vinext, Vite, Cloudfl
 - Run only through the fixed local automation host. The publisher and model agent worktrees are separate.
 - Use the model, reasoning, runId, and staging path fixed by the host prompt.
 - Treat the host-provided official arXiv snapshot as the exact date, primary-New ID set, and count contract.
+- Before fresh category generation, require the host to fetch every official `https://arxiv.org/abs/<ID>v1` page individually with polite pacing and strictly validate the original title, all authors in natural order, abstract, comments, and primary category. If any record is unavailable or invalid, do not start Codex; defer or fail closed and leave the published edition unchanged.
+- Use that host-validated metadata as the sole metadata input for all-abstract screening. Do not call `export.arxiv.org`, `/api/query`, Web search, listing pages, or refetch all abs pages to complete or cross-check metadata. Only provisional top candidates may use the existing version-fixed official source/PDF full-text helpers.
+- Keep the snapshot fingerprint contract unchanged: it remains bound to the date, primary-New ID set, and counts; the validated metadata is a separately digested input bound exactly to that set.
 - Process and display categories in the fixed order `quant-ph`, `gr-qc`, `hep-th`.
 - If several announcement dates are missing, the host selects exactly the oldest recoverable date; the model still evaluates only that one snapshot.
 - Write candidate reports only to the host-provided `/tmp` staging directory.
@@ -41,7 +45,7 @@ Do not restore or create alternate ChatGPT Sites, Next.js, Vinext, Vite, Cloudfl
 - Dated reports and dated public editions are immutable during every automated run. A user-approved historical prose correction may use only `scripts/apply-published-prose-correction.mjs`; it must leave `current.json`, `index.json`, scores, identities, source/evaluation metadata, and `paperType` unchanged.
 - Author identity and reputation never affect scores. Registry badges are deterministic and non-scoring.
 - Production reports use schema 1.4, Daily arXiv rubric 3.0, and primary-category New submission `v1` records only.
-- Screen every abstract, review no more than 12 full texts per category, and require full-text evidence for every final top-10 paper.
+- Screen every abstract from the host-validated metadata, review no more than 12 full texts per category, and require full-text evidence for every final top-10 paper.
 - For each provisional full-text candidate, confirm the official v1 PDF and use `node scripts/extract-arxiv-source.mjs <arXiv-ID>` to extract bounded official v1 e-print text under the fixed run root. Read the relevant source sections; a successful download or byte count alone is not a full-text review.
 - Every paper has the exact four-key `scoreReasons` object required by `docs/SCHEDULED_TASK_PROMPT.md`; `assessment` summarizes the overall merit and principal limitation, not a duplicate of the four reasons.
 - Keep evaluator actions and source provenance only in `evaluationBasis` and `fullTextReviewStatus`. All other reader-facing prose must state paper-specific methods, evidence, and unsupported assumptions directly, without phrases such as `公式概要`, `要旨から確認できない`, or `本文未確認`.

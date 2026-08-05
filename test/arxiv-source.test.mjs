@@ -7,16 +7,21 @@ import {
   ARXIV_LISTING_URLS,
   ARXIV_PASTWEEK_FETCH_URLS,
   ARXIV_PASTWEEK_LISTING_URLS,
+  MAX_ARXIV_ABSTRACT_PAGE_BYTES,
   MAX_ARXIV_LISTING_BYTES,
+  buildOfficialCategoryMetadata,
   buildOfficialListingSnapshot,
   buildOfficialPastweekWindow,
   buildDurableSelectionEvidence,
   classifySnapshotDate,
   fetchOfficialListingSnapshot,
+  fetchOfficialCategoryMetadata,
   fetchOfficialPastweekWindow,
+  fingerprintCategoryMetadata,
   fingerprintSnapshot,
   fingerprintSnapshotContent,
   parseArxivNewListing,
+  parseArxivAbstractPage,
   parseArxivPastweekListing,
   probeOfficialFullTextReadiness,
   revalidatePastweekSnapshot,
@@ -27,6 +32,8 @@ import {
   selectCheckpointRecoverySnapshot,
   selectFullTextReadinessCanary,
   validateReportAgainstSnapshot,
+  validateCategoryMetadata,
+  validateCategoryReportAgainstMetadata,
   validateReportsAgainstSnapshot,
 } from "../scripts/lib/arxiv-source.mjs";
 
@@ -204,6 +211,62 @@ function readinessResponse(url, {
     url,
     headers: new Headers({ "content-type": contentType }),
   };
+}
+
+function abstractPageHtml({
+  arxivId = "2607.07798",
+  slug = "quant-ph",
+  version = "v1",
+  title = "A careful quantum result",
+  metaTitle = title,
+  authors = ["Alice Example", "Bob Q. Researcher"],
+  metaAuthors = ["Example, Alice", "Researcher, Bob Q."],
+  abstract = "We prove a bounded and independently checked result.",
+  metaAbstract = abstract,
+  bodyAbstractHtml = null,
+  comments = "24 pages, 3 figures",
+  commentsHtml = null,
+  canonicalUrl = `https://arxiv.org/abs/${arxivId}`,
+  citationPdfUrl = `https://arxiv.org/pdf/${arxivId}`,
+  metaId = arxivId,
+} = {}) {
+  const escapeAttribute = (value) => value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+  const escapeText = (value) => value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+  return `<!doctype html><html><head>
+    <link rel="canonical" href="${escapeAttribute(canonicalUrl)}" />
+    <meta name="citation_title" content="${escapeAttribute(metaTitle)}" />
+    ${metaAuthors.map((author) => `<meta name="citation_author" content="${escapeAttribute(author)}" />`).join("\n")}
+    <meta name="citation_pdf_url" content="${escapeAttribute(citationPdfUrl)}" />
+    <meta name="citation_arxiv_id" content="${escapeAttribute(metaId)}" />
+    <meta name="citation_abstract" content="${escapeAttribute(metaAbstract)}" />
+  </head><body>
+    <strong>arXiv:${arxivId}${version}</strong> (${slug})
+    <h1 class="title mathjax"><span class="descriptor">Title:</span>${escapeText(title)}</h1>
+    <div class="authors"><span class="descriptor">Authors:</span>${authors.map((author) => (
+      `<a href="https://arxiv.org/search/${slug}?searchtype=author">${escapeText(author)}</a>`
+    )).join(", ")}</div>
+    <blockquote class="abstract mathjax"><span class="descriptor">Abstract:</span>${bodyAbstractHtml ?? escapeText(abstract)}</blockquote>
+    ${comments === null ? "" : `<table><tr><td class="tablecell label">Comments:</td><td class="tablecell comments mathjax">${commentsHtml ?? escapeText(comments)}</td></tr></table>`}
+    <span class="primary-subject">Quantum Physics (${slug})</span>
+  </body></html>`;
+}
+
+function metadataPapers(snapshot, slug) {
+  return snapshot.categories[slug].newIds.map((arxivId, index) => parseArxivAbstractPage(abstractPageHtml({
+    arxivId,
+    slug,
+    title: `Canonical result ${index + 1}`,
+    metaTitle: `Canonical result ${index + 1}`,
+    abstract: `Abstract evidence for paper ${index + 1}.`,
+    metaAbstract: `Abstract evidence for paper ${index + 1}.`,
+  }), { arxivId, slug }));
 }
 
 test("full-text readiness canary is the greatest primary-new ID across all categories", () => {
@@ -1356,5 +1419,376 @@ test("fetcher rejects redirects, non-HTML, declared oversize, and streamed overs
         chunks: [new Uint8Array(MAX_ARXIV_LISTING_BYTES), new Uint8Array(1)],
       })),
     }), (error) => error.code === "SOURCE_TOO_LARGE");
+  });
+});
+
+test("abstract-page parser returns canonical v1 metadata and preserves natural author order", () => {
+  const paper = parseArxivAbstractPage(abstractPageHtml({
+    title: "A & B: exact result",
+    metaTitle: "A & B: exact result",
+    abstract: "  We prove   A & B. ",
+    metaAbstract: "We prove A & B.",
+  }), { arxivId: "2607.07798", slug: "quant-ph" });
+  assert.deepEqual(paper, {
+    arxivId: "2607.07798",
+    arxivVersion: "v1",
+    submissionType: "new",
+    url: "https://arxiv.org/abs/2607.07798",
+    sourceUrl: "https://arxiv.org/abs/2607.07798v1",
+    title: "A & B: exact result",
+    authors: ["Alice Example", "Bob Q. Researcher"],
+    abstract: "We prove A & B.",
+    comments: "24 pages, 3 figures",
+    primaryCategory: "quant-ph",
+  });
+  assert.equal(parseArxivAbstractPage(abstractPageHtml({ comments: null }), {
+    arxivId: "2607.07798",
+    slug: "quant-ph",
+  }).comments, null);
+});
+
+test("citation title and abstract stay canonical across known arXiv visible-rendering differences", () => {
+  const citationTitle = "Maximal R\\'enyi Relative Entropy for $\\alpha>2$";
+  const visibleTitle = "Maximal Rényi Relative Entropy for $α>2$";
+  const citationAbstract = "Results on Erd\\H{o}s-R\\'enyi graphs use symmetry charge.For a finite system.";
+  const bodyAbstractHtml = [
+    "Results on Erdős-Rényi graphs use symmetry ",
+    '<a href="http://charge.For" class="link-external link-http">this http URL</a>',
+    " a finite system.",
+  ].join("");
+  const paper = parseArxivAbstractPage(abstractPageHtml({
+    title: visibleTitle,
+    metaTitle: citationTitle,
+    abstract: "visible body is supplied as HTML",
+    metaAbstract: citationAbstract,
+    bodyAbstractHtml,
+  }), { arxivId: "2607.07798", slug: "quant-ph" });
+  assert.equal(paper.title, citationTitle);
+  assert.equal(paper.abstract, citationAbstract);
+});
+
+test("comments preserve a strictly recognized arXiv linkifier href", () => {
+  const paper = parseArxivAbstractPage(abstractPageHtml({
+    comments: "placeholder",
+    commentsHtml: 'Code: <a href="https://example.org/source?a=1" class="link-external link-https">this https URL</a>',
+  }), { arxivId: "2607.07798", slug: "quant-ph" });
+  assert.equal(paper.comments, "Code: https://example.org/source?a=1");
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    comments: "placeholder",
+    commentsHtml: '<a href="https://example.org/source" class="link-external">this http URL</a>',
+  }), { arxivId: "2607.07798", slug: "quant-ph" }), /malformed automatic URL-linkifier anchor/);
+});
+
+test("abstract-page parser cross-checks ID, v1, URLs, ordered authors, body structure, category, and comments", async (t) => {
+  const cases = [
+    ["citation ID", { metaId: "2607.09999" }, /citation_arxiv_id/],
+    ["version", { version: "v2" }, /matching arXiv:2607\.07798v1/],
+    ["canonical URL", { canonicalUrl: "https://example.com/abs/2607.07798" }, /canonical URL/],
+    ["PDF ID", { citationPdfUrl: "https://arxiv.org/pdf/2607.09999" }, /citation_pdf_url/],
+    ["author count", { metaAuthors: ["Example, Alice"] }, /author count disagrees/],
+    ["author identity", { metaAuthors: ["Wrong, Alice", "Researcher, Bob Q."] }, /author 1 disagrees/],
+    ["category", { slug: "gr-qc" }, /primary category/],
+  ];
+  for (const [name, options, pattern] of cases) {
+    await t.test(name, () => assert.throws(
+      () => parseArxivAbstractPage(abstractPageHtml(options), { arxivId: "2607.07798", slug: "quant-ph" }),
+      pattern,
+    ));
+  }
+  await t.test("malformed comments row", () => assert.throws(
+    () => parseArxivAbstractPage(
+      abstractPageHtml().replace('class="tablecell comments mathjax"', 'class="tablecell value"'),
+      { arxivId: "2607.07798", slug: "quant-ph" },
+    ),
+    /Comments metadata/,
+  ));
+  await t.test("title descriptor", () => assert.throws(
+    () => parseArxivAbstractPage(
+      abstractPageHtml().replace(">Title:</span>", ">Heading:</span>"),
+      { arxivId: "2607.07798", slug: "quant-ph" },
+    ),
+    /exactly one Title: descriptor/,
+  ));
+  await t.test("abstract descriptor", () => assert.throws(
+    () => parseArxivAbstractPage(
+      abstractPageHtml().replace(">Abstract:</span>", ">Summary:</span>"),
+      { arxivId: "2607.07798", slug: "quant-ph" },
+    ),
+    /exactly one Abstract: descriptor/,
+  ));
+  await t.test("empty visible title", () => assert.throws(
+    () => parseArxivAbstractPage(abstractPageHtml({ title: "", metaTitle: "Canonical title" }), {
+      arxivId: "2607.07798",
+      slug: "quant-ph",
+    }),
+    /visible title must be non-empty/,
+  ));
+  await t.test("empty visible abstract", () => assert.throws(
+    () => parseArxivAbstractPage(abstractPageHtml({ abstract: "", metaAbstract: "Canonical abstract" }), {
+      arxivId: "2607.07798",
+      slug: "quant-ph",
+    }),
+    /visible abstract must be non-empty/,
+  ));
+  await t.test("page size bound", () => assert.throws(
+    () => parseArxivAbstractPage(`${abstractPageHtml()}${" ".repeat(MAX_ARXIV_ABSTRACT_PAGE_BYTES)}`, {
+      arxivId: "2607.07798",
+      slug: "quant-ph",
+    }),
+    (error) => error.code === "SOURCE_TOO_LARGE",
+  ));
+  await t.test("field size bound", () => assert.throws(
+    () => parseArxivAbstractPage(abstractPageHtml({
+      title: "x".repeat(2_001),
+      metaTitle: "Canonical title",
+    }), { arxivId: "2607.07798", slug: "quant-ph" }),
+    (error) => error.code === "SOURCE_TOO_LARGE",
+  ));
+});
+
+test("category metadata is snapshot-bound, ordered, canonical, bounded, and fingerprinted", async (t) => {
+  const snapshot = snapshotFixture();
+  const slug = "quant-ph";
+  const metadata = buildOfficialCategoryMetadata({ snapshot, slug, papers: metadataPapers(snapshot, slug) });
+  assert.equal(validateCategoryMetadata(metadata, { snapshot, slug }), true);
+  assert.equal(metadata.schemaVersion, "1.0");
+  assert.equal(metadata.announcementDate, DATE);
+  assert.equal(metadata.snapshotFingerprint, fingerprintSnapshot(snapshot));
+  assert.deepEqual(metadata.papers.map(({ arxivId }) => arxivId), snapshot.categories[slug].newIds);
+  assert.match(fingerprintCategoryMetadata(metadata), /^[0-9a-f]{64}$/);
+  assert.equal(fingerprintCategoryMetadata(metadata), createHash("sha256")
+    .update(JSON.stringify(metadata), "utf8")
+    .digest("hex"));
+
+  await t.test("wrong snapshot digest", () => {
+    const changed = structuredClone(metadata);
+    changed.snapshotFingerprint = "0".repeat(64);
+    assert.throws(
+      () => validateCategoryMetadata(changed, { snapshot, slug }),
+      (error) => error.code === "SOURCE_CONTENT_MISMATCH",
+    );
+  });
+  await t.test("missing, extra, duplicate, or reordered IDs", () => {
+    const missing = structuredClone(metadata);
+    missing.papers.pop();
+    assert.throws(() => validateCategoryMetadata(missing, { snapshot, slug }), /do not exactly match/);
+    const extra = structuredClone(metadata);
+    extra.papers.push({ ...extra.papers[0], arxivId: "2607.09999", url: "https://arxiv.org/abs/2607.09999", sourceUrl: "https://arxiv.org/abs/2607.09999v1" });
+    assert.throws(() => validateCategoryMetadata(extra, { snapshot, slug }), /do not exactly match/);
+    const duplicate = structuredClone(metadata);
+    duplicate.papers[1] = structuredClone(duplicate.papers[0]);
+    assert.throws(() => validateCategoryMetadata(duplicate, { snapshot, slug }), /duplicate/);
+    const reordered = structuredClone(metadata);
+    reordered.papers.reverse();
+    assert.throws(() => validateCategoryMetadata(reordered, { snapshot, slug }), /snapshot ID order/);
+  });
+  await t.test("immutable field and exact-key guards", () => {
+    const wrongUrl = structuredClone(metadata);
+    wrongUrl.papers[0].url += "v1";
+    assert.throws(() => validateCategoryMetadata(wrongUrl, { snapshot, slug }), /unversioned official abstract URL/);
+    const extraKey = structuredClone(metadata);
+    extraKey.papers[0].unexpected = true;
+    assert.throws(() => validateCategoryMetadata(extraKey, { snapshot, slug }), /must contain exactly/);
+    const oversizedAbstract = structuredClone(metadata);
+    oversizedAbstract.papers[0].abstract = "x".repeat(20_001);
+    assert.throws(
+      () => validateCategoryMetadata(oversizedAbstract, { snapshot, slug }),
+      (error) => error.code === "SOURCE_TOO_LARGE",
+    );
+  });
+});
+
+test("report metadata guard pins original title, ordered authors, category, version, type, URL, and full ID set", async (t) => {
+  const snapshot = snapshotFixture();
+  const metadata = buildOfficialCategoryMetadata({
+    snapshot,
+    slug: "quant-ph",
+    papers: metadataPapers(snapshot, "quant-ph"),
+  });
+  const report = {
+    slug: metadata.slug,
+    reportDate: metadata.announcementDate,
+    papers: metadata.papers.toReversed().map((paper) => ({
+      arxivId: paper.arxivId,
+      arxivVersion: paper.arxivVersion,
+      submissionType: paper.submissionType,
+      url: paper.url,
+      title: paper.title,
+      authors: [...paper.authors],
+      primaryCategory: paper.primaryCategory,
+      score: 1,
+    })),
+  };
+  assert.equal(validateCategoryReportAgainstMetadata(report, metadata), true);
+  const mutations = [
+    ["title", (value) => { value.papers[0].title += " changed"; }, /title/],
+    ["author order", (value) => { value.papers[0].authors.reverse(); }, /ordered canonical author list/],
+    ["category", (value) => { value.papers[0].primaryCategory = "gr-qc"; }, /primaryCategory/],
+    ["version", (value) => { value.papers[0].arxivVersion = "v2"; }, /arxivVersion/],
+    ["type", (value) => { value.papers[0].submissionType = "cross"; }, /submissionType/],
+    ["URL", (value) => { value.papers[0].url += "v1"; }, /\.url/],
+    ["duplicate ID", (value) => { value.papers[0] = structuredClone(value.papers[1]); }, /duplicate/],
+  ];
+  for (const [name, mutate, pattern] of mutations) {
+    await t.test(name, () => {
+      const changed = structuredClone(report);
+      mutate(changed);
+      assert.throws(() => validateCategoryReportAgainstMetadata(changed, metadata), pattern);
+    });
+  }
+});
+
+test("official category metadata fetch is exact-v1, serial, paced, hooked per attempt, and transient-only retried", async () => {
+  const snapshot = snapshotFixture();
+  const slug = "quant-ph";
+  const events = [];
+  const attempts = new Map();
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const metadata = await fetchOfficialCategoryMetadata({
+    snapshot,
+    slug,
+    beforeRequest: async ({ arxivId, sourceUrl, attempt, slug: requestSlug }) => {
+      events.push(["before", arxivId, attempt]);
+      assert.equal(requestSlug, slug);
+      assert.equal(sourceUrl, `https://arxiv.org/abs/${arxivId}v1`);
+    },
+    sleepImpl: async (milliseconds) => { events.push(["sleep", milliseconds]); },
+    maxAttempts: 2,
+    fetchImpl: async (url, options) => {
+      const arxivId = /\/abs\/(\d{4}\.\d{4,5})v1$/.exec(url)?.[1];
+      assert.ok(arxivId);
+      events.push(["fetch", arxivId]);
+      assert.deepEqual(events.at(-2).slice(0, 2), ["before", arxivId]);
+      assert.equal(options.method, "GET");
+      assert.equal(options.redirect, "error");
+      assert.equal(options.credentials, "omit");
+      assert.equal(options.referrerPolicy, "no-referrer");
+      assert.ok(options.signal instanceof AbortSignal);
+      inFlight += 1;
+      maxInFlight = Math.max(maxInFlight, inFlight);
+      attempts.set(arxivId, (attempts.get(arxivId) ?? 0) + 1);
+      try {
+        if (arxivId === snapshot.categories[slug].newIds[0] && attempts.get(arxivId) === 1) {
+          return { status: 429, ok: false, url, headers: new Headers(), body: null };
+        }
+        const index = snapshot.categories[slug].newIds.indexOf(arxivId);
+        return responseFor(abstractPageHtml({
+          arxivId,
+          slug,
+          title: `Fetched result ${index + 1}`,
+          metaTitle: `Fetched result ${index + 1}`,
+          abstract: `Fetched abstract ${index + 1}.`,
+          metaAbstract: `Fetched abstract ${index + 1}.`,
+        }), url);
+      } finally {
+        inFlight -= 1;
+      }
+    },
+  });
+  assert.equal(validateCategoryMetadata(metadata, { snapshot, slug }), true);
+  assert.equal(maxInFlight, 1);
+  assert.deepEqual(Object.fromEntries(attempts), {
+    "2607.07798": 2,
+    "2607.08767": 1,
+    "2607.08999": 1,
+  });
+  assert.deepEqual(events.filter(([kind]) => kind === "sleep"), [
+    ["sleep", 3_000],
+    ["sleep", 3_000],
+    ["sleep", 3_000],
+  ]);
+});
+
+test("official category metadata fetch fails closed for non-transient and malformed responses", async (t) => {
+  const snapshot = snapshotFixture();
+  const slug = "gr-qc";
+  await t.test("reverse-proxy 52x is retried", async () => {
+    const arxivId = snapshot.categories[slug].newIds[0];
+    let calls = 0;
+    const sleeps = [];
+    const metadata = await fetchOfficialCategoryMetadata({
+      snapshot,
+      slug,
+      maxAttempts: 2,
+      sleepImpl: async (milliseconds) => { sleeps.push(milliseconds); },
+      fetchImpl: async (url) => {
+        calls += 1;
+        if (calls === 1) return { status: 522, ok: false, url, headers: new Headers(), body: null };
+        return responseFor(abstractPageHtml({ arxivId, slug }), url);
+      },
+    });
+    assert.equal(validateCategoryMetadata(metadata, { snapshot, slug }), true);
+    assert.equal(calls, 2);
+    assert.deepEqual(sleeps, [3_000]);
+  });
+  await t.test("404 is not retried", async () => {
+    let calls = 0;
+    await assert.rejects(fetchOfficialCategoryMetadata({
+      snapshot,
+      slug,
+      maxAttempts: 3,
+      sleepImpl: async () => assert.fail("non-transient failure must not sleep"),
+      fetchImpl: async (url) => {
+        calls += 1;
+        return { status: 404, ok: false, url, headers: new Headers(), body: null };
+      },
+    }), /HTTP 404/);
+    assert.equal(calls, 1);
+  });
+  await t.test("redirect", async () => {
+    const arxivId = snapshot.categories[slug].newIds[0];
+    await assert.rejects(fetchOfficialCategoryMetadata({
+      snapshot,
+      slug,
+      maxAttempts: 1,
+      fetchImpl: async (url) => ({ ...responseFor(abstractPageHtml({ arxivId, slug }), url), url: "https://example.com/" }),
+    }), /unexpected final URL/);
+  });
+  await t.test("non-HTML", async () => {
+    const arxivId = snapshot.categories[slug].newIds[0];
+    await assert.rejects(fetchOfficialCategoryMetadata({
+      snapshot,
+      slug,
+      maxAttempts: 1,
+      fetchImpl: async (url) => {
+        const response = responseFor(abstractPageHtml({ arxivId, slug }), url);
+        response.headers.set("content-type", "application/json");
+        return response;
+      },
+    }), /did not return text\/html/);
+  });
+  await t.test("declared oversize", async () => {
+    const arxivId = snapshot.categories[slug].newIds[0];
+    await assert.rejects(fetchOfficialCategoryMetadata({
+      snapshot,
+      slug,
+      maxAttempts: 1,
+      fetchImpl: async (url) => {
+        const response = responseFor(abstractPageHtml({ arxivId, slug }), url);
+        response.headers.set("content-length", String(MAX_ARXIV_ABSTRACT_PAGE_BYTES + 1));
+        return response;
+      },
+    }), (error) => error.code === "SOURCE_TOO_LARGE");
+  });
+  await t.test("malformed UTF-8", async () => {
+    await assert.rejects(fetchOfficialCategoryMetadata({
+      snapshot,
+      slug,
+      maxAttempts: 1,
+      fetchImpl: async (url) => ({
+        status: 200,
+        ok: true,
+        url,
+        headers: new Headers({ "content-type": "text/html; charset=utf-8" }),
+        body: new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array([0xc3, 0x28]));
+            controller.close();
+          },
+        }),
+      }),
+    }), /decoded as bounded UTF-8 HTML/);
   });
 });

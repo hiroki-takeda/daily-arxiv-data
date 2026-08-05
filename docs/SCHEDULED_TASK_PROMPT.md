@@ -17,6 +17,8 @@ current.json unchanged; no push
 
 publisherとは分離されたモデル専用worktreeの同期、ChatGPT認証、単一runロック、公式arXiv一覧snapshotの取得はホストが完了済みです。日次runではアプリのコードを変更せず、`npm test`、`npm run validate`、`git`、publisherをモデルから実行しません。固定publisherがモデル終了後にschemaとリポジトリ全体を検証し、GitHub Actionsがpush後に全テストを再実行します。いずれかが失敗した場合、Pagesへは公開しません。
 
+fresh category generationの前に、ホストはsnapshotの全IDに対する公式`https://arxiv.org/abs/<ID>v1`を1件ずつ礼儀正しい間隔で取得し、原題、自然順の完全な著者一覧、abstract、comments、primary categoryを厳格検証します。全件が揃わなければホストはCodexを起動せず延期または安全停止し、公開済み版を変更しません。
+
 この文書のschemaと採点仕様が完全な契約です。過去の点数・順位・文面によるアンカリングと不要な入力消費を避けるため、`data/reports/`、`public/data/`、`scripts/lib/pipeline.mjs`、testsを例として読みません。過去版をコピー、要約、比較せず、当該snapshotの公式一次資料だけから独立評価します。
 
 ## 2. ホスト指定snapshot
@@ -28,15 +30,18 @@ announcementDate
 assigned category
 割当カテゴリのNew submissions全arXiv ID
 割当カテゴリのNew件数、Cross submissions件数、公式listing URL
+全IDの検証済みmetadata（原題、自然順全著者、abstract、comments、primary category）とそのSHA-256
 ```
 
-このsnapshotが当該runの唯一の対象集合です。日付、ID、カテゴリ、件数を追加・削除・置換してはいけません。公式ページ、abstract、PDFを開いて内容を調査しますが、ページが別の日へ切り替わった、IDに到達できない、`v1`を確認できない、またはsnapshotと矛盾した場合は`ACTION_REQUIRED: SOURCE_INCOMPLETE`として異常終了します。PCの当日の日付やモデル自身の推測を代用してはいけません。
+このsnapshotが当該runの唯一の対象集合です。日付、ID、カテゴリ、件数を追加・削除・置換してはいけません。snapshot fingerprintは従来どおり日付・primary-New ID集合・件数に基づき、metadataはその対象集合に厳密に結び付く別の検証済み入力です。PCの当日の日付やモデル自身の推測を代用してはいけません。
+
+ホスト検証済みmetadataは、全abstract一次評価における原題・著者・abstract・comments・primary categoryの唯一の入力です。モデルは`export.arxiv.org`、`/api/query`、Web検索、一覧ページ、全件のabsページ再取得でmetadataを補完・照合・置換してはいけません。上位候補の全文確認に限り、3.5の版固定公式source/PDF helper経路を使います。
 
 既に公開済みの日付、3カテゴリの日付不一致、全カテゴリ0件はホストがCodex起動前に無変更終了します。未公開日が複数ある場合、ホストは公式の発表日列から最古の1日だけを実行対象にし、その時点で確認できた後続の未公開snapshotも最古から順にactivateされる耐久キューへ先に保存します。ホストは`quant-ph`、`gr-qc`、`hep-th`の固定順で、未完了の最初のカテゴリだけをモデルへ割り当てます。モデルが起動されたrunでは、割当snapshotの全件を評価した完全な1レポートを作るか、本文取得不能時だけ全abstract評価済みの暫定レポートと固定receiptを残して停止するか、何も完成扱いにせず異常終了するかのいずれかです。他カテゴリのレポートを作成、修正、推測してはいけません。
 
 ## 3. 評価: Daily arXiv rubric 3.0
 
-割当カテゴリの対象全件について、タイトル、完全な著者一覧、アブストラクト、primary category、commentsを読みます。著者の知名度、所属、受賞、引用数、キャリア段階を採点に使いません。論文に書かれた内容と、その論文が示す先行研究比較だけを根拠にします。
+割当カテゴリの対象全件について、ホスト検証済みmetadataからタイトル、完全な著者一覧、アブストラクト、primary category、commentsを読みます。著者の知名度、所属、受賞、引用数、キャリア段階を採点に使いません。論文に書かれた内容と、その論文が示す先行研究比較だけを根拠にします。
 
 以下を0〜25の整数で評価し、4項目の単純和を100点満点の`totalScore`とします。
 
@@ -115,7 +120,7 @@ assigned category
 
 ### 3.5 証拠段階と全文確認
 
-タイトル、著者、アブストラクト、commentsによる一次評価は暫定点として扱います。情報が書かれていないことを欠陥と断定せず、高得点を裏づける材料が未確認であると扱います。各カテゴリで全abstractを比較した後、暫定上位12件だけを全文確認候補として固定します。同点の場合も本仕様の決定的順位規則（総合点、`broadImpact`、`originality`、`technicalStrength`、`categoryImpact`、arXiv IDの順）を用い、候補を12件より増やしません。
+ホスト検証済みのタイトル、著者、アブストラクト、commentsによる一次評価は暫定点として扱います。情報が書かれていないことを欠陥と断定せず、高得点を裏づける材料が未確認であると扱います。各カテゴリで全abstractを比較した後、暫定上位12件だけを全文確認候補として固定します。同点の場合も本仕様の決定的順位規則（総合点、`broadImpact`、`originality`、`technicalStrength`、`categoryImpact`、arXiv IDの順）を用い、候補を12件より増やしません。
 
 各候補では公式`v1` PDFの取得と版を確認したうえで、次の依存追加を伴わない固定helperを1回だけ実行します。
 
@@ -135,7 +140,7 @@ helperは`https://arxiv.org/e-print/<ID>v1`だけを取得し、最終URLが同�
 
 公式e-printが提供されない場合は、公式arXiv HTMLまたは実行環境から内容を読める公式PDFで同じ範囲を確認します。いずれの再現可能な本文経路も使えなければ、その論文を全文確認済みとせず異常終了します。いずれの軸も24点以上は全文確認なしに付けません。`technicalStrength`の18点以上は全文確認を必須とします。
 
-全文確認後は暫定候補12件の内部で再採点し、最終上位10件を確定します。最終上位10件はすべて全文確認済みでなければならず、各カテゴリの`fullTextEvaluatedCount`は`min(totalNew, 12)`を超えてはいけません。11位以下を含む全論文にはabstractに基づく完全な読者向け情報を残します。必要な一時PDFや抽出テキストはホスト指定run rootの内側だけへ置き、リポジトリ内や他の`/tmp`へ保存しません。通信先はホストがarXiv公式ドメインだけに制限します。
+全文確認後は暫定候補12件の内部で再採点し、最終上位10件を確定します。最終上位10件はすべて全文確認済みでなければならず、各カテゴリの`fullTextEvaluatedCount`は`min(totalNew, 12)`を超えてはいけません。11位以下を含む全論文にはabstractに基づく完全な読者向け情報を残します。必要な一時PDFや抽出テキストはホスト指定run rootの内側だけへ置き、リポジトリ内や他の`/tmp`へ保存しません。モデルの通信は上位候補の版固定全文経路に必要な`arxiv.org`だけに制限し、Web検索は無効にします。
 
 ### 3.6 自然な日本語と各フィールドの役割
 
@@ -314,7 +319,7 @@ node scripts/validate-staged-category.mjs YYYY-MM-DD <category> <category stagin
 
 通常のno-opと完成済みカテゴリの再利用はCodex起動前にホストが処理します。モデルが起動された後は、割当カテゴリの完全な1レポートを作成して固定監査とvalidatorを終えるか、上記の本文取得不能専用receiptと全abstract評価済み暫定レポートを残すか、異常終了するかのいずれかです。日付不一致、モデル設定不一致、評価未完了、schema不確実、その他の失敗時はreceiptで偽装せず、架空データで穴埋めせず異常終了します。
 
-Codex終了後、通常成功ではホストはoutboxが空であること、カテゴリ専用stagingがsnapshotの日付とカテゴリに対応する正確な1個のregular JSON fileだけを含むこと、そのファイルが10 MiB以下であることを確認します。本文取得receiptの場合もoutboxは空、stagingは正確な1個の暫定report、blocker領域は割当カテゴリの正確な1 regular JSONだけでなければなりません。その後、通常reportはJSON、schema、runId、モデル情報、公式ID集合、件数を独立検証してcontent digest付きで完成checkpointへ入れます。source receiptと暫定reportはsnapshot、runtime、runId、固定候補集合を照合し、それらとattempt stage、report digestを単一のcontent-addressed source-draft envelopeへ入れて排他的に公開します。追記専用attempt履歴は別に保存しますが、途中停止で履歴eventだけが欠けてもenvelopeから再構成でき、それだけでは公開できません。
+Codex終了後、通常成功ではホストはoutboxが空であること、カテゴリ専用stagingがsnapshotの日付とカテゴリに対応する正確な1個のregular JSON fileだけを含むこと、そのファイルが10 MiB以下であることを確認します。本文取得receiptの場合もoutboxは空、stagingは正確な1個の暫定report、blocker領域は割当カテゴリの正確な1 regular JSONだけでなければなりません。その後、通常reportはJSON、schema、runId、モデル情報、公式ID集合、件数に加え、原題・著者・primary categoryがホスト検証済みmetadataと一致し、metadata入力のdigestが変わっていないことを独立検証してcontent digest付きで完成checkpointへ入れます。source receiptと暫定reportはsnapshot、runtime、runId、固定候補集合を照合し、それらとattempt stage、report digestを単一のcontent-addressed source-draft envelopeへ入れて排他的に公開します。追記専用attempt履歴は別に保存しますが、途中停止で履歴eventだけが欠けてもenvelopeから再構成でき、それだけでは公開できません。
 
 ```text
 ~/Library/Application Support/Daily arXiv/jobs/<YYYY-MM-DD>-<snapshot-fingerprint>/<runtime-fingerprint>/

@@ -81,11 +81,32 @@ const DATE = "2099-01-05";
 const SNAPSHOT = Object.freeze({
   announcementDate: DATE,
   categories: {
-    "quant-ph": { slug: "quant-ph", sourceUrl: "https://arxiv.org/list/quant-ph/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00003"] },
-    "gr-qc": { slug: "gr-qc", sourceUrl: "https://arxiv.org/list/gr-qc/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00002"] },
-    "hep-th": { slug: "hep-th", sourceUrl: "https://arxiv.org/list/hep-th/new?skip=0&show=2000", newCount: 1, crosslistCount: 0, newIds: ["2099.00001"] },
+    "quant-ph": { slug: "quant-ph", sourceUrl: "https://arxiv.org/list/quant-ph/new", newCount: 1, crosslistCount: 0, newIds: ["2099.00003"] },
+    "gr-qc": { slug: "gr-qc", sourceUrl: "https://arxiv.org/list/gr-qc/new", newCount: 1, crosslistCount: 0, newIds: ["2099.00002"] },
+    "hep-th": { slug: "hep-th", sourceUrl: "https://arxiv.org/list/hep-th/new", newCount: 1, crosslistCount: 0, newIds: ["2099.00001"] },
   },
 });
+
+function categoryMetadataFixture(snapshot = SNAPSHOT, slug = "quant-ph") {
+  return {
+    schemaVersion: "1.0",
+    announcementDate: snapshot.announcementDate,
+    slug,
+    snapshotFingerprint: fingerprintSnapshot(snapshot),
+    papers: snapshot.categories[slug].newIds.map((arxivId, index) => ({
+      arxivId,
+      arxivVersion: "v1",
+      submissionType: "new",
+      url: `https://arxiv.org/abs/${arxivId}`,
+      sourceUrl: `https://arxiv.org/abs/${arxivId}v1`,
+      title: `Exact original title ${index + 1}`,
+      authors: [`Author ${index + 1}`],
+      abstract: `Paper-specific abstract evidence ${index + 1}.`,
+      comments: null,
+      primaryCategory: slug,
+    })),
+  };
+}
 
 function typedUnavailableSource(arxivId) {
   return fetchArxivSourceArchive(arxivId, {
@@ -1071,9 +1092,9 @@ test("Git network retry recognizes the launchd SSH failure without classifying o
   assert.equal(isRetryableGitNetworkFailure("fatal: pathspec 'missing' did not match any files"), false);
 });
 
-test("Codex invocation fixes Sol, High reasoning, beta permissions, network, approvals, and web search", () => {
+test("Codex invocation fixes Sol, High reasoning, closed permissions, and arxiv-only network", () => {
   const args = buildCodexArgs({ worktree: "/repo-automation", runRoot: "/tmp/run" });
-  assert.deepEqual(args.slice(0, 2), ["--strict-config", "--search"]);
+  assert.deepEqual(args.slice(0, 2), ["--strict-config", "--model"]);
   assert.ok(args.includes(MODEL_ID));
   assert.ok(args.includes('model_reasoning_effort="high"'));
   assert.ok(args.includes('default_permissions="daily_arxiv_model"'));
@@ -1084,7 +1105,9 @@ test("Codex invocation fixes Sol, High reasoning, beta permissions, network, app
   assert.ok(args.includes("allow_login_shell=false"));
   assert.ok(args.includes("features.network_proxy.enabled=true"));
   assert.ok(args.some((value) => value.startsWith("permissions.daily_arxiv_model.network=") && value.includes('"arxiv.org"="allow"')));
-  assert.ok(args.includes('tools.web_search={context_size="medium",allowed_domains=["arxiv.org","export.arxiv.org"]}'));
+  assert.ok(!args.includes("--search"));
+  assert.ok(!args.some((value) => value.includes("export.arxiv.org")));
+  assert.ok(!args.some((value) => value.startsWith("tools.web_search=")));
   assert.ok(args.includes('projects."/repo-automation".trust_level="trusted"'));
   assert.ok(args.includes('shell_environment_policy.set.HOME="/tmp/run/home"'));
   assert.ok(args.includes('shell_environment_policy.set.TMPDIR="/tmp/run"'));
@@ -1145,11 +1168,17 @@ test("category prompt binds one resumable category and forbids ID/index fallback
     staging,
     snapshot: SNAPSHOT,
     slug: "quant-ph",
+    categoryMetadata: categoryMetadataFixture(),
   });
   assert.match(prompt, /assigned category: quant-ph/);
   assert.match(prompt, /one resumable category/);
   assert.match(prompt, /2099\.00003/);
   assert.doesNotMatch(prompt, /2099\.00002/);
+  assert.match(prompt, /Exact original title 1/);
+  assert.match(prompt, /Paper-specific abstract evidence 1/);
+  assert.match(prompt, /sole source for original title, ordered complete authors, abstract, comments/);
+  assert.match(prompt, /Do not use export\.arxiv\.org, any \/api\/query endpoint, Web search/);
+  assert.match(prompt, /Do not create a placeholder, marker, scratch file/);
   assert.match(prompt, /provisional top min\(12, totalNew\)/);
   assert.match(prompt, /arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula/);
   assert.match(prompt, /record-source-incomplete\.mjs quant-ph/);

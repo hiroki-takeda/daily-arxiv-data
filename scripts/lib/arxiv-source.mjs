@@ -16,12 +16,25 @@ export const ARXIV_PASTWEEK_FETCH_URLS = Object.freeze(Object.fromEntries(
   ARXIV_CATEGORIES.map((slug) => [slug, `${ARXIV_PASTWEEK_LISTING_URLS[slug]}?skip=0&show=2000`]),
 ));
 export const MAX_ARXIV_LISTING_BYTES = 8 * 1024 * 1024;
+export const MAX_ARXIV_ABSTRACT_PAGE_BYTES = 2 * 1024 * 1024;
+export const MAX_ARXIV_CATEGORY_METADATA_BYTES = 2 * 1024 * 1024;
 
 const FETCH_TIMEOUT_MS = 30_000;
 const SNAPSHOT_MAX_ATTEMPTS = 3;
 const SNAPSHOT_RETRY_DELAYS_MS = Object.freeze([3_000, 10_000]);
 const FULL_TEXT_READINESS_TIMEOUT_MS = 30_000;
 const FULL_TEXT_READINESS_DELAY_MS = 3_000;
+const METADATA_REQUEST_INTERVAL_MS = 3_000;
+const METADATA_MAX_ATTEMPTS = 3;
+const METADATA_RETRY_DELAYS_MS = Object.freeze([3_000, 10_000]);
+const CATEGORY_METADATA_SCHEMA_VERSION = "1.0";
+const METADATA_TEXT_LIMITS = Object.freeze({
+  title: 2_000,
+  abstract: 20_000,
+  comments: 4_000,
+  author: 512,
+  authors: 500,
+});
 const ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}$/;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const SECTION_COUNT_PATTERN = /^(New submissions|Cross submissions) \(showing (0|[1-9]\d*) of (0|[1-9]\d*) entries\)$/;
@@ -294,6 +307,291 @@ function elementText(tokens, startIndex, endIndex, path) {
     .map((token) => token.text)
     .join("");
   return decodeHtmlEntities(text, path).replace(/\s+/g, " ").trim();
+}
+
+function classTokens(token) {
+  const value = parseAttributes(token).class;
+  return typeof value === "string" ? value.split(/\s+/).filter(Boolean) : [];
+}
+
+function elementsWithClass(tokens, name, className) {
+  const matches = [];
+  for (const [index, token] of tokens.entries()) {
+    if (token.type !== "start" || token.name !== name || !classTokens(token).includes(className)) continue;
+    const endIndex = pairElement(tokens, index, name);
+    matches.push({ startIndex: index, endIndex });
+  }
+  return matches;
+}
+
+function exactlyOneElementWithClass(tokens, name, className, path) {
+  const matches = elementsWithClass(tokens, name, className);
+  if (matches.length !== 1) {
+    fail("SOURCE_INCOMPLETE", `${path} must contain exactly one <${name}> with class ${className}.`);
+  }
+  return matches[0];
+}
+
+function canonicalMetadataText(value, path, maxCharacters) {
+  if (typeof value !== "string") fail("SOURCE_INCOMPLETE", `${path} must be text.`);
+  const normalized = value.normalize("NFC").replace(/\s+/gu, " ").trim();
+  if (normalized.length === 0) fail("SOURCE_INCOMPLETE", `${path} must be non-empty.`);
+  if (normalized.includes("\0") || /[\u0001-\u0008\u000b\u000c\u000e-\u001f\u007f]/u.test(normalized)) {
+    fail("SOURCE_INCOMPLETE", `${path} contains a forbidden control character.`);
+  }
+  if ([...normalized].length > maxCharacters) {
+    fail("SOURCE_TOO_LARGE", `${path} exceeds ${maxCharacters} characters.`);
+  }
+  return normalized;
+}
+
+function metaContents(tokens, name, { multiple = false } = {}) {
+  const values = [];
+  for (const token of tokens) {
+    if (token.type !== "start" || token.name !== "meta") continue;
+    const attributes = parseAttributes(token);
+    if (attributes.name?.toLowerCase() !== name) continue;
+    if (!Object.hasOwn(attributes, "content")) {
+      fail("SOURCE_INCOMPLETE", `meta[name=${name}] is missing content.`);
+    }
+    values.push(attributes.content);
+  }
+  if (multiple ? values.length === 0 : values.length !== 1) {
+    fail(
+      "SOURCE_INCOMPLETE",
+      multiple
+        ? `arXiv abstract page must contain at least one meta[name=${name}].`
+        : `arXiv abstract page must contain exactly one meta[name=${name}].`,
+    );
+  }
+  return multiple ? values : values[0];
+}
+
+function stripDescriptor(value, descriptor, path) {
+  const prefix = `${descriptor}:`;
+  if (!value.startsWith(prefix)) fail("SOURCE_INCOMPLETE", `${path} is missing the exact ${prefix} descriptor.`);
+  return value.slice(prefix.length).trim();
+}
+
+function authorIdentitySignature(value, path) {
+  const normalized = canonicalMetadataText(value, path, METADATA_TEXT_LIMITS.author)
+    .toLocaleLowerCase("en-US")
+    .replace(/[\p{P}\p{S}]+/gu, " ")
+    .split(/\s+/u)
+    .filter(Boolean)
+    .sort();
+  if (normalized.length === 0) fail("SOURCE_INCOMPLETE", `${path} has no comparable name tokens.`);
+  return normalized.join("\0");
+}
+
+function parseBodyAuthors(tokens) {
+  const authorsElement = exactlyOneElementWithClass(tokens, "div", "authors", "arXiv authors");
+  const authors = [];
+  for (let index = authorsElement.startIndex + 1; index < authorsElement.endIndex; index += 1) {
+    const token = tokens[index];
+    if (token.type !== "start" || token.name !== "a") continue;
+    const endIndex = pairElement(tokens, index, "a");
+    if (endIndex > authorsElement.endIndex) fail("SOURCE_INCOMPLETE", "arXiv authors contain a truncated link.");
+    authors.push(canonicalMetadataText(
+      elementText(tokens, index, endIndex, `arXiv author ${authors.length + 1}`),
+      `arXiv author ${authors.length + 1}`,
+      METADATA_TEXT_LIMITS.author,
+    ));
+    index = endIndex;
+  }
+  if (authors.length === 0 || authors.length > METADATA_TEXT_LIMITS.authors) {
+    fail("SOURCE_INCOMPLETE", `arXiv authors must contain 1 through ${METADATA_TEXT_LIMITS.authors} linked names.`);
+  }
+  return authors;
+}
+
+function automaticLinkifierHref(tokens, startIndex, endIndex, path) {
+  const visibleText = elementText(tokens, startIndex, endIndex, `${path} link`);
+  const match = /^this (https?) URL$/.exec(visibleText);
+  if (!match) return null;
+  const href = parseAttributes(tokens[startIndex]).href;
+  const scheme = `${match[1]}://`;
+  if (
+    typeof href !== "string"
+    || !href.startsWith(scheme)
+    || href.length <= scheme.length
+    || href.length > METADATA_TEXT_LIMITS.abstract
+    || /[\s\u0000-\u001f\u007f]/u.test(href)
+  ) {
+    fail("SOURCE_INCOMPLETE", `${path} has a malformed automatic URL-linkifier anchor.`);
+  }
+  return href;
+}
+
+function elementTextWithLinkifierUrls(tokens, startIndex, endIndex, path) {
+  let text = "";
+  for (let index = startIndex + 1; index < endIndex; index += 1) {
+    const token = tokens[index];
+    if (token.type === "text") {
+      text += decodeHtmlEntities(token.text, path);
+      continue;
+    }
+    if (token.type !== "start" || token.name !== "a") continue;
+    const anchorEnd = pairElement(tokens, index, "a");
+    if (anchorEnd > endIndex) fail("SOURCE_INCOMPLETE", `${path} contains a truncated link.`);
+    const linkifierHref = automaticLinkifierHref(tokens, index, anchorEnd, path);
+    if (linkifierHref !== null) {
+      // Comments have no independent citation_comments field.  Preserve the
+      // exact validated href rather than arXiv's lossy "this http(s) URL"
+      // display placeholder; ordinary anchors retain their visible text.
+      text += linkifierHref;
+      index = anchorEnd;
+    }
+  }
+  return text.replace(/\s+/gu, " ").trim();
+}
+
+function parseBodyComments(tokens, arxivId) {
+  const labels = elementsWithClass(tokens, "td", "label").filter(({ startIndex, endIndex }) => (
+    elementText(tokens, startIndex, endIndex, "arXiv metadata label") === "Comments:"
+  ));
+  const commentsCells = elementsWithClass(tokens, "td", "comments");
+  if (labels.length === 0 && commentsCells.length === 0) return null;
+  if (labels.length !== 1 || commentsCells.length !== 1) {
+    fail("SOURCE_INCOMPLETE", "arXiv abstract page has malformed or repeated Comments metadata.");
+  }
+  const label = labels[0];
+  const cell = commentsCells[0];
+  const interveningTd = tokens.findIndex((token, index) => (
+    index > label.endIndex && index < cell.startIndex && token.type === "start" && token.name === "td"
+  ));
+  if (cell.startIndex <= label.endIndex || interveningTd !== -1) {
+    fail("SOURCE_INCOMPLETE", "arXiv Comments value is not adjacent to its label.");
+  }
+  return canonicalMetadataText(
+    elementTextWithLinkifierUrls(tokens, cell.startIndex, cell.endIndex, `${arxivId} arXiv comments`),
+    "arXiv comments",
+    METADATA_TEXT_LIMITS.comments,
+  );
+}
+
+function validateVisibleBodyField(tokens, element, { descriptor, path, maxCharacters }) {
+  const descriptors = elementsWithClass(tokens, "span", "descriptor").filter(({ startIndex, endIndex }) => (
+    startIndex > element.startIndex && endIndex < element.endIndex
+  ));
+  if (
+    descriptors.length !== 1
+    || elementText(tokens, descriptors[0].startIndex, descriptors[0].endIndex, `${path} descriptor`) !== `${descriptor}:`
+  ) {
+    fail("SOURCE_INCOMPLETE", `${path} must contain exactly one ${descriptor}: descriptor.`);
+  }
+  return canonicalMetadataText(
+    stripDescriptor(
+      elementText(tokens, element.startIndex, element.endIndex, path),
+      descriptor,
+      path,
+    ),
+    path,
+    maxCharacters,
+  );
+}
+
+/**
+ * Parse one exact, version-pinned official arXiv abstract page.  Citation
+ * metadata is canonical for title/abstract because arXiv renders TeX and
+ * automatic links differently in the visible body.  The body must still have
+ * the expected non-empty bounded structure, exact descriptors, v1 marker,
+ * category, and independently ordered author identities.
+ */
+export function parseArxivAbstractPage(html, { arxivId, slug } = {}) {
+  supportedSlug(slug);
+  if (typeof arxivId !== "string" || !ARXIV_ID_PATTERN.test(arxivId)) {
+    fail("SOURCE_INVALID", "arxivId must be an unversioned modern arXiv ID.");
+  }
+  if (typeof html !== "string" || html.length === 0) fail("SOURCE_INCOMPLETE", `${arxivId} abstract page must be non-empty HTML.`);
+  if (Buffer.byteLength(html, "utf8") > MAX_ARXIV_ABSTRACT_PAGE_BYTES) {
+    fail("SOURCE_TOO_LARGE", `${arxivId} abstract page exceeds ${MAX_ARXIV_ABSTRACT_PAGE_BYTES} bytes.`);
+  }
+  if (html.includes("\0")) fail("SOURCE_INCOMPLETE", `${arxivId} abstract page contains a NUL byte.`);
+
+  const tokens = tokenizeHtml(html);
+  const metaId = canonicalMetadataText(metaContents(tokens, "citation_arxiv_id"), "citation_arxiv_id", 32);
+  if (metaId !== arxivId) fail("SOURCE_CONTENT_MISMATCH", `citation_arxiv_id must equal ${arxivId}.`);
+
+  const versionedBodyIds = [];
+  for (const [index, token] of tokens.entries()) {
+    if (token.type !== "start" || token.name !== "strong") continue;
+    const endIndex = pairElement(tokens, index, "strong");
+    const match = /^arXiv:(\d{4}\.\d{4,5})v([1-9]\d*)$/.exec(elementText(tokens, index, endIndex, "arXiv version marker"));
+    if (match) versionedBodyIds.push({ id: match[1], version: `v${match[2]}` });
+  }
+  if (versionedBodyIds.length !== 1 || versionedBodyIds[0].id !== arxivId || versionedBodyIds[0].version !== "v1") {
+    fail("SOURCE_CONTENT_MISMATCH", `${arxivId} abstract page must contain exactly one matching arXiv:${arxivId}v1 marker.`);
+  }
+
+  const canonicalLinks = [];
+  for (const token of tokens) {
+    if (token.type !== "start" || token.name !== "link") continue;
+    const attributes = parseAttributes(token);
+    if (attributes.rel?.split(/\s+/).some((value) => value.toLowerCase() === "canonical")) {
+      canonicalLinks.push(attributes.href);
+    }
+  }
+  const expectedUrl = `https://arxiv.org/abs/${arxivId}`;
+  if (canonicalLinks.length !== 1 || canonicalLinks[0] !== expectedUrl) {
+    fail("SOURCE_CONTENT_MISMATCH", `${arxivId} abstract page must have the exact unversioned canonical URL.`);
+  }
+  const citationPdfUrl = canonicalMetadataText(metaContents(tokens, "citation_pdf_url"), "citation_pdf_url", 256);
+  if (citationPdfUrl !== `https://arxiv.org/pdf/${arxivId}` && citationPdfUrl !== `https://arxiv.org/pdf/${arxivId}v1`) {
+    fail("SOURCE_CONTENT_MISMATCH", `${arxivId} citation_pdf_url does not identify the expected paper.`);
+  }
+
+  const titleElement = exactlyOneElementWithClass(tokens, "h1", "title", "arXiv title");
+  validateVisibleBodyField(tokens, titleElement, {
+    descriptor: "Title",
+    path: `${arxivId} visible title`,
+    maxCharacters: METADATA_TEXT_LIMITS.title,
+  });
+  const metaTitle = canonicalMetadataText(metaContents(tokens, "citation_title"), "citation_title", METADATA_TEXT_LIMITS.title);
+
+  const bodyAuthors = parseBodyAuthors(tokens);
+  const metaAuthors = metaContents(tokens, "citation_author", { multiple: true });
+  if (metaAuthors.length !== bodyAuthors.length) {
+    fail("SOURCE_CONTENT_MISMATCH", `${arxivId} author count disagrees between citation metadata and the visible body.`);
+  }
+  for (const [index, bodyAuthor] of bodyAuthors.entries()) {
+    if (authorIdentitySignature(bodyAuthor, `body author ${index + 1}`) !==
+        authorIdentitySignature(metaAuthors[index], `citation author ${index + 1}`)) {
+      fail("SOURCE_CONTENT_MISMATCH", `${arxivId} author ${index + 1} disagrees between citation metadata and the visible body.`);
+    }
+  }
+
+  const metaAbstract = canonicalMetadataText(
+    metaContents(tokens, "citation_abstract"),
+    "citation_abstract",
+    METADATA_TEXT_LIMITS.abstract,
+  );
+  const abstractElement = exactlyOneElementWithClass(tokens, "blockquote", "abstract", "arXiv abstract");
+  validateVisibleBodyField(tokens, abstractElement, {
+    descriptor: "Abstract",
+    path: `${arxivId} visible abstract`,
+    maxCharacters: METADATA_TEXT_LIMITS.abstract,
+  });
+
+  const primaryElement = exactlyOneElementWithClass(tokens, "span", "primary-subject", "arXiv primary subject");
+  const primaryText = elementText(tokens, primaryElement.startIndex, primaryElement.endIndex, "arXiv primary subject");
+  const primaryMatch = /\(([a-z][a-z0-9-]*(?:\.[A-Za-z0-9-]+)*)\)$/.exec(primaryText);
+  if (!primaryMatch || primaryMatch[1] !== slug) {
+    fail("SOURCE_CONTENT_MISMATCH", `${arxivId} primary category must equal ${slug}.`);
+  }
+
+  return Object.freeze({
+    arxivId,
+    arxivVersion: "v1",
+    submissionType: "new",
+    url: expectedUrl,
+    sourceUrl: `${expectedUrl}v1`,
+    title: metaTitle,
+    authors: Object.freeze([...bodyAuthors]),
+    abstract: metaAbstract,
+    comments: parseBodyComments(tokens, arxivId),
+    primaryCategory: slug,
+  });
 }
 
 function collectHeadings(tokens, lowerBound, upperBound) {
@@ -745,6 +1043,195 @@ function assertSnapshot(snapshot) {
     }
   }
   return snapshot;
+}
+
+function assertCanonicalMetadataField(value, path, maxCharacters) {
+  if (typeof value !== "string" || canonicalMetadataText(value, path, maxCharacters) !== value) {
+    fail("SOURCE_INVALID", `${path} must be canonical non-empty text.`);
+  }
+}
+
+function canonicalCategoryMetadata(metadata) {
+  return {
+    schemaVersion: metadata.schemaVersion,
+    announcementDate: metadata.announcementDate,
+    slug: metadata.slug,
+    snapshotFingerprint: metadata.snapshotFingerprint,
+    papers: metadata.papers.map((paper) => ({
+      arxivId: paper.arxivId,
+      arxivVersion: paper.arxivVersion,
+      submissionType: paper.submissionType,
+      url: paper.url,
+      sourceUrl: paper.sourceUrl,
+      title: paper.title,
+      authors: [...paper.authors],
+      abstract: paper.abstract,
+      comments: paper.comments,
+      primaryCategory: paper.primaryCategory,
+    })),
+  };
+}
+
+/** Validate both the strict metadata schema and, when supplied, its snapshot binding. */
+export function validateCategoryMetadata(metadata, { snapshot, slug } = {}) {
+  exactKeys(
+    metadata,
+    ["schemaVersion", "announcementDate", "slug", "snapshotFingerprint", "papers"],
+    "categoryMetadata",
+  );
+  if (metadata.schemaVersion !== CATEGORY_METADATA_SCHEMA_VERSION) {
+    fail("SOURCE_INVALID", `categoryMetadata.schemaVersion must equal ${CATEGORY_METADATA_SCHEMA_VERSION}.`);
+  }
+  validateDate(metadata.announcementDate, "categoryMetadata.announcementDate");
+  supportedSlug(metadata.slug);
+  if (slug !== undefined) {
+    supportedSlug(slug);
+    if (metadata.slug !== slug) fail("SOURCE_CONTENT_MISMATCH", `categoryMetadata.slug must equal ${slug}.`);
+  }
+  if (typeof metadata.snapshotFingerprint !== "string" || !/^[0-9a-f]{64}$/.test(metadata.snapshotFingerprint)) {
+    fail("SOURCE_INVALID", "categoryMetadata.snapshotFingerprint must be a lowercase SHA-256 digest.");
+  }
+  if (!Array.isArray(metadata.papers)) fail("SOURCE_INVALID", "categoryMetadata.papers must be an array.");
+  const ids = [];
+  for (const [index, paper] of metadata.papers.entries()) {
+    const path = `categoryMetadata.papers[${index}]`;
+    exactKeys(
+      paper,
+      [
+        "arxivId",
+        "arxivVersion",
+        "submissionType",
+        "url",
+        "sourceUrl",
+        "title",
+        "authors",
+        "abstract",
+        "comments",
+        "primaryCategory",
+      ],
+      path,
+    );
+    if (typeof paper.arxivId !== "string" || !ARXIV_ID_PATTERN.test(paper.arxivId)) {
+      fail("SOURCE_INVALID", `${path}.arxivId must be an unversioned modern arXiv ID.`);
+    }
+    if (paper.arxivVersion !== "v1") fail("SOURCE_INVALID", `${path}.arxivVersion must equal v1.`);
+    if (paper.submissionType !== "new") fail("SOURCE_INVALID", `${path}.submissionType must equal new.`);
+    if (paper.url !== `https://arxiv.org/abs/${paper.arxivId}`) {
+      fail("SOURCE_INVALID", `${path}.url must be the exact unversioned official abstract URL.`);
+    }
+    if (paper.sourceUrl !== `https://arxiv.org/abs/${paper.arxivId}v1`) {
+      fail("SOURCE_INVALID", `${path}.sourceUrl must be the exact version-fixed official abstract URL.`);
+    }
+    assertCanonicalMetadataField(paper.title, `${path}.title`, METADATA_TEXT_LIMITS.title);
+    assertCanonicalMetadataField(paper.abstract, `${path}.abstract`, METADATA_TEXT_LIMITS.abstract);
+    if (paper.comments !== null) {
+      assertCanonicalMetadataField(paper.comments, `${path}.comments`, METADATA_TEXT_LIMITS.comments);
+    }
+    if (!Array.isArray(paper.authors) || paper.authors.length === 0 || paper.authors.length > METADATA_TEXT_LIMITS.authors) {
+      fail("SOURCE_INVALID", `${path}.authors must contain 1 through ${METADATA_TEXT_LIMITS.authors} names.`);
+    }
+    for (const [authorIndex, author] of paper.authors.entries()) {
+      assertCanonicalMetadataField(author, `${path}.authors[${authorIndex}]`, METADATA_TEXT_LIMITS.author);
+    }
+    if (paper.primaryCategory !== metadata.slug) {
+      fail("SOURCE_CONTENT_MISMATCH", `${path}.primaryCategory must equal ${metadata.slug}.`);
+    }
+    ids.push(paper.arxivId);
+  }
+  if (new Set(ids).size !== ids.length) fail("SOURCE_CONTENT_MISMATCH", "categoryMetadata.papers contains duplicate arXiv IDs.");
+  if ([...ids].sort().join("\0") !== ids.join("\0")) {
+    fail("SOURCE_CONTENT_MISMATCH", "categoryMetadata.papers must retain the sorted snapshot ID order.");
+  }
+
+  if (snapshot !== undefined) {
+    assertSnapshot(snapshot);
+    const expectedSlug = slug ?? metadata.slug;
+    supportedSlug(expectedSlug);
+    if (metadata.slug !== expectedSlug) fail("SOURCE_CONTENT_MISMATCH", `categoryMetadata.slug must equal ${expectedSlug}.`);
+    if (metadata.announcementDate !== snapshot.announcementDate) {
+      fail("SOURCE_CONTENT_MISMATCH", "categoryMetadata.announcementDate does not match the official snapshot.");
+    }
+    if (metadata.snapshotFingerprint !== fingerprintSnapshot(snapshot)) {
+      fail("SOURCE_CONTENT_MISMATCH", "categoryMetadata.snapshotFingerprint does not match the official snapshot.");
+    }
+    const expectedIds = snapshot.categories[expectedSlug].newIds;
+    if (ids.join("\0") !== expectedIds.join("\0")) {
+      fail("SOURCE_CONTENT_MISMATCH", `categoryMetadata.papers do not exactly match snapshot.categories.${expectedSlug}.newIds in order.`);
+    }
+  }
+
+  const bytes = Buffer.byteLength(JSON.stringify(canonicalCategoryMetadata(metadata)), "utf8");
+  if (bytes > MAX_ARXIV_CATEGORY_METADATA_BYTES) {
+    fail("SOURCE_TOO_LARGE", `categoryMetadata exceeds ${MAX_ARXIV_CATEGORY_METADATA_BYTES} canonical JSON bytes.`);
+  }
+  return true;
+}
+
+export function buildOfficialCategoryMetadata({ snapshot, slug, papers } = {}) {
+  assertSnapshot(snapshot);
+  supportedSlug(slug);
+  if (!Array.isArray(papers)) fail("SOURCE_INVALID", "papers must be an array.");
+  const metadata = {
+    schemaVersion: CATEGORY_METADATA_SCHEMA_VERSION,
+    announcementDate: snapshot.announcementDate,
+    slug,
+    snapshotFingerprint: fingerprintSnapshot(snapshot),
+    papers: papers.map((paper) => (
+      paper !== null && typeof paper === "object" && !Array.isArray(paper)
+        ? { ...paper, ...(Array.isArray(paper.authors) ? { authors: [...paper.authors] } : {}) }
+        : paper
+    )),
+  };
+  validateCategoryMetadata(metadata, { snapshot, slug });
+  const frozenPapers = metadata.papers.map((paper) => Object.freeze({
+    ...paper,
+    authors: Object.freeze([...paper.authors]),
+  }));
+  return Object.freeze({ ...metadata, papers: Object.freeze(frozenPapers) });
+}
+
+export function fingerprintCategoryMetadata(metadata) {
+  validateCategoryMetadata(metadata);
+  return createHash("sha256")
+    .update(JSON.stringify(canonicalCategoryMetadata(metadata)), "utf8")
+    .digest("hex");
+}
+
+export function validateCategoryReportAgainstMetadata(report, metadata) {
+  validateCategoryMetadata(metadata);
+  const reportPath = `reports.${metadata.slug}`;
+  if (report === null || typeof report !== "object" || Array.isArray(report)) {
+    reportMismatch(reportPath, "must be an object");
+  }
+  if (report.slug !== metadata.slug) reportMismatch(`${reportPath}.slug`, `must equal ${metadata.slug}`);
+  if (report.reportDate !== metadata.announcementDate) {
+    reportMismatch(`${reportPath}.reportDate`, `must equal ${metadata.announcementDate}`);
+  }
+  if (!Array.isArray(report.papers) || report.papers.length !== metadata.papers.length) {
+    reportMismatch(`${reportPath}.papers`, `must contain exactly ${metadata.papers.length} papers`);
+  }
+  const canonicalById = new Map(metadata.papers.map((paper) => [paper.arxivId, paper]));
+  const seenIds = new Set();
+  for (const [index, paper] of report.papers.entries()) {
+    const path = `${reportPath}.papers[${index}]`;
+    if (paper === null || typeof paper !== "object" || Array.isArray(paper)) reportMismatch(path, "must be an object");
+    if (typeof paper.arxivId !== "string" || !ARXIV_ID_PATTERN.test(paper.arxivId)) {
+      reportMismatch(`${path}.arxivId`, "must be an unversioned modern arXiv ID");
+    }
+    if (seenIds.has(paper.arxivId)) reportMismatch(`${reportPath}.papers`, `contains duplicate arXiv ID ${paper.arxivId}`);
+    seenIds.add(paper.arxivId);
+    const canonical = canonicalById.get(paper.arxivId);
+    if (canonical === undefined) reportMismatch(`${path}.arxivId`, "does not occur in canonical category metadata");
+    for (const field of ["title", "primaryCategory", "arxivVersion", "submissionType", "url"]) {
+      if (paper[field] !== canonical[field]) reportMismatch(`${path}.${field}`, "does not exactly match canonical category metadata");
+    }
+    if (!Array.isArray(paper.authors) || paper.authors.length !== canonical.authors.length ||
+        paper.authors.some((author, authorIndex) => author !== canonical.authors[authorIndex])) {
+      reportMismatch(`${path}.authors`, "does not exactly match the ordered canonical author list");
+    }
+  }
+  if (seenIds.size !== canonicalById.size) reportMismatch(`${reportPath}.papers`, "does not contain the complete canonical arXiv ID set");
+  return true;
 }
 
 function compareModernArxivIds(left, right) {
@@ -1695,11 +2182,14 @@ export function validateReportsAgainstSnapshot(reports, snapshot) {
   return true;
 }
 
-async function readBoundedHtml(response, sourceUrl) {
+async function readBoundedHtml(response, sourceUrl, { maxBytes = MAX_ARXIV_LISTING_BYTES } = {}) {
   if (response === null || typeof response !== "object") fail("SOURCE_FETCH", `${sourceUrl} did not return a Response.`);
   if (response.status !== 200 || response.ok !== true) {
     fail("SOURCE_FETCH", `${sourceUrl} returned HTTP ${String(response.status)}.`, {
-      retryable: [408, 425, 429, 500, 502, 503, 504].includes(response.status),
+      // Retry every bounded server-side failure, including reverse-proxy 52x
+      // responses.  501 and 505 describe stable protocol capability errors.
+      retryable: [408, 425, 429].includes(response.status)
+        || (response.status >= 500 && response.status <= 599 && ![501, 505].includes(response.status)),
     });
   }
   if (response.url !== sourceUrl) fail("SOURCE_FETCH", `${sourceUrl} redirected or returned an unexpected final URL.`);
@@ -1710,8 +2200,8 @@ async function readBoundedHtml(response, sourceUrl) {
   const declaredLength = response.headers.get("content-length");
   if (declaredLength !== null) {
     if (!/^(0|[1-9]\d*)$/.test(declaredLength)) fail("SOURCE_FETCH", `${sourceUrl} returned an invalid Content-Length.`);
-    if (Number(declaredLength) > MAX_ARXIV_LISTING_BYTES) {
-      fail("SOURCE_TOO_LARGE", `${sourceUrl} exceeds ${MAX_ARXIV_LISTING_BYTES} bytes.`);
+    if (Number(declaredLength) > maxBytes) {
+      fail("SOURCE_TOO_LARGE", `${sourceUrl} exceeds ${maxBytes} bytes.`);
     }
   }
   const reader = response.body?.getReader?.();
@@ -1725,9 +2215,9 @@ async function readBoundedHtml(response, sourceUrl) {
       if (done) break;
       if (!(value instanceof Uint8Array)) fail("SOURCE_FETCH", `${sourceUrl} returned a non-byte response chunk.`);
       total += value.byteLength;
-      if (total > MAX_ARXIV_LISTING_BYTES) {
+      if (total > maxBytes) {
         await reader.cancel("response too large");
-        fail("SOURCE_TOO_LARGE", `${sourceUrl} exceeds ${MAX_ARXIV_LISTING_BYTES} bytes.`);
+        fail("SOURCE_TOO_LARGE", `${sourceUrl} exceeds ${maxBytes} bytes.`);
       }
       html += decoder.decode(value, { stream: true });
     }
@@ -1864,4 +2354,93 @@ export async function fetchOfficialPastweekWindow({
     parser: parseArxivPastweekListing,
     build: buildOfficialPastweekWindow,
   });
+}
+
+/**
+ * Fetch exact v1 abstract pages serially.  Every HTTP attempt is paced and the
+ * caller hook runs immediately before that attempt, which lets the unattended
+ * host enforce one shared arXiv request interval across processes.
+ */
+export async function fetchOfficialCategoryMetadata({
+  snapshot,
+  slug,
+  fetchImpl = globalThis.fetch,
+  beforeRequest = async () => {},
+  sleepImpl = sleep,
+  maxAttempts = METADATA_MAX_ATTEMPTS,
+  signal,
+} = {}) {
+  assertSnapshot(snapshot);
+  supportedSlug(slug);
+  if (typeof fetchImpl !== "function") fail("SOURCE_INVALID", "fetchImpl must be a function.");
+  if (typeof beforeRequest !== "function") fail("SOURCE_INVALID", "beforeRequest must be a function.");
+  if (typeof sleepImpl !== "function") fail("SOURCE_INVALID", "sleepImpl must be a function.");
+  if (signal !== undefined && !(signal instanceof AbortSignal)) fail("SOURCE_INVALID", "signal must be an AbortSignal.");
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > METADATA_MAX_ATTEMPTS) {
+    fail("SOURCE_INVALID", `metadata fetch attempts must be from 1 through ${METADATA_MAX_ATTEMPTS}.`);
+  }
+
+  const papers = [];
+  let requestCount = 0;
+  for (const arxivId of snapshot.categories[slug].newIds) {
+    const sourceUrl = `https://arxiv.org/abs/${arxivId}v1`;
+    let paper;
+    let lastError;
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      if (signal?.aborted) throw signal.reason ?? new Error("arXiv metadata fetch was aborted");
+      if (requestCount > 0) {
+        const delay = attempt > 1
+          ? METADATA_RETRY_DELAYS_MS[attempt - 2]
+          : METADATA_REQUEST_INTERVAL_MS;
+        await sleepImpl(delay, signal);
+      }
+
+      const requestContext = Object.freeze({ arxivId, slug, sourceUrl, attempt });
+      await beforeRequest(requestContext);
+      requestCount += 1;
+
+      const timeoutController = new AbortController();
+      const timer = setTimeout(
+        () => timeoutController.abort(new Error("arXiv abstract-page fetch timed out")),
+        FETCH_TIMEOUT_MS,
+      );
+      timer.unref?.();
+      const combinedSignal = signal === undefined
+        ? timeoutController.signal
+        : AbortSignal.any([signal, timeoutController.signal]);
+      try {
+        let response;
+        try {
+          response = await fetchImpl(sourceUrl, {
+            method: "GET",
+            headers: {
+              Accept: "text/html",
+              "User-Agent": "daily-arxiv-data/1.1 (+https://github.com/hiroki-takeda/daily-arxiv-data)",
+            },
+            redirect: "error",
+            cache: "no-store",
+            credentials: "omit",
+            referrerPolicy: "no-referrer",
+            signal: combinedSignal,
+          });
+        } catch (error) {
+          if (signal?.aborted) throw error;
+          fail("SOURCE_FETCH", `${sourceUrl} could not be fetched.`, { cause: error, retryable: true });
+        }
+        const html = await readBoundedHtml(response, sourceUrl, { maxBytes: MAX_ARXIV_ABSTRACT_PAGE_BYTES });
+        paper = parseArxivAbstractPage(html, { arxivId, slug });
+      } catch (error) {
+        lastError = error;
+      } finally {
+        clearTimeout(timer);
+      }
+
+      if (paper !== undefined) break;
+      const retryable = lastError instanceof ArxivSourceError && lastError.retryable === true;
+      if (!retryable || signal?.aborted || attempt === maxAttempts) throw lastError;
+    }
+    if (paper === undefined) throw lastError;
+    papers.push(paper);
+  }
+  return buildOfficialCategoryMetadata({ snapshot, slug, papers });
 }

@@ -14,9 +14,9 @@ OpenAI API課金なしで現在もっとも確実な本番経路は、ChatGPTア
 
 - OpenAI APIキーとAPI従量課金は使いません。
 - ChatGPTログイン済みCodex CLIを使うため、契約中ChatGPTプランのCodex利用枠を消費します。
-- 全abstractを一次評価し、各カテゴリの暫定上位12件だけを全文確認します。最終上位10件の全文確認を維持しつつ、全文取得を最大36件へ制限します。カテゴリは`quant-ph`、`gr-qc`、`hep-th`の順に独立実行し、検証済みcheckpointを再利用するため、利用枠、モデル、ネットワークのいずれかで失敗しても次回は失敗または未完了のカテゴリだけを再試行します。
+- fresh category generationの前に、ホストがsnapshotの全IDについて公式`https://arxiv.org/abs/<ID>v1`を1件ずつ礼儀正しい間隔で取得し、原題、自然順の完全な著者一覧、abstract、comments、primary categoryを厳格検証します。この全件metadataだけを全abstract一次評価の入力としてCodexへ渡し、1件でも取得・検証できなければCodexを起動せず延期または安全停止して公開済み版を維持します。その後、各カテゴリの暫定上位12件だけを全文確認します。最終上位10件の全文確認を維持しつつ、全文取得を最大36件へ制限します。カテゴリは`quant-ph`、`gr-qc`、`hep-th`の順に独立実行し、検証済みcheckpointを再利用するため、利用枠、モデル、ネットワークのいずれかで失敗しても次回は失敗または未完了のカテゴリだけを再試行します。
 - 公式一覧の日付が既に公開済みならCodexを起動しないため、午後runを含め利用枠を消費しません。
-- 公式一覧だけが先に更新された場合は、全New IDを取得せず、当日バッチの最大arXiv IDをcanaryとして版固定PDFとe-printへ順次`HEAD`します。PDFが未配信なら`AUTOMATION_DEFERRED`で正常終了し、Codexを起動せず次の定時runへ回します。PDFが利用可能でe-printだけが不調なら`FULL_TEXT_PDF_FALLBACK_READY`として続行します。これはバッチ伝播の軽量確認であり、個別論文の可用性はモデル側でも引き続き安全確認します。
+- 公式一覧だけが先に更新された場合は、全New IDを取得せず、当日バッチの最大arXiv IDをcanaryとして版固定PDFとe-printへ順次`HEAD`します。PDFが未配信なら`AUTOMATION_DEFERRED`で正常終了し、Codexを起動せず次の定時runへ回します。PDFが利用可能でe-printだけが不調なら`FULL_TEXT_PDF_FALLBACK_READY`として続行します。これはバッチ伝播の軽量確認であり、全件metadataの取得・検証と個別候補の本文確認は後続の独立した段階で行います。
 - 全abstract比較後に個別候補の本文だけが取得不能だった場合は、失敗IDと固定済み暫定候補集合をホストがsnapshotと照合してcheckpoint履歴へ残します。通常のarXiv配信遅延を吸収するため、トークンを使わない公式source事前確認だけは初回15分、次に4時間、18時間、36時間、以後最大72時間のbackoffで再試行し、待機中はCodexを起動しません。待機後はまずホストが候補e-printを実GET・安全抽出します。取得helper自身が型付きで報告した通信・配信不能、または明示的に安全な抽出形式非対応の場合だけ、同じIDの版固定公式PDFを独立`HEAD`確認してPDF経路へ進めます。e-printとPDFの両方が利用不能な場合はbackoffを延長します。取得済みsourceは次のrun固有`/tmp`へ置き、モデルに同じ取得を繰り返させません。危険なarchive path、容量超過、権限、disk、redirect、validation等の予期しないエラーは、messageに`network`、`timeout`、`5xx`等の語が含まれてもPDF fallbackへ落とさず安全停止します。
 
 ## 本番構成
@@ -30,9 +30,10 @@ launchd（平日11:30・16:30 JST）
   → 未公開日が複数ならpastweekから最古の完全な1日を選択
   → 公開済みならNO_CHANGE（Codex未使用）
   → v1 PDF canaryが未配信ならAUTOMATION_DEFERRED。e-printだけ不調ならPDF fallbackで続行
-  → 別のdaily-arxiv-data-agent worktree
-  → quant-ph → gr-qc → hep-thの固定順で未完了カテゴリだけを実行
-  → 各カテゴリをCodex CLI（GPT-5.6-Sol / High）で全abstract一次評価
+  → quant-ph → gr-qc → hep-thの固定順で未完了カテゴリだけを処理
+  → fresh generationなら、ホストが全IDの版固定absを1件ずつ取得し、5項目のmetadataを厳格検証（全件揃わなければCodex未起動）
+  → 最初のモデル起動直前に別のdaily-arxiv-data-agent worktreeをorigin/mainへ同期
+  → 各カテゴリをCodex CLI（GPT-5.6-Sol / High）で、ホスト検証済みmetadataだけから全abstract一次評価
   → 暫定上位12件の公式v1 PDF確認 + 公式e-print TeXのbounded抽出（追加package不要）
   → 個別本文が取得不能なら候補receiptを検証保存。cooldown後はe-printを先取りし、抽出不能でも版固定PDFが確認できればPDF経路で再開
   → run固有/tmpのカテゴリ専用stagingへ正確な1 JSON（outboxは空のまま）
@@ -94,6 +95,8 @@ Codexのstdout/stderrはホストが20 MiBで打ち切り、上限超過runは�
 
 aged checkpoint復旧では、旧sourceの固定identity・所有者・mode・inode・link・内容digest・時刻をsource provenanceとしてauthorizationへ封印します。これは同一Mac上の運用証跡であり、第三者のタイムスタンプではありません。
 
+snapshotとfingerprintの契約は従来どおり日付・primary-New ID集合・件数であり、全件metadataはそのID集合に厳密に拘束する別のdigest付き入力です。metadataの導入によってsnapshot対象を追加・削除・置換しません。
+
 1日分のjobは、announcement dateと公式snapshotのSHA-256で親ディレクトリを選び、その中を評価runtimeのSHA-256で分離した`jobs/<date>-<snapshot-fingerprint>/<runtime-fingerprint>/`に置きます。`job.json`、`snapshot.json`、共有`evaluationRunId`は初回に固定し、既存値を上書きしません。通常のpastweek選択でも明示的旧snapshot復旧でも、モデル起動前にライブの公式head・発表日列・完全snapshot列・target fingerprintを検証し、内容digestをファイル名に持つ0600のdurable authorizationを`recovery-authorizations/`へ排他的に保存します。作成途中の内容は同一filesystem上の非active stagingへfsyncしてから`link(2)`で公開するため、途中終了した部分ファイルをactive authorizationとして読みません。受理した各カテゴリは`reports/<category>.json`とdigest付き`<category>.receipt.json`として保存します。通常の失敗draftは`drafts/<attemptId>.<category>.json`とdigest付きreceiptとして不変保存し、本文link直後の停止でreceiptだけが欠けた場合は次回runが同じ検証を再実行してreceiptを追記します。本文取得不能draftだけは、暫定report、固定候補receipt、attempt stage、snapshot・runtime・runId、report digestを1個のcontent-addressed `*.source-draft.json` envelopeへ入れて排他的に公開します。この関連付けは単一原子的artifactなので、ホスト停止時にもsource draftを通常修復draftへ誤分類しません。追記専用のretry監査eventだけが欠けた場合はenvelopeから再構成します。モデル試行は`attempts/*.json`、公開試行は`publication/*.json`へ追記し、content-addressedな`.writes/*.blob`も含め既存記録を削除・置換しません。
 
 次の定時runでは、public latestDateと一致するactive authorizationを自動検出し、同じsnapshot、runtime fingerprint、evaluationRunIdのjobを開きます。同じanchorのauthorizationが複数ある、digest・0600 mode・canonical内容が変わった、公開anchorやruntimeが一致しない場合はfail closedです。完成済みカテゴリのdigestとschemaを再検証し、有効なカテゴリはCodexを呼ばず再利用して、`quant-ph`、`gr-qc`、`hep-th`の順で最初の未完了カテゴリから再開します。
@@ -109,8 +112,8 @@ permissions profile = daily_arxiv_model（Beta、fail closed）
 approval policy = never
 filesystem = agent worktree・認証保存領域・ホスト制御領域は書込不可
              run固有rootは書込可能、macOS system tempは非信頼scratch
-shell network = arxiv.org / export.arxiv.orgだけ
-web search = arxiv.org / export.arxiv.orgだけ
+shell network = arxiv.orgだけ（上位候補の版固定本文経路）
+web search = 無効
 login shell、Apps、Plugins、MCP、browser、computer use = 無効
 ```
 
@@ -129,6 +132,8 @@ AIの評価内容を機械的に証明することはできませんが、次は
 - aged checkpoint復旧では、公開済み日 → 保存target → 現在windowの最古完全日がそれぞれ直後の平日で、現在windowの全発表日が完全かつtargetより新しく、`/new`とpastweekのheadが一致すること
 - aged sourceがsnapshot-onlyで、固定date・snapshot・runtime・evaluationRunId・ローカルprovenance digestを再開時と公開直前に再検証できること
 - reportの全ID集合、カテゴリ、`v1`、New件数、Cross件数が公式snapshotと完全一致すること
+- fresh category generation前に、snapshot全IDの公式版固定absから原題・自然順全著者・abstract・comments・primary categoryを1件ずつ取得・検証し、欠落時はCodexを起動しないこと
+- reportの原題・著者・primary categoryがホスト検証済みmetadataと一致し、metadata入力のdigestがモデル終了後も変わっていないこと
 - generation前後で、選択したpastweek日付のsnapshot fingerprintが同一であること
 - 各モデル終了後もoutboxが空で、カテゴリ専用stagingがホストsnapshotの日付・カテゴリに対応する正確な1レポートだけを含むこと
 - 各カテゴリで`<category>-structure-audit-1.json`から番号順に最大4回の固定構造監査を実行し、非ゼロの監査1〜3の後だけ最大3回の一括修正を行い、最初の`issues=0`で後続の構造監査を作らず終了したこと。得点分布と得点・順位・上位10件の全文確認tuple・件数・URLの修正はこの構造段階だけで完了したこと。その後、現在のレポート構造とrun IDを各pass直前に正規validatorで再検証する文章専用の番号付き言語監査が5回以内に`issues=0`となり（非ゼロ言語監査後のwhole-field一括修正は4回以内）、単一カテゴリvalidatorが成功し、その後にホストが公式ID集合・件数・digestを独立検証してcheckpointしたこと
