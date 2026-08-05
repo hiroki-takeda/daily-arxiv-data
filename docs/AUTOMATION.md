@@ -133,7 +133,8 @@ AIの評価内容を機械的に証明することはできませんが、次は
 - aged sourceがsnapshot-onlyで、固定date・snapshot・runtime・evaluationRunId・ローカルprovenance digestを再開時と公開直前に再検証できること
 - reportの全ID集合、カテゴリ、`v1`、New件数、Cross件数が公式snapshotと完全一致すること
 - fresh category generation前に、snapshot全IDの公式版固定absから原題・自然順全著者・abstract・comments・primary categoryを1件ずつ取得・検証し、欠落時はCodexを起動しないこと
-- reportの原題・著者・primary categoryがホスト検証済みmetadataと一致し、metadata入力のdigestがモデル終了後も変わっていないこと
+- モデル終了後、reportの原題・自然順全著者・primary category・版・投稿種別・canonical URLだけをホスト検証済みmetadataから決定的に再注入し、ID集合、順位、点数、評価根拠、文章を変えていないこと
+- 再注入後のreport書誌情報が同じmetadataと完全一致し、metadata入力のdigestがモデル終了後も変わっていないこと
 - generation前後で、選択したpastweek日付のsnapshot fingerprintが同一であること
 - 各モデル終了後もoutboxが空で、カテゴリ専用stagingがホストsnapshotの日付・カテゴリに対応する正確な1レポートだけを含むこと
 - 各カテゴリで`<category>-structure-audit-1.json`から番号順に最大4回の固定構造監査を実行し、非ゼロの監査1〜3の後だけ最大3回の一括修正を行い、最初の`issues=0`で後続の構造監査を作らず終了したこと。得点分布と得点・順位・上位10件の全文確認tuple・件数・URLの修正はこの構造段階だけで完了したこと。その後、現在のレポート構造とrun IDを各pass直前に正規validatorで再検証する文章専用の番号付き言語監査が5回以内に`issues=0`となり（非ゼロ言語監査後のwhole-field一括修正は4回以内）、単一カテゴリvalidatorが成功し、その後にホストが公式ID集合・件数・digestを独立検証してcheckpointしたこと

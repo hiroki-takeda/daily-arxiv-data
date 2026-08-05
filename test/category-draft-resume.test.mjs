@@ -225,6 +225,32 @@ test("a retry restores an immutable same-runtime draft and uses repair instead o
   assert.equal(otherExecution.mode, "generation", "drafts from another runtime must not be selected");
 });
 
+test("generic rescue preserves a normalized host copy and leaves model evidence untouched", async () => {
+  const { root, report, job, policy } = await fixtureJob();
+  startCategoryAttempt(job, RUN_ID);
+  report.papers[0].title = "Model-normalized title";
+  const serialized = `${JSON.stringify(report, null, 2)}\n`;
+  const sourcePath = writeSource(root, "failed-metadata-copy.json", serialized);
+  const sourceBytes = readFileSync(sourcePath);
+  const canonicalTitle = "Canonical R\\'enyi title";
+  const draft = preserveCheckpointCategoryDraft({
+    job,
+    category: CATEGORY,
+    sourcePath,
+    normalizeReport: (candidate) => ({
+      ...candidate,
+      papers: candidate.papers.map((paper) => ({ ...paper, title: canonicalTitle })),
+    }),
+    validateDraft: validateFixtureDraft(policy),
+    attemptId: RUN_ID,
+    now: new Date("2099-01-05T12:30:00.000Z"),
+  });
+
+  assert.deepEqual(readFileSync(sourcePath), sourceBytes);
+  assert.equal(JSON.parse(readFileSync(draft.path, "utf8")).papers[0].title, canonicalTitle);
+  assert.equal(draft.report.papers[0].title, canonicalTitle);
+});
+
 test("a retry strictly revalidates an interrupted draft write and appends its missing receipt", async () => {
   const { root, controlRoot, report, snapshot, job, policy } = await fixtureJob();
   startCategoryAttempt(job, RUN_ID);
@@ -402,6 +428,47 @@ test("a source interruption resumes from the protected screening draft and fixed
     receipt: { provisionalCandidateIds: ["2099.10001"] },
     requireComplete: false,
   }), /changed protected abstract-screening content/);
+});
+
+test("source-incomplete rescue binds a protected copy without rewriting its provisional source", async () => {
+  const { root, snapshot, job, policy } = await fixtureJob();
+  const provisional = provisionalFixtureReport();
+  provisional.papers[0].title = "Model-normalized title";
+  const canonicalTitle = "Canonical R\\'enyi title";
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: provisional.papers[0].arxivId,
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: [provisional.papers[0].arxivId],
+  };
+  startCategoryAttempt(job, RUN_ID);
+  const sourcePath = writeSource(root, "source-bound.json", `${JSON.stringify(provisional)}\n`);
+  const sourceBytes = readFileSync(sourcePath);
+  const draft = preserveCheckpointCategorySourceDraft({
+    job,
+    category: CATEGORY,
+    sourcePath,
+    sourceReceipt: receipt,
+    normalizeReport: (candidate) => ({
+      ...candidate,
+      papers: candidate.papers.map((paper) => ({ ...paper, title: canonicalTitle })),
+    }),
+    attemptId: RUN_ID,
+    validateDraft: (candidate, context) => validateCategorySourceResumeDraft({
+      report: candidate,
+      receipt,
+      date: context.reportDate,
+      slug: context.category,
+      policy,
+      evaluationRunId: context.evaluationRunId,
+      snapshot: context.snapshot,
+      candidateOrderRequired: true,
+    }),
+  });
+
+  assert.deepEqual(readFileSync(sourcePath), sourceBytes);
+  assert.equal(draft.report.papers[0].title, canonicalTitle);
 });
 
 test("a source draft atomically preserves its receipt association across a host crash", async () => {

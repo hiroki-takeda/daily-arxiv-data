@@ -16,6 +16,7 @@ import {
   assertGenericCategoryDraftRescueAllowed,
   assertChatGptLogin,
   assertPinnedCodexIdentity,
+  bindCategoryReportForCheckpoint,
   buildAutomationPrompt,
   buildCategoryAutomationPrompt,
   buildCategoryRepairPrompt,
@@ -1177,6 +1178,8 @@ test("category prompt binds one resumable category and forbids ID/index fallback
   assert.match(prompt, /Exact original title 1/);
   assert.match(prompt, /Paper-specific abstract evidence 1/);
   assert.match(prompt, /sole source for original title, ordered complete authors, abstract, comments/);
+  assert.match(prompt, /preserve TeX backslashes and punctuation byte-for-byte/);
+  assert.match(prompt, /host deterministically rebinds those immutable fields/);
   assert.match(prompt, /Do not use export\.arxiv\.org, any \/api\/query endpoint, Web search/);
   assert.match(prompt, /Do not create a placeholder, marker, scratch file/);
   assert.match(prompt, /provisional top min\(12, totalNew\)/);
@@ -1211,6 +1214,47 @@ test("category prompt binds one resumable category and forbids ID/index fallback
     prompt.indexOf("structure-audit-4.json") < prompt.indexOf("language-audit-1.json"),
     "every permitted structural preflight must be listed before every language audit",
   );
+});
+
+test("host binds canonical immutable metadata without modifying the model file", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-metadata-binding-test-")));
+  const path = join(root, `${DATE}-quant-ph.json`);
+  const categoryMetadata = categoryMetadataFixture();
+  categoryMetadata.papers[0].title = "Maximal R\\'enyi Relative Entropy for $\\alpha>2$";
+  const report = {
+    reportDate: DATE,
+    slug: "quant-ph",
+    papers: [{
+      arxivId: "2099.00003",
+      arxivVersion: "v1",
+      submissionType: "new",
+      url: "https://arxiv.org/abs/2099.00003",
+      title: "Maximal R'enyi Relative Entropy for $\\alpha>2$",
+      authors: ["Author 1"],
+      primaryCategory: "quant-ph",
+      totalScore: 87,
+      assessment: "評価内容は変更しない。",
+    }],
+  };
+  writeFileSync(path, `${JSON.stringify(report, null, 2)}\n`, { mode: 0o600 });
+
+  const before = readFileSync(path);
+  const binding = bindCategoryReportForCheckpoint({ report, categoryMetadata });
+  const stored = JSON.parse(readFileSync(path, "utf8"));
+  assert.equal(binding.correctedFields, 1);
+  assert.match(binding.sourceValueSha256, /^[0-9a-f]{64}$/);
+  assert.match(binding.boundValueSha256, /^[0-9a-f]{64}$/);
+  assert.notEqual(binding.sourceValueSha256, binding.boundValueSha256);
+  assert.equal(binding.report.papers[0].title, categoryMetadata.papers[0].title);
+  assert.equal(binding.report.papers[0].totalScore, 87);
+  assert.equal(binding.report.papers[0].assessment, "評価内容は変更しない。");
+  assert.equal(stored.papers[0].title, report.papers[0].title);
+  assert.deepEqual(readFileSync(path), before, "the untrusted model output remains byte-for-byte evidence");
+  assert.equal(statSync(path).mode & 0o777, 0o600);
+
+  const unchanged = bindCategoryReportForCheckpoint({ report: binding.report, categoryMetadata });
+  assert.equal(unchanged.correctedFields, 0);
+  assert.equal(unchanged.sourceValueSha256, unchanged.boundValueSha256);
 });
 
 test("category repair prompt uses the same fixed audit protocol without legacy output names", () => {

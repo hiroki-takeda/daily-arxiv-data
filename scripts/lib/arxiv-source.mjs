@@ -1197,6 +1197,54 @@ export function fingerprintCategoryMetadata(metadata) {
     .digest("hex");
 }
 
+/**
+ * Replace model-copied immutable bibliography fields with the host-fetched
+ * canonical values.  The model still owns ranking, scores, and reader-facing
+ * analysis; the host owns source identity and original bibliographic text.
+ */
+export function bindCategoryReportToMetadata(report, metadata) {
+  validateCategoryMetadata(metadata);
+  const reportPath = `reports.${metadata.slug}`;
+  if (report === null || typeof report !== "object" || Array.isArray(report)) {
+    reportMismatch(reportPath, "must be an object");
+  }
+  if (report.slug !== metadata.slug) reportMismatch(`${reportPath}.slug`, `must equal ${metadata.slug}`);
+  if (report.reportDate !== metadata.announcementDate) {
+    reportMismatch(`${reportPath}.reportDate`, `must equal ${metadata.announcementDate}`);
+  }
+  if (!Array.isArray(report.papers) || report.papers.length !== metadata.papers.length) {
+    reportMismatch(`${reportPath}.papers`, `must contain exactly ${metadata.papers.length} papers`);
+  }
+
+  const canonicalById = new Map(metadata.papers.map((paper) => [paper.arxivId, paper]));
+  const seenIds = new Set();
+  const papers = report.papers.map((paper, index) => {
+    const path = `${reportPath}.papers[${index}]`;
+    if (paper === null || typeof paper !== "object" || Array.isArray(paper)) reportMismatch(path, "must be an object");
+    if (typeof paper.arxivId !== "string" || !ARXIV_ID_PATTERN.test(paper.arxivId)) {
+      reportMismatch(`${path}.arxivId`, "must be an unversioned modern arXiv ID");
+    }
+    if (seenIds.has(paper.arxivId)) reportMismatch(`${reportPath}.papers`, `contains duplicate arXiv ID ${paper.arxivId}`);
+    seenIds.add(paper.arxivId);
+    const canonical = canonicalById.get(paper.arxivId);
+    if (canonical === undefined) reportMismatch(`${path}.arxivId`, "does not occur in canonical category metadata");
+    return {
+      ...paper,
+      arxivVersion: canonical.arxivVersion,
+      submissionType: canonical.submissionType,
+      url: canonical.url,
+      title: canonical.title,
+      authors: [...canonical.authors],
+      primaryCategory: canonical.primaryCategory,
+    };
+  });
+  if (seenIds.size !== canonicalById.size) reportMismatch(`${reportPath}.papers`, "does not contain the complete canonical arXiv ID set");
+
+  const bound = { ...report, papers };
+  validateCategoryReportAgainstMetadata(bound, metadata);
+  return bound;
+}
+
 export function validateCategoryReportAgainstMetadata(report, metadata) {
   validateCategoryMetadata(metadata);
   const reportPath = `reports.${metadata.slug}`;

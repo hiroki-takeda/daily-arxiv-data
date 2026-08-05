@@ -9,6 +9,7 @@ import {
   ARXIV_PASTWEEK_LISTING_URLS,
   MAX_ARXIV_ABSTRACT_PAGE_BYTES,
   MAX_ARXIV_LISTING_BYTES,
+  bindCategoryReportToMetadata,
   buildOfficialCategoryMetadata,
   buildOfficialListingSnapshot,
   buildOfficialPastweekWindow,
@@ -1637,6 +1638,57 @@ test("report metadata guard pins original title, ordered authors, category, vers
       assert.throws(() => validateCategoryReportAgainstMetadata(changed, metadata), pattern);
     });
   }
+});
+
+test("host binding restores immutable report metadata without changing evaluation content", async (t) => {
+  const snapshot = snapshotFixture();
+  const canonicalPapers = structuredClone(metadataPapers(snapshot, "quant-ph"));
+  canonicalPapers[0].title = "Maximal R\\'enyi Relative Entropy for $\\alpha>2$";
+  const metadata = buildOfficialCategoryMetadata({
+    snapshot,
+    slug: "quant-ph",
+    papers: canonicalPapers,
+  });
+  const report = {
+    slug: metadata.slug,
+    reportDate: metadata.announcementDate,
+    papers: metadata.papers.toReversed().map((paper, index) => ({
+      arxivId: paper.arxivId,
+      arxivVersion: "v2",
+      submissionType: "cross",
+      url: `${paper.url}v1`,
+      title: index === 0 ? "Maximal R'enyi Relative Entropy" : `${paper.title} changed`,
+      authors: [...paper.authors].reverse().concat("Invented Author"),
+      primaryCategory: "gr-qc",
+      totalScore: 91 - index,
+      assessment: `Paper-specific assessment ${index + 1}`,
+    })),
+  };
+  const original = structuredClone(report);
+  const bound = bindCategoryReportToMetadata(report, metadata);
+
+  assert.equal(validateCategoryReportAgainstMetadata(bound, metadata), true);
+  assert.deepEqual(report, original, "binding must not mutate the model report in memory");
+  for (const [index, paper] of bound.papers.entries()) {
+    const canonical = metadata.papers.find(({ arxivId }) => arxivId === paper.arxivId);
+    assert.equal(paper.title, canonical.title);
+    assert.deepEqual(paper.authors, canonical.authors);
+    assert.equal(paper.primaryCategory, canonical.primaryCategory);
+    assert.equal(paper.arxivVersion, canonical.arxivVersion);
+    assert.equal(paper.submissionType, canonical.submissionType);
+    assert.equal(paper.url, canonical.url);
+    assert.equal(paper.totalScore, report.papers[index].totalScore);
+    assert.equal(paper.assessment, report.papers[index].assessment);
+  }
+
+  await t.test("unknown or duplicate identities still fail closed", () => {
+    const unknown = structuredClone(report);
+    unknown.papers[0].arxivId = "2607.09998";
+    assert.throws(() => bindCategoryReportToMetadata(unknown, metadata), /does not occur/);
+    const duplicate = structuredClone(report);
+    duplicate.papers[0].arxivId = duplicate.papers[1].arxivId;
+    assert.throws(() => bindCategoryReportToMetadata(duplicate, metadata), /duplicate/);
+  });
 });
 
 test("official category metadata fetch is exact-v1, serial, paced, hooked per attempt, and transient-only retried", async () => {

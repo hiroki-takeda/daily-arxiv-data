@@ -72,7 +72,7 @@ npm run validate
 git diff --check
 ```
 
-各Codexカテゴリrunには、ホストから指定されたrun固有`/tmp`のカテゴリ専用stagingへ1レポートだけを書くよう要求します。Codex自身は`git add`、`commit`、`push`を行いません。モデルのシェル通信は上位候補の版固定本文確認に必要な`arxiv.org`だけに制限し、Web検索は無効にします。全abstract一次評価のmetadataはホスト入力だけを使い、`export.arxiv.org`、`/api/query`、全件absの再取得による補完は禁止します。リポジトリ、ChatGPT認証保存領域、publisher、checkpointを含むホスト制御領域への書込みを拒否します。現在のmacOS版Codexでは共通ツール用system tempがscratchとして書込み可能なため、`/tmp`全体を非信頼領域として扱い、公開用のホストstaging・lock・ログ・秘密情報は置きません。モデル終了後にホストが単一カテゴリを独立検証してcheckpointへ取り込み、3カテゴリが揃った後だけ、固定publisher controlから準備した隔離publication worktree内でホスト側ランナーが次を呼びます。
+各Codexカテゴリrunには、ホストから指定されたrun固有`/tmp`のカテゴリ専用stagingへ1レポートだけを書くよう要求します。Codex自身は`git add`、`commit`、`push`を行いません。モデルのシェル通信は上位候補の版固定本文確認に必要な`arxiv.org`だけに制限し、Web検索は無効にします。全abstract一次評価のmetadataはホスト入力だけを使い、`export.arxiv.org`、`/api/query`、全件absの再取得による補完は禁止します。リポジトリ、ChatGPT認証保存領域、publisher、checkpointを含むホスト制御領域への書込みを拒否します。現在のmacOS版Codexでは共通ツール用system tempがscratchとして書込み可能なため、`/tmp`全体を非信頼領域として扱い、公開用のホストstaging・lock・ログ・秘密情報は置きません。モデル終了後にホストが公式metadataから原題・全著者・primary category・版・投稿種別・canonical URLだけを決定的に再注入し、ID集合とレポート全体を独立検証してcheckpointへ取り込みます。順位・点数・評価根拠・文章はこの再注入で変更しません。3カテゴリが揃った後だけ、固定publisher controlから準備した隔離publication worktree内でホスト側ランナーが次を呼びます。
 
 ```bash
 node scripts/publish-edition.mjs YYYY-MM-DD /tmp/.../staging

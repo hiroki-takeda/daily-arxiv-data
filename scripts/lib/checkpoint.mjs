@@ -1456,22 +1456,35 @@ function validateCheckpointReportCandidate({
   current,
   category,
   content,
+  normalizeReport,
   validateReport,
   label,
   validationContext = {},
 }) {
   if (typeof validateReport !== "function") fail("Checkpoint report import requires a validation callback.");
-  const report = parseJsonBuffer(content, label);
-  validateReportAssociation(report, current.manifest, category, label);
-  const validationResult = validateReport(report, {
+  if (normalizeReport !== undefined && typeof normalizeReport !== "function") {
+    fail("Checkpoint report normalizer must be a function when supplied.");
+  }
+  const context = {
     category,
     reportDate: current.manifest.reportDate,
     evaluationRunId: current.evaluationRunId,
     snapshot: current.snapshot,
     ...validationContext,
-  });
+  };
+  const sourceReport = parseJsonBuffer(content, label);
+  validateReportAssociation(sourceReport, current.manifest, category, label);
+  // A trusted host normalizer may derive the protected copy from the stable
+  // source bytes, but it never writes back to the untrusted model file.
+  const report = normalizeReport === undefined ? sourceReport : normalizeReport(sourceReport, context);
+  validateReportAssociation(report, current.manifest, category, `${label} after normalization`);
+  const normalizedContent = normalizeReport === undefined
+    ? content
+    : Buffer.from(serializeJson(report), "utf8");
+  if (normalizedContent.length > MAX_REPORT_BYTES) fail(`${label} exceeds the normalized report size limit.`);
+  const validationResult = validateReport(report, context);
   if (validationResult === false) fail(`${label} failed validation.`);
-  return report;
+  return Object.freeze({ report, content: normalizedContent });
 }
 
 function writeMissingReportReceipt({ current, category, content, attemptId, now }) {
@@ -1508,6 +1521,7 @@ export function importCheckpointCategoryReport({
   job,
   category,
   sourcePath,
+  normalizeReport,
   validateReport,
   attemptId,
   now = new Date(),
@@ -1522,22 +1536,23 @@ export function importCheckpointCategoryReport({
     maxBytes: MAX_REPORT_BYTES,
     immutable: false,
   });
-  validateCheckpointReportCandidate({
+  const candidate = validateCheckpointReportCandidate({
     current,
     category,
     content,
+    normalizeReport,
     validateReport,
     label: `Checkpoint source report ${category}`,
   });
-  const digest = sha256(content);
+  const digest = sha256(candidate.content);
   const reportPath = join(current.paths.reports, `${category}.json`);
   if (existsSync(reportPath)) {
     const existing = readStableSecureFile(reportPath, `Existing checkpoint report ${category}`, { maxBytes: MAX_REPORT_BYTES });
-    if (sha256(existing) !== digest || !existing.equals(content)) fail(`Refusing to replace a different checkpoint report for ${category}.`);
+    if (sha256(existing) !== digest || !existing.equals(candidate.content)) fail(`Refusing to replace a different checkpoint report for ${category}.`);
   } else {
-    writeAtomicExclusive(current.paths, reportPath, content);
+    writeAtomicExclusive(current.paths, reportPath, candidate.content);
   }
-  writeMissingReportReceipt({ current, category, content, attemptId, now });
+  writeMissingReportReceipt({ current, category, content: candidate.content, attemptId, now });
   return reloadJob(current).reports[category];
 }
 
@@ -1617,6 +1632,7 @@ export function preserveCheckpointCategoryDraft({
   job,
   category,
   sourcePath,
+  normalizeReport,
   validateDraft,
   attemptId,
   now = new Date(),
@@ -1632,10 +1648,11 @@ export function preserveCheckpointCategoryDraft({
     maxBytes: MAX_REPORT_BYTES,
     immutable: false,
   });
-  const report = validateCheckpointReportCandidate({
+  const candidate = validateCheckpointReportCandidate({
     current,
     category,
     content,
+    normalizeReport,
     validateReport: validateDraft,
     label: `Category draft source ${category}`,
     validationContext: { attemptId },
@@ -1648,12 +1665,12 @@ export function preserveCheckpointCategoryDraft({
   ) {
     fail(`Refusing to overwrite an existing category draft for ${attemptId} ${category}.`);
   }
-  const digest = sha256(content);
-  writeAtomicExclusive(current.paths, destinations.report, content);
-  writeMissingCategoryDraftReceipt({ current, attemptId, category, content, now });
+  const digest = sha256(candidate.content);
+  writeAtomicExclusive(current.paths, destinations.report, candidate.content);
+  writeMissingCategoryDraftReceipt({ current, attemptId, category, content: candidate.content, now });
   const saved = reloadJob(current).drafts[category].find((entry) => entry.attemptId === attemptId);
   if (saved === undefined || saved.sha256 !== digest) fail(`Preserved category draft could not be reloaded: ${attemptId} ${category}`);
-  return Object.freeze({ ...saved, report });
+  return Object.freeze({ ...saved, report: candidate.report });
 }
 
 export function preserveCheckpointCategorySourceDraft({
@@ -1661,6 +1678,7 @@ export function preserveCheckpointCategorySourceDraft({
   category,
   sourcePath,
   sourceReceipt,
+  normalizeReport,
   validateDraft,
   attemptId,
   now = new Date(),
@@ -1680,14 +1698,16 @@ export function preserveCheckpointCategorySourceDraft({
     snapshot: current.snapshot,
     category,
   });
-  const report = validateCheckpointReportCandidate({
+  const candidate = validateCheckpointReportCandidate({
     current,
     category,
     content,
+    normalizeReport,
     validateReport: validateDraft,
     label: `Source category draft source ${category}`,
     validationContext: { attemptId, sourceReceipt: normalizedSourceReceipt },
   });
+  const report = candidate.report;
   const reportContent = Buffer.from(serializeJson(report), "utf8");
   if (reportContent.length > MAX_REPORT_BYTES) {
     fail(`Canonical source category draft exceeds the ${MAX_REPORT_BYTES}-byte report limit.`);

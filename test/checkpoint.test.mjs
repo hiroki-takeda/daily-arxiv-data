@@ -597,6 +597,35 @@ test("category import validates before an immutable digest-recorded copy and is 
   assert.equal(readFileSync(first.path, "utf8"), readFileSync(source, "utf8"));
 });
 
+test("category import normalizes into an atomic checkpoint copy while preserving source evidence", async () => {
+  const { base, controlRoot } = await fixture();
+  const job = openFresh(controlRoot);
+  const source = writeSource(base, "quant-ph");
+  const sourceBytes = readFileSync(source);
+  let validatedPayload;
+  const imported = importCheckpointCategoryReport({
+    job,
+    category: "quant-ph",
+    sourcePath: source,
+    attemptId: ATTEMPT_ID,
+    now: new Date("2099-01-05T12:10:00.000Z"),
+    normalizeReport(report, context) {
+      assert.equal(context.category, "quant-ph");
+      return { ...report, payload: "host-bound-quant-ph" };
+    },
+    validateReport(report) {
+      validatedPayload = report.payload;
+      return true;
+    },
+  });
+
+  assert.equal(validatedPayload, "host-bound-quant-ph");
+  assert.deepEqual(readFileSync(source), sourceBytes, "normalization must never rewrite model source evidence");
+  assert.equal(JSON.parse(readFileSync(imported.path, "utf8")).payload, "host-bound-quant-ph");
+  assert.notEqual(imported.sha256, createHash("sha256").update(sourceBytes).digest("hex"));
+  assert.equal(imported.receipt.sha256, imported.sha256);
+});
+
 test("a report-link interruption is revalidated and receipted without regenerating the category", async () => {
   const { base, controlRoot } = await fixture();
   const job = openFresh(controlRoot);
