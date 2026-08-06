@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   accessSync,
   chmodSync,
@@ -21,6 +21,7 @@ import {
   statSync,
   unlinkSync,
   writeFileSync,
+  writeSync,
 } from "node:fs";
 import { homedir, hostname } from "node:os";
 import { basename, delimiter, dirname, isAbsolute, join, resolve } from "node:path";
@@ -111,6 +112,10 @@ const MAX_AUTHORIZATION_BYTES = 256 * 1024;
 const MAX_REPORT_BYTES = 10 * 1024 * 1024;
 const MAX_LOCK_BYTES = 64 * 1024;
 const MAX_CODEX_LOG_BYTES = 20 * 1024 * 1024;
+const MAX_STREAM_CAPTURE_BYTES = 256 * 1024;
+const MIN_STREAM_LOG_BYTES = 4 * 1024;
+const STREAM_LOG_AUDIT_RESERVE_BYTES = 2 * 1024;
+const PROCESS_GROUP_TERMINATION_GRACE_MS = 500;
 const OFFICIAL_PDF_PROBE_TIMEOUT_MS = 60_000;
 const STALE_LOCK_MS = ORPHANED_GENERATION_STALE_MS;
 const GIT_NETWORK_RETRY_DELAYS_MS = Object.freeze([2_000, 10_000]);
@@ -1041,6 +1046,359 @@ export function runCommand(command, args, {
   return result;
 }
 
+function writeAllSync(descriptor, content) {
+  let offset = 0;
+  while (offset < content.length) {
+    const written = writeSync(descriptor, content, offset, content.length - offset);
+    if (written < 1) fail("Bounded command log write made no progress.");
+    offset += written;
+  }
+}
+
+function createBoundedStreamCapture(maxBytes) {
+  const hash = createHash("sha256");
+  const chunks = [];
+  let totalBytes = 0;
+  let capturedBytes = 0;
+  return Object.freeze({
+    append(value) {
+      const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
+      hash.update(chunk);
+      totalBytes += chunk.length;
+      if (chunk.length >= maxBytes) {
+        chunks.splice(0, chunks.length, Buffer.from(chunk.subarray(chunk.length - maxBytes)));
+        capturedBytes = maxBytes;
+        return;
+      }
+      chunks.push(Buffer.from(chunk));
+      capturedBytes += chunk.length;
+      while (capturedBytes > maxBytes) {
+        const excess = capturedBytes - maxBytes;
+        const first = chunks[0];
+        if (first.length <= excess) {
+          chunks.shift();
+          capturedBytes -= first.length;
+        } else {
+          chunks[0] = first.subarray(excess);
+          capturedBytes -= excess;
+        }
+      }
+    },
+    finish() {
+      return Object.freeze({
+        bytes: totalBytes,
+        sha256: hash.digest("hex"),
+        capturedBytes,
+        truncated: totalBytes > capturedBytes,
+        text: Buffer.concat(chunks, capturedBytes).toString("utf8"),
+      });
+    },
+  });
+}
+
+function streamingTimeoutError(command, args, timeout) {
+  const error = new Error(`spawn ${command} ETIMEDOUT after ${timeout}ms`);
+  error.code = "ETIMEDOUT";
+  error.errno = "ETIMEDOUT";
+  error.syscall = `spawn ${command}`;
+  error.path = command;
+  error.spawnargs = [...args];
+  return error;
+}
+
+function streamingStdioTimeoutError(command, args, timeout) {
+  const error = new Error(`spawn ${command} stdio did not close within ${timeout}ms after process start`);
+  error.code = "ERR_CHILD_PROCESS_STDIO_TIMEOUT";
+  error.syscall = `spawn ${command}`;
+  error.path = command;
+  error.spawnargs = [...args];
+  return error;
+}
+
+export async function runStreamingCommand(command, args, {
+  cwd,
+  env = hostChildEnv(),
+  input,
+  outputPath,
+  timeout = 120_000,
+  allowFailure = false,
+  isolatedProcessGroup = false,
+  maxOutputBytes = MAX_CODEX_LOG_BYTES,
+  maxCapturedStreamBytes = MAX_STREAM_CAPTURE_BYTES,
+} = {}) {
+  if (typeof command !== "string" || command.length === 0 || !Array.isArray(args)) {
+    fail("Streaming command requires a command string and argument array.");
+  }
+  if (typeof outputPath !== "string" || outputPath.length === 0) {
+    fail("Streaming command requires an exclusive bounded log path.");
+  }
+  if (!Number.isSafeInteger(timeout) || timeout < 1) {
+    fail("Streaming command timeout must be a positive integer.");
+  }
+  if (!Number.isSafeInteger(maxOutputBytes) || maxOutputBytes < MIN_STREAM_LOG_BYTES) {
+    fail(`maxOutputBytes must be an integer of at least ${MIN_STREAM_LOG_BYTES} bytes for streaming commands.`);
+  }
+  if (!Number.isSafeInteger(maxCapturedStreamBytes) || maxCapturedStreamBytes < 256) {
+    fail("maxCapturedStreamBytes must be an integer of at least 256 bytes.");
+  }
+
+  const outputDescriptor = openSync(outputPath, "wx", 0o600);
+  const logContentLimit = maxOutputBytes - STREAM_LOG_AUDIT_RESERVE_BYTES;
+  const stdoutCapture = createBoundedStreamCapture(maxCapturedStreamBytes);
+  const stderrCapture = createBoundedStreamCapture(maxCapturedStreamBytes);
+  const loggedBytes = { stdout: 0, stderr: 0 };
+  let logBytes = 0;
+  let lastLoggedStream = null;
+  let logContentExhausted = false;
+  let logError = null;
+  let child;
+  let spawnError = null;
+  let transportError = null;
+  let inputError = null;
+  let terminationError = null;
+  let timeoutHandle;
+  let timedOut = false;
+  let streamDrainTimedOut = false;
+  let exitSeen = false;
+  let closeSeen = false;
+  let status = null;
+  let signal = null;
+  let terminationPromise = null;
+
+  const appendLogContent = (content) => {
+    if (logError !== null || logContentExhausted || content.length === 0) return 0;
+    const available = logContentLimit - logBytes;
+    if (available < 1) {
+      logContentExhausted = true;
+      return 0;
+    }
+    const bounded = content.length <= available ? content : content.subarray(0, available);
+    try {
+      writeAllSync(outputDescriptor, bounded);
+      logBytes += bounded.length;
+    } catch (error) {
+      logError = error;
+      return 0;
+    }
+    if (bounded.length !== content.length) logContentExhausted = true;
+    return bounded.length;
+  };
+
+  try {
+    appendLogContent(Buffer.from("--- HOST BOUNDED STREAM LOG ---\n", "utf8"));
+    if (logError !== null) throw logError;
+
+    child = spawn(command, args, {
+      cwd,
+      env,
+      stdio: ["pipe", "pipe", "pipe"],
+      detached: isolatedProcessGroup,
+    });
+
+    const signalChild = (requestedSignal) => {
+      if (!Number.isSafeInteger(child?.pid) || child.pid < 1) return false;
+      try {
+        if (isolatedProcessGroup) process.kill(-child.pid, requestedSignal);
+        else if (!exitSeen) child.kill(requestedSignal);
+        else return false;
+        return true;
+      } catch (error) {
+        if (error.code === "ESRCH") return false;
+        terminationError ??= error;
+        return false;
+      }
+    };
+
+    const beginTermination = () => {
+      if (terminationPromise !== null) return terminationPromise;
+      terminationPromise = (async () => {
+        if (!signalChild("SIGTERM")) return;
+        await new Promise((resolvePromise) => {
+          globalThis.setTimeout(resolvePromise, PROCESS_GROUP_TERMINATION_GRACE_MS);
+        });
+        signalChild("SIGKILL");
+      })();
+      return terminationPromise;
+    };
+
+    const destroyChildPipes = () => {
+      for (const pipe of [child.stdin, child.stdout, child.stderr]) {
+        if (pipe === null || pipe.destroyed) continue;
+        try {
+          pipe.destroy();
+        } catch (error) {
+          transportError ??= error;
+        }
+      }
+    };
+
+    const appendStream = (stream, capture, value) => {
+      const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value);
+      capture.append(chunk);
+      if (logError !== null || logContentExhausted) return;
+      if (lastLoggedStream !== stream) {
+        const marker = Buffer.from(`\n--- ${stream.toUpperCase()} ---\n`, "utf8");
+        if (logContentLimit - logBytes < marker.length) {
+          logContentExhausted = true;
+          return;
+        }
+        appendLogContent(marker);
+        lastLoggedStream = stream;
+      }
+      loggedBytes[stream] += appendLogContent(chunk);
+      if (logError !== null) beginTermination();
+    };
+
+    child.stdout.on("data", (chunk) => appendStream("stdout", stdoutCapture, chunk));
+    child.stderr.on("data", (chunk) => appendStream("stderr", stderrCapture, chunk));
+    child.stdout.once("error", (error) => {
+      transportError ??= error;
+      beginTermination();
+    });
+    child.stderr.once("error", (error) => {
+      transportError ??= error;
+      beginTermination();
+    });
+
+    const closed = new Promise((resolvePromise) => {
+      child.once("error", (error) => {
+        spawnError ??= error;
+        beginTermination();
+      });
+      child.once("exit", (code, exitSignal) => {
+        exitSeen = true;
+        status = code;
+        signal = exitSignal;
+        if (isolatedProcessGroup) beginTermination();
+      });
+      child.once("close", (code, closeSignal) => {
+        exitSeen = true;
+        closeSeen = true;
+        status = code;
+        signal = closeSignal;
+        if (timeoutHandle !== undefined) globalThis.clearTimeout(timeoutHandle);
+        if (isolatedProcessGroup) beginTermination();
+        resolvePromise();
+      });
+    });
+
+    timeoutHandle = globalThis.setTimeout(() => {
+      if (closeSeen) return;
+      const processExited = exitSeen || child.exitCode !== null || child.signalCode !== null;
+      if (processExited) streamDrainTimedOut = true;
+      else timedOut = true;
+      destroyChildPipes();
+      beginTermination();
+    }, timeout);
+
+    child.stdin.once("error", (error) => {
+      inputError ??= error;
+      beginTermination();
+    });
+    try {
+      child.stdin.end(input);
+    } catch (error) {
+      inputError ??= error;
+      beginTermination();
+    }
+
+    await closed;
+    if (terminationPromise !== null) await terminationPromise;
+  } catch (error) {
+    spawnError ??= error;
+  } finally {
+    if (timeoutHandle !== undefined) globalThis.clearTimeout(timeoutHandle);
+  }
+
+  if (spawnError?.syscall?.startsWith("spawn ")) {
+    status = null;
+    signal = null;
+  }
+
+  const stdout = stdoutCapture.finish();
+  const stderr = stderrCapture.finish();
+  const errorCode = logError?.code
+    ?? spawnError?.code
+    ?? (timedOut ? "ETIMEDOUT" : null)
+    ?? (streamDrainTimedOut ? "ERR_CHILD_PROCESS_STDIO_TIMEOUT" : null)
+    ?? terminationError?.code
+    ?? transportError?.code
+    ?? inputError?.code
+    ?? null;
+  const audit = {
+    schemaVersion: "1.0",
+    pid: Number.isSafeInteger(child?.pid) ? child.pid : null,
+    status,
+    signal,
+    timedOut,
+    streamDrainTimedOut,
+    errorCode,
+    terminationErrorCode: terminationError?.code ?? null,
+    transportErrorCode: transportError?.code ?? null,
+    inputErrorCode: inputError?.code ?? null,
+    maxLogBytes: maxOutputBytes,
+    stdout: {
+      bytes: stdout.bytes,
+      sha256: stdout.sha256,
+      capturedBytes: stdout.capturedBytes,
+      loggedBytes: loggedBytes.stdout,
+      captureTruncated: stdout.truncated,
+      logTruncated: loggedBytes.stdout !== stdout.bytes,
+    },
+    stderr: {
+      bytes: stderr.bytes,
+      sha256: stderr.sha256,
+      capturedBytes: stderr.capturedBytes,
+      loggedBytes: loggedBytes.stderr,
+      captureTruncated: stderr.truncated,
+      logTruncated: loggedBytes.stderr !== stderr.bytes,
+    },
+  };
+  const footer = Buffer.from(`\n--- HOST STREAM AUDIT ---\n${JSON.stringify(audit)}\n`, "utf8");
+  if (footer.length > STREAM_LOG_AUDIT_RESERVE_BYTES) {
+    logError ??= new Error("Host stream audit footer exceeded its reserved bounded-log space.");
+  } else if (logError === null) {
+    try {
+      writeAllSync(outputDescriptor, footer);
+      fsyncSync(outputDescriptor);
+    } catch (error) {
+      logError ??= error;
+    }
+  }
+  try {
+    closeSync(outputDescriptor);
+  } catch (error) {
+    logError ??= error;
+  }
+
+  const commandError = logError
+    ?? spawnError
+    ?? (timedOut ? streamingTimeoutError(command, args, timeout) : null)
+    ?? (streamDrainTimedOut ? streamingStdioTimeoutError(command, args, timeout) : null)
+    ?? terminationError
+    ?? transportError
+    ?? inputError;
+  if (commandError !== null) throw commandError;
+
+  const result = {
+    pid: child.pid,
+    output: [null, stdout.text, stderr.text],
+    stdout: stdout.text,
+    stderr: stderr.text,
+    status,
+    signal,
+    stdoutTruncated: stdout.truncated,
+    stderrTruncated: stderr.truncated,
+    timedOut,
+    streamDrainTimedOut,
+  };
+  if (result.status !== 0 && !allowFailure) {
+    const termination = result.status ?? result.signal ?? "unknown";
+    fail(`${basename(command)} ${args[0] ?? ""} failed (${termination})`);
+  }
+  return result;
+}
+
 export function git(root, args, options = {}) {
   const gitBin = existsSync("/usr/bin/git") ? "/usr/bin/git" : "git";
   return runCommand(gitBin, ["-C", root, ...args], options).stdout?.trim() ?? "";
@@ -1762,35 +2120,19 @@ export function validateCodexCompletionResponse(stdout) {
   return "STAGED_REPORTS_VALID";
 }
 
-export function invokeCodex({ codexBin, worktree, paths, prompt }) {
-  const result = runCommand(codexBin, buildCodexArgs({ worktree, runRoot: paths.runRoot }), {
-    cwd: worktree,
-    env: sanitizedChildEnv(),
-    input: prompt,
-    outputPath: paths.codexLog,
-    timeout: 4 * 60 * 60 * 1000,
-    allowFailure: true,
-    isolatedProcessGroup: true,
-  });
-  if (result.status !== 0) {
-    fail(`Codex generation failed (${result.status}); no publication was attempted. Inspect ${paths.codexLog}.`);
-  }
-  validateCodexCompletionResponse(result.stdout);
-}
-
-export function invokeCodexCategory({
+export async function invokeCodexCategory({
   codexBin,
   worktree,
   runRoot,
   logPath,
   prompt,
   sourceBlockerPath,
-  commandRunner = runCommand,
+  commandRunner = runStreamingCommand,
 }) {
   if (typeof commandRunner !== "function") fail("Codex category command runner must be a function.");
   let result;
   try {
-    result = commandRunner(codexBin, buildCodexArgs({ worktree, runRoot }), {
+    result = await commandRunner(codexBin, buildCodexArgs({ worktree, runRoot }), {
       cwd: worktree,
       env: sanitizedChildEnv(),
       input: prompt,
@@ -1808,7 +2150,8 @@ export function invokeCodexCategory({
     return "";
   }
   if (result.status !== 0 && !(sourceBlockerPath && existsSync(sourceBlockerPath))) {
-    fail(`Codex category generation failed (${result.status}); no publication was attempted. Inspect ${logPath}.`);
+    const termination = result.status ?? result.signal ?? "unknown";
+    fail(`Codex category generation failed (${termination}); no publication was attempted. Inspect ${logPath}.`);
   }
   return result.stdout?.trim() ?? "";
 }
@@ -4587,7 +4930,7 @@ export async function runAutomation({
                 + `terminal repair failures and bounded backoff with host metadata SHA-256 ${categoryMetadataSha256}.`,
       });
       try {
-        invokeCodexCategory({
+        await invokeCodexCategory({
           codexBin,
           worktree: agent.worktree,
           runRoot: paths.runRoot,

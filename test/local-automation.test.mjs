@@ -46,7 +46,7 @@ import {
   removeSuccessfulRunArtifacts,
   resolveAgentWorktreeBase,
   resolvePublicationWorktreeBase,
-  runCommand,
+  runStreamingCommand,
   runPaths,
   sanitizedChildEnv,
   sourceFailureNeedsAttention,
@@ -151,6 +151,27 @@ function canonicalJson(value) {
   if (value === null || typeof value !== "object") return value;
   if (Array.isArray(value)) return value.map(canonicalJson);
   return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalJson(value[key])]));
+}
+
+function readHostStreamAudit(path) {
+  const content = readFileSync(path, "utf8");
+  const marker = "\n--- HOST STREAM AUDIT ---\n";
+  const index = content.lastIndexOf(marker);
+  assert.notEqual(index, -1, "bounded stream log must end with a host audit footer");
+  return JSON.parse(content.slice(index + marker.length).trim());
+}
+
+async function waitForProcessToDisappear(pid) {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      process.kill(pid, 0);
+    } catch (error) {
+      if (error.code === "ESRCH") return;
+      throw error;
+    }
+    await new Promise((resolvePromise) => globalThis.setTimeout(resolvePromise, 25));
+  }
+  assert.fail(`process ${pid} survived bounded process-group cleanup`);
 }
 
 function agedProvenanceFixture({
@@ -2079,31 +2100,33 @@ test("repair exhaustion notification states retained draft and automatic cooldow
   assert.equal(macNotificationBody("unknown"), null);
 });
 
-test("a source receipt survives a command transport error for host validation", async () => {
+test("a source receipt survives an asynchronous command transport error for host validation", async () => {
   const root = await mkdtemp(join(tmpdir(), "daily-arxiv-receipt-transport-test-"));
   const blocker = join(root, "quant-ph.json");
   const commandError = new Error("Codex stream terminated after receipt write");
-  const result = invokeCodexCategory({
+  const result = await invokeCodexCategory({
     codexBin: "/usr/bin/false",
     worktree: root,
     runRoot: root,
     logPath: join(root, "codex.log"),
     prompt: "bounded test",
     sourceBlockerPath: blocker,
-    commandRunner: () => {
+    commandRunner: async () => {
+      await Promise.resolve();
       writeFileSync(blocker, "{}\n", { mode: 0o600 });
       throw commandError;
     },
   });
   assert.equal(result, "");
-  assert.throws(() => invokeCodexCategory({
+  await assert.rejects(() => invokeCodexCategory({
     codexBin: "/usr/bin/false",
     worktree: root,
     runRoot: root,
     logPath: join(root, "codex-2.log"),
     prompt: "bounded test",
     sourceBlockerPath: join(root, "absent.json"),
-    commandRunner: () => {
+    commandRunner: async () => {
+      await Promise.resolve();
       throw commandError;
     },
   }), /stream terminated/u);
@@ -2158,17 +2181,246 @@ test("successful-run cleanup rejects paths outside the exact run scope", async (
   assert.equal(readFileSync(join(outside, "keep.txt"), "utf8"), "keep\n");
 });
 
-test("captured Codex-style logs are bounded and oversize output fails closed", async () => {
+test("streamed Codex-style output beyond 20 MiB is drained with bounded capture and an audited log", async () => {
   const root = await mkdtemp(join(tmpdir(), "daily-arxiv-log-limit-test-"));
   const log = join(root, "captured.log");
-  assert.throws(() => runCommand(process.execPath, ["-e", "process.stdout.write('x'.repeat(4096))"], {
+  const stderrBytes = 20 * 1024 * 1024 + 4096;
+  const stdout = "STAGED_CATEGORY_VALID\n";
+  const result = await runStreamingCommand(process.execPath, [
+    "-e",
+    `process.stderr.write(Buffer.alloc(${stderrBytes}, 120), () => process.stdout.write(${JSON.stringify(stdout)}))`,
+  ], {
     cwd: root,
     outputPath: log,
-    maxOutputBytes: 1024,
+    maxOutputBytes: 8192,
+    maxCapturedStreamBytes: 1024,
     allowFailure: true,
-  }), /ENOBUFS|maxBuffer|buffer|host limit/i);
-  assert.ok(statSync(log).size <= 1024);
-  assert.match(readFileSync(log, "utf8"), /LOG TRUNCATED|PROCESS ERROR/);
+    timeout: 30_000,
+    isolatedProcessGroup: true,
+  });
+
+  assert.equal(result.status, 0);
+  assert.equal(result.signal, null);
+  assert.equal(result.stdout, stdout);
+  assert.equal(result.stdoutTruncated, false);
+  assert.equal(result.stderr, "x".repeat(1024));
+  assert.equal(result.stderrTruncated, true);
+  assert.equal(result.timedOut, false);
+  assert.ok(statSync(log).size <= 8192);
+  assert.equal(statSync(log).mode & 0o777, 0o600);
+
+  const audit = readHostStreamAudit(log);
+  const chunk = Buffer.alloc(64 * 1024, 120);
+  const expectedStderrHash = createHash("sha256");
+  let remaining = stderrBytes;
+  while (remaining > 0) {
+    const length = Math.min(remaining, chunk.length);
+    expectedStderrHash.update(chunk.subarray(0, length));
+    remaining -= length;
+  }
+  assert.equal(audit.status, 0);
+  assert.equal(audit.signal, null);
+  assert.equal(audit.timedOut, false);
+  assert.equal(audit.stdout.bytes, Buffer.byteLength(stdout));
+  assert.equal(audit.stdout.sha256, createHash("sha256").update(stdout).digest("hex"));
+  assert.equal(audit.stdout.captureTruncated, false);
+  assert.equal(audit.stderr.bytes, stderrBytes);
+  assert.equal(audit.stderr.sha256, expectedStderrHash.digest("hex"));
+  assert.equal(audit.stderr.captureTruncated, true);
+  assert.equal(audit.stderr.logTruncated, true);
+});
+
+test("Codex category invocation awaits its asynchronous runner", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-async-runner-test-"));
+  let observedOptions;
+  const result = await invokeCodexCategory({
+    codexBin: "/usr/bin/false",
+    worktree: root,
+    runRoot: root,
+    logPath: join(root, "codex.log"),
+    prompt: "bounded prompt",
+    sourceBlockerPath: join(root, "absent.json"),
+    commandRunner: async (_command, _args, options) => {
+      await new Promise((resolvePromise) => globalThis.setTimeout(resolvePromise, 5));
+      observedOptions = options;
+      return { status: 0, signal: null, stdout: "STAGED_CATEGORY_VALID\n", stderr: "" };
+    },
+  });
+  assert.equal(result, "STAGED_CATEGORY_VALID");
+  assert.equal(observedOptions.outputPath, join(root, "codex.log"));
+  assert.equal(observedOptions.allowFailure, true);
+  assert.equal(observedOptions.isolatedProcessGroup, true);
+
+  await assert.rejects(() => invokeCodexCategory({
+    codexBin: "/usr/bin/false",
+    worktree: root,
+    runRoot: root,
+    logPath: join(root, "codex-signal.log"),
+    prompt: "bounded prompt",
+    sourceBlockerPath: join(root, "absent-signal.json"),
+    commandRunner: async () => ({ status: null, signal: "SIGTERM", stdout: "", stderr: "" }),
+  }), /failed \(SIGTERM\)/u);
+});
+
+test("streaming command preserves nonzero exit and signal results under allowFailure", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-stream-exit-test-"));
+  const nonzero = await runStreamingCommand(process.execPath, ["-e", "process.stderr.write('failed'); process.exit(7)"], {
+    cwd: root,
+    outputPath: join(root, "nonzero.log"),
+    allowFailure: true,
+    isolatedProcessGroup: true,
+  });
+  assert.equal(nonzero.status, 7);
+  assert.equal(nonzero.signal, null);
+  assert.equal(nonzero.stderr, "failed");
+
+  await assert.rejects(() => runStreamingCommand(process.execPath, ["-e", "process.exit(7)"], {
+    cwd: root,
+    outputPath: join(root, "rejected.log"),
+    isolatedProcessGroup: true,
+  }), /failed \(7\)/u);
+
+  const signaled = await runStreamingCommand(process.execPath, ["-e", "process.kill(process.pid, 'SIGTERM')"], {
+    cwd: root,
+    outputPath: join(root, "signal.log"),
+    allowFailure: true,
+    isolatedProcessGroup: true,
+  });
+  assert.equal(signaled.status, null);
+  assert.equal(signaled.signal, "SIGTERM");
+  const signalAudit = readHostStreamAudit(join(root, "signal.log"));
+  assert.equal(signalAudit.status, null);
+  assert.equal(signalAudit.signal, "SIGTERM");
+
+  await assert.rejects(() => runStreamingCommand(
+    process.execPath,
+    ["-e", "process.kill(process.pid, 'SIGTERM')"],
+    {
+      cwd: root,
+      outputPath: join(root, "signal-rejected.log"),
+      isolatedProcessGroup: true,
+    },
+  ), /failed \(SIGTERM\)/u);
+});
+
+test("streaming command timeout rejects with ETIMEDOUT and records the terminating signal", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-stream-timeout-test-"));
+  const log = join(root, "timeout.log");
+  await assert.rejects(() => runStreamingCommand(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+    cwd: root,
+    outputPath: log,
+    input: Buffer.alloc(2 * 1024 * 1024, 120),
+    timeout: 50,
+    allowFailure: true,
+    isolatedProcessGroup: true,
+  }), (error) => error?.code === "ETIMEDOUT");
+  const audit = readHostStreamAudit(log);
+  assert.equal(audit.timedOut, true);
+  assert.equal(audit.streamDrainTimedOut, false);
+  assert.equal(audit.errorCode, "ETIMEDOUT");
+  assert.equal(audit.status, null);
+  assert.equal(audit.signal, "SIGTERM");
+});
+
+test("streaming command removes descendants from its isolated process group", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-stream-group-test-"));
+  const pidPath = join(root, "grandchild.pid");
+  const program = [
+    "const { spawn } = require('node:child_process');",
+    "const { writeFileSync } = require('node:fs');",
+    "const child = spawn('/bin/sleep', ['30'], { stdio: 'ignore' });",
+    `writeFileSync(${JSON.stringify(pidPath)}, String(child.pid));`,
+    "child.unref();",
+  ].join(" ");
+  const result = await runStreamingCommand(process.execPath, ["-e", program], {
+    cwd: root,
+    outputPath: join(root, "group.log"),
+    isolatedProcessGroup: true,
+    timeout: 10_000,
+  });
+  assert.equal(result.status, 0);
+  const grandchildPid = Number(readFileSync(pidPath, "utf8"));
+  assert.ok(Number.isSafeInteger(grandchildPid) && grandchildPid > 0);
+  await waitForProcessToDisappear(grandchildPid);
+});
+
+test("streaming command fails at its deadline when an escaped grandchild retains stdio", { timeout: 5_000 }, async (t) => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-stream-escaped-stdio-test-"));
+  const pidPath = join(root, "escaped-grandchild.pid");
+  const log = join(root, "escaped.log");
+  let escapedPid;
+  t.after(() => {
+    if (!Number.isSafeInteger(escapedPid) || escapedPid < 1) return;
+    try {
+      process.kill(escapedPid, "SIGKILL");
+    } catch (error) {
+      if (error.code !== "ESRCH") throw error;
+    }
+  });
+  const grandchildProgram = "setTimeout(() => process.exit(0), 2000)";
+  const leaderProgram = [
+    "const { spawn } = require('node:child_process');",
+    "const { writeFileSync } = require('node:fs');",
+    `const child = spawn(${JSON.stringify(process.execPath)}, ['-e', ${JSON.stringify(grandchildProgram)}], { detached: true, stdio: ['ignore', 'inherit', 'inherit'] });`,
+    `writeFileSync(${JSON.stringify(pidPath)}, String(child.pid));`,
+    "child.unref();",
+  ].join(" ");
+  const startedAt = Date.now();
+  await assert.rejects(() => runStreamingCommand(process.execPath, ["-e", leaderProgram], {
+    cwd: root,
+    outputPath: log,
+    isolatedProcessGroup: true,
+    timeout: 500,
+  }), (error) => error?.code === "ERR_CHILD_PROCESS_STDIO_TIMEOUT");
+  const elapsedMs = Date.now() - startedAt;
+  assert.ok(elapsedMs >= 450 && elapsedMs < 1_500, `escaped stdio returned after ${elapsedMs}ms`);
+  escapedPid = Number(readFileSync(pidPath, "utf8"));
+  assert.ok(Number.isSafeInteger(escapedPid) && escapedPid > 0);
+
+  const audit = readHostStreamAudit(log);
+  assert.equal(audit.status, 0);
+  assert.equal(audit.signal, null);
+  assert.equal(audit.timedOut, false);
+  assert.equal(audit.streamDrainTimedOut, true);
+  assert.equal(audit.errorCode, "ERR_CHILD_PROCESS_STDIO_TIMEOUT");
+});
+
+test("streaming command refuses to overwrite an existing bounded log", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-stream-exclusive-log-test-"));
+  const log = join(root, "existing.log");
+  writeFileSync(log, "keep\n", { mode: 0o600 });
+  await assert.rejects(() => runStreamingCommand(process.execPath, ["-e", "process.exit(0)"], {
+    cwd: root,
+    outputPath: log,
+  }), /EEXIST/u);
+  assert.equal(readFileSync(log, "utf8"), "keep\n");
+});
+
+test("streaming command closes stdin and records a spawn failure without losing its audit", async () => {
+  const root = await mkdtemp(join(tmpdir(), "daily-arxiv-stream-transport-test-"));
+  const input = "bounded prompt input";
+  const inputResult = await runStreamingCommand(process.execPath, [
+    "-e",
+    "let value = ''; process.stdin.setEncoding('utf8'); process.stdin.on('data', (chunk) => { value += chunk; }); process.stdin.on('end', () => process.stdout.write(String(value.length)));",
+  ], {
+    cwd: root,
+    input,
+    outputPath: join(root, "input.log"),
+    isolatedProcessGroup: true,
+  });
+  assert.equal(inputResult.status, 0);
+  assert.equal(inputResult.stdout, String(input.length));
+
+  const missingLog = join(root, "missing.log");
+  await assert.rejects(() => runStreamingCommand(join(root, "missing-command"), [], {
+    cwd: root,
+    outputPath: missingLog,
+    isolatedProcessGroup: true,
+  }), (error) => error?.code === "ENOENT");
+  const missingAudit = readHostStreamAudit(missingLog);
+  assert.equal(missingAudit.status, null);
+  assert.equal(missingAudit.signal, null);
+  assert.equal(missingAudit.errorCode, "ENOENT");
 });
 
 test("ready manifest requires the exact three regular report files", async () => {
