@@ -3,6 +3,9 @@ name: Publish Daily arXiv data
 on:
   push:
     branches: [main]
+  schedule:
+    # Retry the latest validated main after a push-time GitHub Actions/Pages outage.
+    - cron: "17 0,12 * * *"
   workflow_dispatch:
 
 permissions:
@@ -12,7 +15,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   validate:

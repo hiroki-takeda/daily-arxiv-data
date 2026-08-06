@@ -31,6 +31,7 @@
   → liveな選択日は公式snapshot、範囲外へ落ちた明示的復旧日は封印済みsource provenanceを、現在の公式head・耐久planと再検証できる場合だけ固定publisherが6ファイルをcommit・push
   → 公開処理だけが失敗した場合は、次回runでCodexを呼ばずcommit・pushだけを再試行
   → GitHub Actionsが再検証してPagesへ公開
+  → push時のGitHub障害に備え、毎日09:17・21:17 JSTにも最新mainをクラウド側で再検証・再配信（進行中の配信は後続runで中断しない）
   → 共用PCが5分以内に新データを取得
 ```
 
