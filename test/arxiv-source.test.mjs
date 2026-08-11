@@ -1448,6 +1448,27 @@ test("abstract-page parser returns canonical v1 metadata and preserves natural a
   }).comments, null);
 });
 
+test("abstract-page parser tolerates only an exactly reconstructable citation-author surname split", () => {
+  const paper = parseArxivAbstractPage(abstractPageHtml({
+    arxivId: "2608.06359",
+    authors: ["Ivana Đorđević", "Jovan Potrebić"],
+    metaAuthors: ["ević, Ivana Đorđ", "Potrebić, Jovan"],
+  }), { arxivId: "2608.06359", slug: "quant-ph" });
+  assert.deepEqual(paper.authors, ["Ivana Đorđević", "Jovan Potrebić"]);
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    arxivId: "2608.06359",
+    authors: ["Ivana Đorđević", "Jovan Potrebić"],
+    metaAuthors: ["ević, Ivana Wrong Đorđ", "Potrebić, Jovan"],
+  }), { arxivId: "2608.06359", slug: "quant-ph" }), /author 1 disagrees/);
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    arxivId: "2608.06359",
+    authors: ["Aditi कि", "Jovan Potrebić"],
+    metaAuthors: ["क, Aditi", "Potrebić, Jovan"],
+  }), { arxivId: "2608.06359", slug: "quant-ph" }), /author 1 disagrees/);
+});
+
 test("citation title and abstract stay canonical across known arXiv visible-rendering differences", () => {
   const citationTitle = "Maximal R\\'enyi Relative Entropy for $\\alpha>2$";
   const visibleTitle = "Maximal Rényi Relative Entropy for $α>2$";

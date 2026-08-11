@@ -384,6 +384,34 @@ function authorIdentitySignature(value, path) {
   return normalized.join("\0");
 }
 
+function compactNaturalAuthorIdentity(value, path) {
+  return canonicalMetadataText(value, path, METADATA_TEXT_LIMITS.author)
+    .toLocaleLowerCase("en-US")
+    .replace(/[\s\p{P}\p{S}]+/gu, "");
+}
+
+function citationAuthorMatchesVisibleBody(citationAuthor, bodyAuthor, index) {
+  if (
+    authorIdentitySignature(bodyAuthor, `body author ${index + 1}`) ===
+    authorIdentitySignature(citationAuthor, `citation author ${index + 1}`)
+  ) {
+    return true;
+  }
+
+  // arXiv normally emits citation_author as "surname, given names".  Some
+  // TeX-encoded names make arXiv split the surname at a macro boundary, for example
+  // "ević, Ivana Đorđ" beside the correct visible "Ivana Đorđević".
+  // Accept that narrow rendering defect only when moving the exact prefix
+  // before the comma back behind the suffix reconstructs the visible name in
+  // exact code-point order after removing only whitespace, punctuation, and
+  // symbols.  Genuine author substitutions still fail closed.
+  const parts = citationAuthor.split(",");
+  if (parts.length !== 2 || parts.some((part) => part.trim().length === 0)) return false;
+  const citationNaturalOrder = `${parts[1]} ${parts[0]}`;
+  return compactNaturalAuthorIdentity(bodyAuthor, `body author ${index + 1}`) ===
+    compactNaturalAuthorIdentity(citationNaturalOrder, `citation author ${index + 1}`);
+}
+
 function parseBodyAuthors(tokens) {
   const authorsElement = exactlyOneElementWithClass(tokens, "div", "authors", "arXiv authors");
   const authors = [];
@@ -555,8 +583,7 @@ export function parseArxivAbstractPage(html, { arxivId, slug } = {}) {
     fail("SOURCE_CONTENT_MISMATCH", `${arxivId} author count disagrees between citation metadata and the visible body.`);
   }
   for (const [index, bodyAuthor] of bodyAuthors.entries()) {
-    if (authorIdentitySignature(bodyAuthor, `body author ${index + 1}`) !==
-        authorIdentitySignature(metaAuthors[index], `citation author ${index + 1}`)) {
+    if (!citationAuthorMatchesVisibleBody(metaAuthors[index], bodyAuthor, index)) {
       fail("SOURCE_CONTENT_MISMATCH", `${arxivId} author ${index + 1} disagrees between citation metadata and the visible body.`);
     }
   }
