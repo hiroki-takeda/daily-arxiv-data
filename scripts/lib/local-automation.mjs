@@ -81,6 +81,11 @@ import {
   loadActiveAgedRecoveryPlan,
 } from "./aged-recovery-plan.mjs";
 import {
+  GIT_NETWORK_RETRY_DELAYS_MS,
+  isRetryableGitNetworkFailure,
+  runWithBoundedGitNetworkRetries,
+} from "./git-network-retry.mjs";
+import {
   CURRENT_QUALITY_GATE_EFFECTIVE_DATE,
   MAX_LANGUAGE_AUDIT_PASSES,
   MAX_STRUCTURE_AUDIT_PASSES,
@@ -118,7 +123,6 @@ const STREAM_LOG_AUDIT_RESERVE_BYTES = 2 * 1024;
 const PROCESS_GROUP_TERMINATION_GRACE_MS = 500;
 const OFFICIAL_PDF_PROBE_TIMEOUT_MS = 60_000;
 const STALE_LOCK_MS = ORPHANED_GENERATION_STALE_MS;
-const GIT_NETWORK_RETRY_DELAYS_MS = Object.freeze([2_000, 10_000]);
 const REPAIR_SOURCE_DRAFT_MESSAGE_PREFIX = "REPAIR_SOURCE_DRAFT_SHA256=";
 const REPAIR_REGENERATION_FALLBACK_MESSAGE_PREFIX = "REPAIR_REGENERATION_FALLBACK_DRAFT_SHA256=";
 const SOURCE_RESUME_DRAFT_MESSAGE_PREFIX = "SOURCE_RESUME_DRAFT_SHA256=";
@@ -186,6 +190,7 @@ export const AUTOMATION_RUNTIME_PATHS = Object.freeze([
   "scripts/lib/arxiv-source.mjs",
   "scripts/lib/aged-recovery-plan.mjs",
   "scripts/lib/checkpoint.mjs",
+  "scripts/lib/git-network-retry.mjs",
   "scripts/lib/local-automation.mjs",
   "scripts/lib/macos-schedule.mjs",
   "scripts/lib/pipeline.mjs",
@@ -1404,23 +1409,17 @@ export function git(root, args, options = {}) {
   return runCommand(gitBin, ["-C", root, ...args], options).stdout?.trim() ?? "";
 }
 
-export function isRetryableGitNetworkFailure(output) {
-  return /(?:ssh: connect to host .* port \d+:|Could not resolve (?:host|hostname)|Could not read from remote repository|Connection (?:timed out|reset|refused|closed)|Operation timed out|Network is unreachable|remote end hung up|RPC failed|fatal: unable to access|HTTP 408|HTTP 425|HTTP 429|HTTP 5\d\d)/iu.test(String(output ?? ""));
-}
+export { isRetryableGitNetworkFailure };
 
 function gitNetwork(root, args, { timeout = 120_000 } = {}) {
   const gitBin = existsSync("/usr/bin/git") ? "/usr/bin/git" : "git";
-  let result;
-  for (let attempt = 0; attempt <= GIT_NETWORK_RETRY_DELAYS_MS.length; attempt += 1) {
-    result = runCommand(gitBin, ["-C", root, ...args], { timeout, allowFailure: true });
-    if (result.status === 0) return result.stdout?.trim() ?? "";
-    const output = `${result.stderr ?? ""}\n${result.stdout ?? ""}`;
-    if (attempt >= GIT_NETWORK_RETRY_DELAYS_MS.length || !isRetryableGitNetworkFailure(output)) {
-      fail(`git ${args[0] ?? ""} failed (${result.status}): ${output.trim()}`);
-    }
-    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, GIT_NETWORK_RETRY_DELAYS_MS[attempt]);
-  }
-  fail(`git ${args[0] ?? ""} failed after bounded network retries.`);
+  const result = runWithBoundedGitNetworkRetries(
+    () => runCommand(gitBin, ["-C", root, ...args], { timeout, allowFailure: true }),
+    { retryDelays: GIT_NETWORK_RETRY_DELAYS_MS },
+  );
+  if (result.status === 0) return result.stdout?.trim() ?? "";
+  const output = `${result.stderr ?? ""}\n${result.stdout ?? ""}`;
+  fail(`git ${args[0] ?? ""} failed (${result.status}): ${output.trim()}`);
 }
 
 function assertExpectedRemote(root) {

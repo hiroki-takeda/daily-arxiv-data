@@ -20,10 +20,14 @@ import {
   validateProductionReportSet,
   validateRepository,
 } from "./lib/pipeline.mjs";
+import {
+  GIT_NETWORK_RETRY_DELAYS_MS,
+  runGitPushWithRemoteConfirmation,
+  runWithBoundedGitNetworkRetries,
+} from "./lib/git-network-retry.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const EXPECTED_REMOTE = /^(?:git@github\.com:|https:\/\/github\.com\/|ssh:\/\/git@github\.com\/)(?:hiroki-takeda\/daily-arxiv-data)(?:\.git)?$/;
-const NETWORK_RETRY_DELAYS_MS = Object.freeze([2_000, 10_000]);
 
 function git(args, { allowFailure = false } = {}) {
   const result = spawnSync("git", args, {
@@ -40,24 +44,11 @@ function git(args, { allowFailure = false } = {}) {
   return result;
 }
 
-function retryableGitNetworkFailure(result) {
-  const output = `${result.stderr ?? ""}\n${result.stdout ?? ""}`;
-  return /(?:ssh: connect to host .* port \d+:|Could not resolve (?:host|hostname)|Could not read from remote repository|Connection (?:timed out|reset|refused|closed)|Operation timed out|Network is unreachable|remote end hung up|RPC failed|fatal: unable to access|HTTP 408|HTTP 425|HTTP 429|HTTP 5\d\d)/iu.test(output);
-}
-
-function waitSynchronously(milliseconds) {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
-}
-
 function gitNetwork(args) {
-  let result;
-  for (let attempt = 0; attempt <= NETWORK_RETRY_DELAYS_MS.length; attempt += 1) {
-    result = git(args, { allowFailure: true });
-    if (result.status === 0) return result;
-    if (attempt >= NETWORK_RETRY_DELAYS_MS.length || !retryableGitNetworkFailure(result)) return result;
-    waitSynchronously(NETWORK_RETRY_DELAYS_MS[attempt]);
-  }
-  return result;
+  return runWithBoundedGitNetworkRetries(
+    () => git(args, { allowFailure: true }),
+    { retryDelays: GIT_NETWORK_RETRY_DELAYS_MS },
+  );
 }
 
 function nulList(args) {
@@ -196,15 +187,18 @@ try {
     if (!sameSet(new Set(committedPaths), new Set(allowlist))) {
       throw new Error(`Commit escaped the six-file allowlist: ${committedPaths.join(", ")}`);
     }
-    const pushed = gitNetwork(["push", "origin", "HEAD:main"]);
-    if (pushed.status !== 0) {
-      const fetched = gitNetwork(["fetch", "--quiet", "origin", "main"]);
-      const remoteAfterFailure = fetched.status === 0
-        ? git(["rev-parse", "refs/remotes/origin/main"], { allowFailure: true }).stdout.trim()
-        : "";
-      if (remoteAfterFailure !== commitHash) {
-        throw new Error(`git push failed (${pushed.status}): ${(pushed.stderr || pushed.stdout).trim()}`);
-      }
+    const pushOutcome = runGitPushWithRemoteConfirmation({
+      push: () => gitNetwork(["push", "origin", "HEAD:main"]),
+      fetch: () => gitNetwork(["fetch", "--quiet", "origin", "main"]),
+      readRemoteHead: () => git(
+        ["rev-parse", "refs/remotes/origin/main"],
+        { allowFailure: true },
+      ).stdout.trim(),
+      expectedRemoteHead: commitHash,
+    });
+    if (!pushOutcome.remoteConfirmed && pushOutcome.pushResult.status !== 0) {
+      const pushed = pushOutcome.pushResult;
+      throw new Error(`git push failed (${pushed.status}): ${(pushed.stderr || pushed.stdout).trim()}`);
     }
     console.log(`PUBLISHED: ${date} at ${commitHash} (origin/main).`);
   } catch (error) {

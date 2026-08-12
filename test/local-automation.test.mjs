@@ -1066,6 +1066,7 @@ test("runtime update barrier covers every scheduled runtime dependency", () => {
     "scripts/lib/arxiv-source.mjs",
     "scripts/lib/aged-recovery-plan.mjs",
     "scripts/lib/checkpoint.mjs",
+    "scripts/lib/git-network-retry.mjs",
     "scripts/lib/pipeline.mjs",
     "scripts/lib/source-blocker.mjs",
     "scripts/validate-staged-category.mjs",
