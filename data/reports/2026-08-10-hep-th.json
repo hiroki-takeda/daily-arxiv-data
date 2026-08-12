@@ -1,0 +1,566 @@
+{
+  "audit": {
+    "announcementDate": "2026-08-10",
+    "authorPolicy": "著者の知名度、所属、受賞、引用数、キャリア段階は採点に用いない。",
+    "evaluationPolicy": "著者の知名度や経歴を用いず、各論文の題名・著者・要旨・コメントと、候補について確認した公式v1本文だけから独立に評価する。",
+    "fullTextEvaluatedCount": 12,
+    "fullTextPolicy": "全要旨を比較後、暫定上位min(12,totalNew)件を固定候補とし、最終上位min(10,totalNew)件には公式v1全文の主要節確認を必須とする。",
+    "generatedAtJst": "2026-08-13T04:24:00+09:00",
+    "listingUrl": "https://arxiv.org/list/hep-th/pastweek",
+    "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv IDの昇順。",
+    "scoreRubric": "Daily arXiv rubric 3.0：broadImpact、categoryImpact、originality、technicalStrengthを各0〜25の整数で評価し、18点以上には具体的な波及先・中心課題・先行比較・本文検証を要する。",
+    "selectionRule": "primary categoryがhep-thのNew submission v1だけを対象とし、Cross submissionsを除外した。",
+    "sourceCounts": {
+      "crosslistsExcluded": 12,
+      "newPrimary": 12,
+      "titleAuthorAbstractEvaluated": 12
+    }
+  },
+  "crosslistsExcluded": 12,
+  "evaluatedCount": 12,
+  "evaluationRun": {
+    "modelDisplayName": "GPT-5.6-Sol",
+    "modelId": "gpt-5.6-sol",
+    "modelSelectionVerified": true,
+    "reasoningEffort": "high",
+    "runId": "run-20260812T163317Z-8cb39bf689fc"
+  },
+  "fullTextEvaluatedCount": 12,
+  "label": "High Energy Physics - Theory",
+  "papers": [
+    {
+      "abstractLines": [
+        "Lanczos係数の先頭漸近だけでは、同じスペクトル裾を持つ系のKrylov力学を識別できない。",
+        "直交多項式のRiemann–Hilbert表示と急降下法を用い、単一帯・多重帯・ギャップ閉鎖を解析した。",
+        "多重帯では充填率が振動を定め、閉鎖点ではPainlevé II解に従う振幅が$n^{-1/3}$で減衰する。"
+      ],
+      "arxivId": "2608.07258",
+      "arxivVersion": "v1",
+      "assessment": "位相変化、Lanczos振動、臨界特殊関数を統一した射程が大きい。一方、任意の相互作用多体系まで同じ分類が保たれる条件は限定される。",
+      "authors": [
+        "Jeff Murugan",
+        "Hendrik J. R. Van Zyl",
+        "Masataka Watanabe"
+      ],
+      "concept": "スペクトル測度の連結成分を直交多項式の漸近へ写し、帯の充填率とギャップ閉鎖の局所模型をLanczos振動の不変量として読む。",
+      "conclusion": "Krylov力学はスペクトル裾だけでなく帯の位相で細分類され、ギャップ閉鎖は普遍的臨界減衰を生む。解析は特定の測度条件と検証模型に基づく。",
+      "curiosity": "スペクトルの裾が同じ量子系を、帯の位相は演算子成長のどの観測量によって区別するのか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、単一・多重帯の急降下解析、ギャップ閉鎖、SSH・SYK検証、付録の局所解析、議論を確認した。$K(t)$の制御漸近と補正則の証明は行われていない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 1,
+      "scoreReasons": {
+        "broadImpact": "スペクトルの帯構造から演算子成長を分類する枠組みは、量子カオスと物性鎖の双方へ届く。適用は直交多項式で扱えるスペクトル測度に限られる。",
+        "categoryImpact": "裾だけでは捉えられないKrylov力学を、切断数・ギャップ・閉鎖転移で分類した。演算子成長の普遍性に位相的な精密化を与える。",
+        "originality": "Freud成長則を起点にしつつ、帯の充填率による振動とPainlevé II型臨界減衰を一つの位相転移像へ結び付けた点が非自明である。",
+        "technicalStrength": "急降下解析を付録の局所パラメトリックスまで展開し、SSH鎖・変形鎖・三つの可解族・SYKで検査した。複雑性そのものの漸近と二つの補正則は未証明である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 20,
+        "originality": 19,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.07258v1",
+        "https://arxiv.org/pdf/2608.07258v1"
+      ],
+      "submissionType": "new",
+      "title": "Spectral Topology and Universal Krylov Dynamics",
+      "titleJa": "スペクトル位相と普遍的Krylov力学",
+      "totalScore": 77,
+      "url": "https://arxiv.org/abs/2608.07258"
+    },
+    {
+      "abstractLines": [
+        "3次元共形ブートストラップでは、標準的な微分基底が重い外部演算子に対して収束しにくい。",
+        "1次元解析汎関数を次元還元と組み合わせ、積汎関数からなる制約基底を構成した。",
+        "同程度の基底数で従来法より強いギャップ上限を得て、$\\Delta_\\phi\\simeq4.16$付近に新しい折れ曲がりを見いだした。"
+      ],
+      "arxivId": "2608.06497",
+      "arxivVersion": "v1",
+      "assessment": "既存基底との数値比較とIsing基準点での上限改善が方法の効用を明確にする。ただし、実用範囲の主張は単一相関関数の二種類の最適化問題に依存する。",
+      "authors": [
+        "Kausik Ghosh",
+        "Zechuan Zheng"
+      ],
+      "concept": "1次元で解析的に制御できる汎関数を次元還元後の各成分へ積として作用させ、微分展開とは異なる収束構造を利用する。",
+      "conclusion": "積解析汎関数は単一相関関数のギャップ制約を強め、大外部次元ほど優位になる。混合相関関数や現実的なゲージ理論での性能は今後の課題である。",
+      "curiosity": "重い外部演算子を含む3次元CFTの交差対称性を、計算量を抑えながらどこまで鋭く制約できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、積汎関数の構成、次元還元の尾処理、二種のギャップ境界、収束比較、極値スペクトル、数値設定、展望を確認した。新しい折れ曲がりのCFT同定は未了である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 2,
+      "scoreReasons": {
+        "broadImpact": "重い演算子を持つ共形ゲージ理論とAdS相関関数の平坦時空極限へ、高効率な制約基底を提供する。現段階の実証は3次元の単一相関関数に限られる。",
+        "categoryImpact": "微分基底の収束難を緩和し、3次元Ising模型の上限と単一調整量臨界点の必要条件を更新した。混合相関関数への拡張は残る。",
+        "originality": "1次元解析汎関数と次元還元の要素を継承しながら、その積を3次元制約へ直接使う基底を構成し、大きな外部次元での優位を示した。",
+        "technicalStrength": "次元還元級数の尾を解析的に再総和し、適応精度最適化とSDPBを独立実装して基底数・収束率・Isingデータを比較した。高次元の台地は外挿されていない。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 20,
+        "originality": 18,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.06497v1",
+        "https://arxiv.org/pdf/2608.06497v1"
+      ],
+      "submissionType": "new",
+      "title": "Bootstrapping 3D Conformal Field Theories with Product Analytic Functionals",
+      "titleJa": "積解析汎関数による3次元共形場理論のブートストラップ",
+      "totalScore": 76,
+      "url": "https://arxiv.org/abs/2608.06497"
+    },
+    {
+      "abstractLines": [
+        "非保存秩序変数の長距離臨界運動が、微視的な伝播モードから必ず過減衰へ移るかを問う。",
+        "局所摩擦・雑音と時間2階運動項を含むスカラー場を超対称化し、4次元近傍で2ループ展開した。",
+        "摩擦なし面には伝播型固定点が残るが、任意の微小な平衡摩擦は関連摂動となりModel A側へ流す。"
+      ],
+      "arxivId": "2608.07292",
+      "arxivVersion": "v1",
+      "assessment": "散逸なし面の不変性と横方向の不安定性を別々に計算し、伝播型臨界則の位置付けを明瞭にした。有限散逸で二つの端点を結ぶ大域的交差は扱っていない。",
+      "authors": [
+        "Laura Batini",
+        "Eduardo Grossi"
+      ],
+      "concept": "摩擦と雑音が同時に消える面を対称性で保護し、その面内の伝播型固定点と面外の散逸摂動の固有値を分けて追跡する。",
+      "conclusion": "伝播型臨界運動は整合的な固定点を持つが、局所的な平衡散逸に対して不安定な微調整相である。この結論は4次元近傍の摂動展開に基づく。",
+      "curiosity": "粗視化が散逸を生まない条件の下で、相互作用する伝播型臨界運動は独立の普遍クラスになり得るか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "超対称定式化、有効作用、2ループ自己エネルギー、Model A極限、散逸なし面、散逸挿入、固定点安定性、付録の積分法を確認した。有限散逸の大域的RG流は未計算である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 3,
+      "scoreReasons": {
+        "broadImpact": "伝播型から過減衰型への臨界交差は、有限温度場理論と動的臨界現象を結ぶ。平衡かつ局所摩擦を持つ単一スカラー場という条件が範囲を絞る。",
+        "categoryImpact": "Model Aと同じ静的固定点の上に、摩擦なしの伝播型動的固定点が存在することを2ループで示し、動的普遍性の分類を拡張した。",
+        "originality": "時間2階微分を保つ確率場理論に超対称形式を与え、散逸演算子が生成されない不変面と、その面に横向きな不安定性を同時に導いた。",
+        "technicalStrength": "超対称Ward恒等式、2ループ図、有限質量と無質量極限、既知のModel A指数を相互検査した。解析は端点近傍の局所RGに限られ、有限散逸での大域的流れは未決定である。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 21
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.07292v1",
+        "https://arxiv.org/pdf/2608.07292v1"
+      ],
+      "submissionType": "new",
+      "title": "Critical dynamics of a scalar field near four spatial dimensions",
+      "titleJa": "4空間次元近傍におけるスカラー場の臨界力学",
+      "totalScore": 73,
+      "url": "https://arxiv.org/abs/2608.07292"
+    },
+    {
+      "abstractLines": [
+        "拡散複雑性の有限時間ピークが、局所的な準位相関からどう生じるかは十分に整理されていない。",
+        "エネルギー表示のKrylov核を帯状行列として展開し、展開後の核を一様格子の核で近似した。",
+        "ピークは主に最近接準位間隔分布のFourier変換で決まり、カオス系とPoisson極限を共通に記述する。"
+      ],
+      "arxivId": "2608.07412",
+      "arxivVersion": "v1",
+      "assessment": "複雑性の時間構造を準位間隔分布へ直接翻訳した点が有用である。中心となる核普遍性が近似仮説なので、系ごとの誤差制御が総合評価を制限する。",
+      "authors": [
+        "Pallab Basu",
+        "Suman das",
+        "Bigboy Madlala"
+      ],
+      "concept": "順序付けたエネルギー準位ではKrylov核の遠距離成分が抑制されることを使い、普遍核と個別の間隔分布を分離して畳み込む。",
+      "conclusion": "拡散複雑性のピークと晩時間挙動を近接準位統計へ結び付ける解析式が得られた。定量的普遍性は一様格子核近似の成否に依存する。",
+      "curiosity": "量子カオスに特徴的な複雑性ピークの高さと時刻を、どの局所準位相関が支配するのか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "エネルギー核表示、帯状性、核普遍性仮説、大$D$対角和、GOE・GUEのピーク、Poisson再総和、付録の一様核解析を確認した。核近似の一般誤差則は未証明である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 4,
+      "scoreReasons": {
+        "broadImpact": "局所準位統計から拡散複雑性の時間形を予測する関係は、量子カオスと可積分系の比較に使える。普遍核近似の精度が適用範囲を決める。",
+        "categoryImpact": "有限時間ピークを最近接準位間隔分布のFourier変換へ還元し、カオスと可積分性を同じ複雑性公式で区別する基準を作った。",
+        "originality": "エネルギー空間の帯状Krylov核と一様格子核の近似を組み合わせ、各近接次数の間隔分布から時間発展を合成する構成が新しい。",
+        "technicalStrength": "対角展開の剰余を評価し、GOE・GUEのピークとPoisson極限の厳密再総和を数値照合した。核普遍性と$D^{-1/2}$誤差則は経験的仮説に留まる。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.07412v1",
+        "https://arxiv.org/pdf/2608.07412v1"
+      ],
+      "submissionType": "new",
+      "title": "Analytic Spread Complexity from Level Statistics: From Chaos to Integrability",
+      "titleJa": "準位統計から導く解析的拡散複雑性：カオスから可積分性まで",
+      "totalScore": 70,
+      "url": "https://arxiv.org/abs/2608.07412"
+    },
+    {
+      "abstractLines": [
+        "8超電荷を持つ$\\mathrm{SU}(2)$ゲージ理論のHiggs枝に現れる孤立シンプレクティック特異点を分類する。",
+        "基本半ハイパー多重項と$\\mathrm{Sym}^k$半ハイパー多重項を組み、Higgs機構と母関数を調べた。",
+        "$k=5,7$で新系列を得て、その1次元成員をKlein $E_6,E_8$特異点として実現した。"
+      ],
+      "arxivId": "2608.06451",
+      "arxivVersion": "v1",
+      "assessment": "単純なゲージ理論から新しい特異点族と例外型1次元例を同時に得る構成が魅力的である。母関数による明示検証が一部の事例に限られる点が制約となる。",
+      "authors": [
+        "Amihay Hanany",
+        "Guhesh Kumaran",
+        "Deshuo Liu",
+        "Travis Schedler"
+      ],
+      "concept": "半ハイパー多重項の表現次数を離散的に変え、完全Higgs化という物理条件を特異点の孤立性と分類条件へ読み替える。",
+      "conclusion": "$k=5,7$の$\\mathrm{Sp}(1)$理論から二つの新しい孤立特異点系列が提案され、例外型Klein特異点の別の商構成も得られた。一般$N$の完全分類には論証の精査が要る。",
+      "curiosity": "自発的対称性の破れ後に自明な理論だけを残す最小ゲージ理論は、どの孤立特異点をHiggs枝として生成するか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "鎖重合構成、電気クイバー、Higgs機構による部分群分類、三系列のHilbert級数、Coulomb枝、Klein特異点、表現分岐付録を確認した。新二系列の磁気クイバーは未構成である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 5,
+      "scoreReasons": {
+        "broadImpact": "超対称ゲージ理論のHiggs枝と特異点分類を結び、表現論・シンプレクティック幾何にも具体的な対象を供給する。物理的応用は8超電荷の小さなゲージ群に集中する。",
+        "categoryImpact": "$\\mathrm{Sp}(1)$物質表現から孤立特異点の二つの新系列と新しい横断スライスを構成し、既知の冪零軌道閉包系列を拡張した。",
+        "originality": "$k=1,3$の既知構成を踏まえ、$k=5,7$から$h\\mathrm{SO}(N)$と$i\\mathrm{SO}(N)$を得てKlein $E_6,E_8$へ接続する差分が明確である。",
+        "technicalStrength": "Higgs機構の部分群分岐で許される$k$を絞り、Higgs・Coulomb枝Hilbert級数と既知系列を照合した。$i\\mathrm{SO}(N)$の精密母関数と磁気クイバーは得られていない。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.06451v1",
+        "https://arxiv.org/pdf/2608.06451v1"
+      ],
+      "submissionType": "new",
+      "title": "New symplectic singularities from $SU(2)$ gauge theories",
+      "titleJa": "$SU(2)$ゲージ理論から得られる新しいシンプレクティック特異点",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2608.06451"
+    },
+    {
+      "abstractLines": [
+        "de Sitter膨張と一様磁場が、荷電フェルミオンのカイラル対称性へ逆向きに作用する可能性を調べる。",
+        "Bunch–Davies真空のモード関数を求め、NJL模型の平均場ギャップ方程式を解析的・数値的に解いた。",
+        "曲率は対称性を回復し、磁場は磁気触媒作用で破れを強める競合相図が得られた。"
+      ],
+      "arxivId": "2608.07270",
+      "arxivVersion": "v1",
+      "assessment": "曲率と磁場の競合を正確なモード、解析極限、数値相図へ落とした点は明確である。接触相互作用と平均場近似により、初期宇宙への結論は定性的である。",
+      "authors": [
+        "Kohei Fujikura",
+        "Toshifumi Noumi",
+        "Shintetsu Yamazaki"
+      ],
+      "concept": "de Sitter不変真空でLandau量子化されたフェルミオンを構成し、その凝縮が受ける曲率抑制と磁場増強を同じギャップ方程式で競わせる。",
+      "conclusion": "NJL平均場では磁場がカイラル対称性の破れを促し、曲率が回復させるため、両者の比で相が決まる。結論は一様場と平均場近似の範囲にある。",
+      "curiosity": "宇宙膨張による曲率と強磁場が共存すると、動的フェルミオン質量の生成条件はどう変わるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "de Sitter中のLandauモード、凝縮の正則化、NJLギャップ式、弱磁場・強磁場極限、数値相図、付録の規格化と積分を確認した。非局所ゲージ相互作用は扱っていない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 6,
+      "scoreReasons": {
+        "broadImpact": "膨張時空での動的質量生成は、初期宇宙場理論と強磁場下のカイラル相転移を結ぶ。NJL平均場と一様磁場という理想化がある。",
+        "categoryImpact": "小曲率近似を使わず、de Sitter曲率による対称性回復と磁場による破れ促進の競合を、量子化モードから相図まで一貫して求めた。",
+        "originality": "平坦時空の磁気触媒機構を単に移すだけでなく、Bunch–Davies条件下の曲率効果と競合させ、複数極限の解析式を導いた。",
+        "technicalStrength": "Bunch–Daviesモード、正則化凝縮、弱磁場・強磁場極限を導き、切断付きLandau和の数値相境界と照合した。NJL平均場は磁場が切断を超える領域で定量制御を失う。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 17,
+        "originality": 15,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.07270v1",
+        "https://arxiv.org/pdf/2608.07270v1"
+      ],
+      "submissionType": "new",
+      "title": "Magnetic Catalysis and Fermion Mass Generation in de Sitter Spacetime",
+      "titleJa": "de Sitter時空における磁気触媒作用とフェルミオン質量生成",
+      "totalScore": 67,
+      "url": "https://arxiv.org/abs/2608.07270"
+    },
+    {
+      "abstractLines": [
+        "不定内積を持つゴースト理論では、負ノルム状態がBorn則による確率解釈を妨げる。",
+        "ノルム符号と一致する厳密な$\\mathbb Z_2$ゴースト・パリティ$Q$を超選択電荷として課した。",
+        "$Q$セクター内で確率を非負にし、固定符号のスペクトル表示とエルミート摂動論を得た。"
+      ],
+      "arxivId": "2608.06605",
+      "arxivVersion": "v1",
+      "assessment": "ゴーストを排除せず超選択則で確率問題を処理する構想は明快で、光学定理と伝播関数にも整合する。現実的な4次元理論が必要な実スペクトル領域を持つ証拠はない。",
+      "authors": [
+        "Bob Holdom"
+      ],
+      "concept": "エネルギー固有状態のノルム符号を保存離散電荷の固有値として固定し、物理状態と可観測量をその超選択セクターへ制限する。",
+      "conclusion": "厳密なゴースト・パリティが存在する実スペクトル領域では、Born則と光学定理に確率的意味を与えられる。成立性は相互作用下の$Q$の存在に依存する。",
+      "curiosity": "負ノルムの自由度を消さずに、相互作用するゴースト理論へ一貫した確率解釈を与えられるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "擬Hermite量子力学、4次元漸近Fock空間、光学定理、セクター別スペクトル表示、相似変換摂動論、結論を確認した。相互作用重力での実スペクトルと高次構成は未実証である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 7,
+      "scoreReasons": {
+        "broadImpact": "負ノルム状態の確率解釈を回復できれば、高階微分場理論と繰り込み可能重力に影響する。実スペクトルと厳密なゴースト・パリティの存在が強い前提である。",
+        "categoryImpact": "不定内積の障害に対し、ノルム符号と一致する保存$\\mathbb Z_2$電荷を超選択則にする解法を提示した。複素スペクトル領域は扱わない。",
+        "originality": "通常のゴースト除去ではなく、ゴーストを残したまま可観測量を$Q$可換部分へ制限し、Born則と光学定理を再解釈する構成が特徴的である。",
+        "technicalStrength": "不定計量の光学定理、固定符号スペクトル表示、最低次のHermite化相互作用を導いた。対角化可能な実スペクトルと連続極限を仮定し、高次摂動論は別稿に委ねる。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 16,
+        "originality": 17,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.06605v1",
+        "https://arxiv.org/pdf/2608.06605v1"
+      ],
+      "submissionType": "new",
+      "title": "Superselected ghost theory: real spectrum",
+      "titleJa": "超選択されたゴースト理論：実スペクトル",
+      "totalScore": 66,
+      "url": "https://arxiv.org/abs/2608.06605"
+    },
+    {
+      "abstractLines": [
+        "二つのAdS境界に同一の正弦波スカラー源を置いたとき、連結鞍点の優劣とRG流を調べる。",
+        "源強度を変えて大小のワームホール解と非連結解を求め、重力作用と有効$\\beta$関数を比較した。",
+        "閾値後は大ワームホールが常に優勢で、連結解は赤外のギャップ相、非連結解は始点への回帰を表す。"
+      ],
+      "arxivId": "2608.06465",
+      "arxivVersion": "v1",
+      "assessment": "支配的鞍点と多価RG流を同じ変調源で追える点が興味深い。大ワームホールの安定性と積分サイクルが未確定なので、集合揺らぎの解釈は条件付きである。",
+      "authors": [
+        "Pompey Leung"
+      ],
+      "concept": "同じ正弦波源を両境界へ与え、ワームホールの鞍点競合を多価なホログラフィック$\\beta$関数の枝構造として解釈する。",
+      "conclusion": "ワームホールが存在する全領域で連結大枝が支配し、集合揺らぎは平均に比べ指数的に大きくなる。結論は半古典鞍点と集合解釈に依存する。",
+      "curiosity": "空間変調した境界源は、二境界重力の支配的鞍点と赤外終状態をどのように組み替えるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "正弦波仮定、非連結解、大小ワームホール、折り畳みRG流、反項付き作用差、数値外挿、因子化の議論を確認した。負モード解析とLefschetz小道は未実施である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 8,
+      "scoreReasons": {
+        "broadImpact": "非一様源によるAdSワームホールを、重力経路積分の揺らぎとホログラフィックRGの双方へ接続する。半古典的な二境界模型に範囲が限られる。",
+        "categoryImpact": "ワームホール出現後に常に大枝が優勢となる例を示し、従来の非一様物質源で見られた劣勢領域がない相構造を提示した。",
+        "originality": "正弦波源という単純な変調から、多価$\\beta$関数と平均を上回る集合揺らぎを同時に導く点が、既存ワームホール模型との差である。",
+        "technicalStrength": "境界値問題、ホログラフィック反項、切断外挿を用いて三鞍点の作用を比較した。大枝の負モード解析と分岐点での積分路は未計算で、支配性の結論はそこに依存する。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.06465v1",
+        "https://arxiv.org/pdf/2608.06465v1"
+      ],
+      "submissionType": "new",
+      "title": "Holographic RG flows and wormholes from sinusoidal scalars",
+      "titleJa": "正弦波スカラー源が生むホログラフィックRG流とワームホール",
+      "totalScore": 66,
+      "url": "https://arxiv.org/abs/2608.06465"
+    },
+    {
+      "abstractLines": [
+        "同じクイバーを持ちながら超ポテンシャルが異なる4次元$\\mathcal N=1$理論の双対性を幾何学的に特徴付ける。",
+        "$H1121$模型の42個のトーリック相について、タイリング領域の傾斜変異とジグザグ経路を分類した。",
+        "三種類の変異族を得て、同一クイバーを持つ五つの二重項と一つの三重項が同じCalabi–Yau三次元多様体を表すと確かめた。"
+      ],
+      "arxivId": "2608.07269",
+      "arxivVersion": "v1",
+      "assessment": "42相の網羅的調査とトーリック図の照合が、局所変異則を具体的な双対性へ結び付ける。単一模型で見つけた三族が一般分類になるかは未定である。",
+      "authors": [
+        "Seong-Jin Lee",
+        "Rak-Kyeong Seong",
+        "Benjamin Suzzoni"
+      ],
+      "concept": "変異領域を横切るジグザグ経路の向きを一斉に反転し、クイバーの接続を保ちながら完全例外集合に対応する傾斜対象を更新する。",
+      "conclusion": "$H1121$のクイバー不変双対相は三族の傾斜変異で結ばれ、新しい双対多重項も得られた。任意のトーリック三次元特異点への一般化は残る。",
+      "curiosity": "クイバーを変えず超ポテンシャルだけを変える双対性は、ブレーン・タイリングのどの局所操作で生成されるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "42個のトーリック相の分類、傾斜変異の一般形と三族、五二重項・一三重項の超ポテンシャル、巻数条件、前向き算法、全相付録を確認した。模型横断的な完全分類はない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 9,
+      "scoreReasons": {
+        "broadImpact": "Dブレーン・ゲージ理論の双対性を組合せ操作へ写すため、弦理論とクイバー表現の接点に有用である。解析対象は特定のトーリック模型に狭い。",
+        "categoryImpact": "同一クイバーで超ポテンシャルだけが異なる双対相を、ブレーン・タイリング上の傾斜変異として実現する規則を与えた。",
+        "originality": "Seiberg双対性の通常のクイバー変化とは異なり、変異領域内のジグザグ経路の向き反転でクイバー不変双対性を統一する点が独自である。",
+        "technicalStrength": "$H1121$の42相を完全列挙し、六組すべてでトーリック条件、ジグザグ巻数、前向き算法の$G_t$行列を照合した。他のCalabi–Yau模型での分類完全性は未確立である。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.07269v1",
+        "https://arxiv.org/pdf/2608.07269v1"
+      ],
+      "submissionType": "new",
+      "title": "Tilting Mutations and Quiver-Invariant Dualities in Brane Tilings",
+      "titleJa": "ブレーン・タイリングにおける傾斜変異とクイバー不変双対性",
+      "totalScore": 64,
+      "url": "https://arxiv.org/abs/2608.07269"
+    },
+    {
+      "abstractLines": [
+        "真正多重エントロピーの置換収縮グラフが、単体分割された多様体を表す条件を調べる。",
+        "$q=4$のグラフ$\\Gamma_{4,n}$について、各頂点リンクの位相とEuler標数を分類した。",
+        "多様体条件を満たすのは$n=2$だけで、$n\\geq3$では各頂点に正種数リンクを持つ円錐特異点が生じる。"
+      ],
+      "arxivId": "2608.06755",
+      "arxivVersion": "v1",
+      "assessment": "多様体解釈が成立する範囲を頂点リンクの閉式で厳密に切り分けた。結論は4者系の位相分類であり、もつれ量の物理的性質への帰結は限定的である。",
+      "authors": [
+        "Norihiro Iizuka"
+      ],
+      "concept": "4色収縮グラフを四面体の貼り合わせとして読み、各頂点リンクのEuler標数と向き付け可能曲面の種数で局所多様体性を判定する。",
+      "conclusion": "$q=4$のグラフ符号化多様体は$n=2$に限られ、より高い複製数では円錐特異単体複体になる。$q>4$での対応する障害は未解明である。",
+      "curiosity": "多重エントロピーの置換グラフを幾何学へ変換するとき、真の多様体構造はどの複製数で成立するか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "真正多重エントロピー、GEM辞書、$q=3$のセル計数、$q=4$の$n=2,3$構成、任意$n$の同型化と種数証明、TQFT解釈を確認した。信号と境界TQFTの等式は未証明である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 10,
+      "scoreReasons": {
+        "broadImpact": "多体系量子もつれの複製置換を位相空間へ翻訳する結果だが、直接の帰結は4者真正多重エントロピーの構成に集中する。",
+        "categoryImpact": "多重もつれ信号のGEM解釈に対し、$q=4$では$n=2$だけが閉多様体条件を満たすという明確な適用境界を与えた。",
+        "originality": "収縮グラフを単体分割と読む既存提案を受け、全頂点リンクのEuler標数を閉式化して、一般$n$で円錐特異点が必至と示した。",
+        "technicalStrength": "四通りの色除去を$q=3$標準グラフへ同型化し、全$n$のセル数、向き付け、連結性から種数を導いた。$q>4$への一般式とTQFT振幅の対応は未証明である。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 15,
+        "originality": 15,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.06755v1",
+        "https://arxiv.org/pdf/2608.06755v1"
+      ],
+      "submissionType": "new",
+      "title": "Notes on the Graph-Encoded Manifolds for the (Genuine) Multi-Entropy",
+      "titleJa": "真正多重エントロピーのグラフ符号化多様体に関する考察",
+      "totalScore": 60,
+      "url": "https://arxiv.org/abs/2608.06755"
+    },
+    {
+      "abstractLines": [
+        "Lorentz符号のChern–Simons–Kodama波動汎関数は、実接続上の積分が十分に収束しない。",
+        "接続を複素化し、自己双対de Sitter鞍点に付随するLefschetz小道を積分路として選んだ。",
+        "FRWでAiry波動関数を再現し、Bianchi IXでは異方性を実Gaussianで抑える有限な先頭波動関数を得た。"
+      ],
+      "arxivId": "2608.07467",
+      "arxivVersion": "v1",
+      "assessment": "Kodama型状態を解析接続Chern–Simons積分として扱う対応は示唆的である。ただし、異方性減衰は鞍点近傍の2次近似で、完全小道の収束検査も完了していない。",
+      "authors": [
+        "Stephon Alexander",
+        "Kenneth Blakey"
+      ],
+      "concept": "正則指数の実部をMorse関数とし、膨張de Sitter鞍点から流れ出るLefschetz小道だけを物理積分サイクルとして採用する。",
+      "conclusion": "選択した小道上では等方Airy因子と異方性Gaussianからなる有限なBianchi IX波動関数が得られる。全場空間への拡張と現実条件の実装は残る。",
+      "curiosity": "正の宇宙定数を持つLorentz符号の量子重力で、Kodama型状態を収束する積分として定義できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "自己双対変数、解析接続、FRWのAiry還元、Bianchi IX鞍点とせん断Hessian、現実条件、付録の勾配流を確認した。完全小道の数値積分は作業中と明記されている。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 11,
+      "scoreReasons": {
+        "broadImpact": "Lorentz符号量子宇宙論の波動汎関数へ収束積分路を与え、重力とChern–Simons理論を接続する。結果はミニ超空間の打ち切りに依存する。",
+        "categoryImpact": "条件収束のKodama型積分へde Sitter鞍点のLefschetz小道を導入し、Bianchi IXの2次近似で有限な波動関数を得た。",
+        "originality": "Wittenの解析接続を自己双対重力の現実条件と組み合わせ、FRWのAiry構造をせん断方向の実Gaussian減衰へ拡張した点が新しい。",
+        "technicalStrength": "FRWでAiry積分を再現し、Bianchi IXの臨界点と2次せん断Hessianを計算した。完全小道の数値積分、1ループ行列式、重力波、非摂動的内積はいずれも未完である。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 15,
+        "originality": 16,
+        "technicalStrength": 12
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.07467v1",
+        "https://arxiv.org/pdf/2608.07467v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum de Sitter and Analytically Continued Chern Simons Theory",
+      "titleJa": "量子de Sitter時空と解析接続されたChern–Simons理論",
+      "totalScore": 58,
+      "url": "https://arxiv.org/abs/2608.07467"
+    },
+    {
+      "abstractLines": [
+        "4次元$U(1)^4$荷電ブラックブレーンに双対なABJM模型のフェルミオン・ギャップを調べる。",
+        "56個のフェルミオン・モードのDirac方程式を分類し、近地平線極限を5次元と11次元へ持ち上げた。",
+        "不等な化学ポテンシャルに対応するギャップを得て、高次元極限にBTZまたは$\\mathrm{AdS}^3$部分と分離セクターを見いだした。"
+      ],
+      "arxivId": "2608.06887",
+      "arxivVersion": "v1",
+      "assessment": "多数のフェルミオン・モードと二段階の持ち上げを整理した資料性がある。ただし、極限の不連続を場の理論スペクトルのギャップと同一視する中心解釈には直接計算が不足する。",
+      "authors": [
+        "Mahdis Ghodrati"
+      ],
+      "concept": "化学ポテンシャルの縮退極限をフェルミオンのDirac係数ごとに追い、低次元の特異領域を高次元のAdSまたはBTZ因子へ幾何学的に持ち上げる。",
+      "conclusion": "ABJMフェルミオンのギャップは電荷極限に依存し、持ち上げた幾何では分離した低次元セクターに対応する。完全なスペクトルと安定性の範囲は確定していない。",
+      "curiosity": "4次元で特異に見えるABJMギャップは、高次元の滑らかな近地平線幾何からどう理解できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "荷電ブレーン、化学ポテンシャル極限、56モードのDirac係数、振動領域、5次元・11次元持ち上げ、二種類の近地平線極限を確認した。Green関数の極とFermi面は未計算である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 12,
+      "scoreReasons": {
+        "broadImpact": "ABJM模型のフェルミオン応答を高次元幾何へ結び、ホログラフィック物性とM理論の接点を扱う。特定の荷電ブラックブレーン背景に依存する。",
+        "categoryImpact": "不等化学ポテンシャルの極限順序を56個のフェルミオン・モードと高次元持ち上げで整理したが、ギャップ現象と分離セクターは既存研究の近接拡張である。",
+        "originality": "既知の5次元ギャップ解析を4次元$U(1)^4$背景へ移し、5次元・11次元のBTZまたは$\\mathrm{AdS}^3$部分と対応付けた。",
+        "technicalStrength": "Dirac係数、振動領域、二通りの近地平線極限を計算した一方、主張するGreen関数の極やFermi面を数値的に求めず、ギャップのスペクトル検証が欠ける。"
+      },
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 13,
+        "originality": 10,
+        "technicalStrength": 11
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.06887v1",
+        "https://arxiv.org/pdf/2608.06887v1"
+      ],
+      "submissionType": "new",
+      "title": "The spectral gap of the ABJM model: A holographic perspective from uplifted higher-dimensional geometries",
+      "titleJa": "ABJM模型のスペクトルギャップ：高次元へ持ち上げた幾何によるホログラフィック描像",
+      "totalScore": 47,
+      "url": "https://arxiv.org/abs/2608.06887"
+    }
+  ],
+  "reportDate": "2026-08-10",
+  "schemaVersion": "1.4",
+  "slug": "hep-th",
+  "totalNew": 12
+}
