@@ -33,7 +33,12 @@ const METADATA_TEXT_LIMITS = Object.freeze({
   abstract: 20_000,
   comments: 4_000,
   author: 512,
-  authors: 500,
+  // Large experimental collaborations can legitimately exceed one thousand
+  // linked authors (for example, joint LIGO-Virgo-KAGRA papers).  The complete
+  // abstract page is still independently capped at 2 MiB, and each individual
+  // author remains capped at 512 characters, so accepting these official lists
+  // does not remove the parser's bounded-input guarantees.
+  authors: 5_000,
 });
 const ARXIV_ID_PATTERN = /^\d{4}\.\d{4,5}$/;
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -412,23 +417,99 @@ function citationAuthorMatchesVisibleBody(citationAuthor, bodyAuthor, index) {
     compactNaturalAuthorIdentity(citationNaturalOrder, `citation author ${index + 1}`);
 }
 
-function parseBodyAuthors(tokens) {
+function parseBodyAuthors(tokens, arxivId) {
   const authorsElement = exactlyOneElementWithClass(tokens, "div", "authors", "arXiv authors");
   const authors = [];
+  const authorTokenIndexes = [];
+  let longAuthorToggle = null;
+  const hiddenListStarts = [];
+  for (let index = authorsElement.startIndex + 1; index < authorsElement.endIndex; index += 1) {
+    const token = tokens[index];
+    if (token.type !== "start" || token.name !== "div") continue;
+    if (parseAttributes(token).id === "long-author-list") hiddenListStarts.push(index);
+  }
+  if (hiddenListStarts.length > 1) {
+    fail("SOURCE_INCOMPLETE", `${arxivId} authors contain repeated long-author-list elements.`);
+  }
+  const hiddenList = hiddenListStarts.length === 0
+    ? null
+    : uniqueElementWithId(tokens, "div", "long-author-list");
   for (let index = authorsElement.startIndex + 1; index < authorsElement.endIndex; index += 1) {
     const token = tokens[index];
     if (token.type !== "start" || token.name !== "a") continue;
     const endIndex = pairElement(tokens, index, "a");
     if (endIndex > authorsElement.endIndex) fail("SOURCE_INCOMPLETE", "arXiv authors contain a truncated link.");
+    const attributes = parseAttributes(token);
+    if (attributes.id === "toggle") {
+      if (longAuthorToggle !== null) {
+        fail("SOURCE_INCOMPLETE", `${arxivId} authors contain repeated long-author-list toggles.`);
+      }
+      const text = canonicalMetadataText(
+        elementText(tokens, index, endIndex, "arXiv long-author-list toggle"),
+        "arXiv long-author-list toggle",
+        128,
+      );
+      const match = /^et al\. \(([1-9]\d*) additional authors not shown\)$/.exec(text);
+      if (
+        match === null
+        || attributes.title !== "Show Entire Author List"
+        || attributes.href !== `javascript:toggleAuthorList('long-author-list','${text}');`
+      ) {
+        fail("SOURCE_INCOMPLETE", `${arxivId} authors contain a malformed long-author-list toggle.`);
+      }
+      longAuthorToggle = Object.freeze({
+        hiddenCount: Number(match[1]),
+        startIndex: index,
+        endIndex,
+      });
+      index = endIndex;
+      continue;
+    }
+    const linkedName = elementText(tokens, index, endIndex, `arXiv author ${authors.length + 1}`);
+    const preceding = tokens[index - 1];
+    const directPrefixText = preceding?.type === "text"
+      ? decodeHtmlEntities(preceding.text, `arXiv author ${authors.length + 1} prefix`)
+      : "";
+    // Long experimental-collaboration pages render a leading article outside
+    // the author-search anchor ("The <a>LIGO ... Collaboration</a>").  Preserve
+    // that narrowly recognized visible prefix so the independently emitted
+    // citation_author value still has to match the complete displayed name.
+    const collaborationPrefix = /\bCollaboration$/u.test(linkedName)
+      ? /^\s*(?:,\s*)?(The|the)\s*$/u.exec(directPrefixText)?.[1] ?? ""
+      : "";
     authors.push(canonicalMetadataText(
-      elementText(tokens, index, endIndex, `arXiv author ${authors.length + 1}`),
+      collaborationPrefix === "" ? linkedName : `${collaborationPrefix} ${linkedName}`,
       `arXiv author ${authors.length + 1}`,
       METADATA_TEXT_LIMITS.author,
     ));
+    authorTokenIndexes.push(index);
     index = endIndex;
   }
   if (authors.length === 0 || authors.length > METADATA_TEXT_LIMITS.authors) {
-    fail("SOURCE_INCOMPLETE", `arXiv authors must contain 1 through ${METADATA_TEXT_LIMITS.authors} linked names.`);
+    fail(
+      "SOURCE_INCOMPLETE",
+      `${arxivId} authors must contain 1 through ${METADATA_TEXT_LIMITS.authors} linked names; `
+      + `observed ${authors.length}.`,
+    );
+  }
+  if ((longAuthorToggle === null) !== (hiddenList === null)) {
+    fail("SOURCE_INCOMPLETE", `${arxivId} long-author-list and its toggle must occur together.`);
+  }
+  if (longAuthorToggle !== null && hiddenList !== null) {
+    if (
+      hiddenList.startIndex <= authorsElement.startIndex
+      || hiddenList.endIndex >= authorsElement.endIndex
+      || hiddenList.endIndex >= longAuthorToggle.startIndex
+      || longAuthorToggle.endIndex >= authorsElement.endIndex
+    ) {
+      fail("SOURCE_INCOMPLETE", `${arxivId} long-author-list must be contained by the authors element.`);
+    }
+    const actualHiddenCount = authorTokenIndexes.filter((index) => (
+      index > hiddenList.startIndex && index < hiddenList.endIndex
+    )).length;
+    if (actualHiddenCount !== longAuthorToggle.hiddenCount) {
+      fail("SOURCE_INCOMPLETE", `${arxivId} long-author-list toggle count disagrees with its hidden author links.`);
+    }
   }
   return authors;
 }
@@ -577,10 +658,14 @@ export function parseArxivAbstractPage(html, { arxivId, slug } = {}) {
   });
   const metaTitle = canonicalMetadataText(metaContents(tokens, "citation_title"), "citation_title", METADATA_TEXT_LIMITS.title);
 
-  const bodyAuthors = parseBodyAuthors(tokens);
+  const bodyAuthors = parseBodyAuthors(tokens, arxivId);
   const metaAuthors = metaContents(tokens, "citation_author", { multiple: true });
   if (metaAuthors.length !== bodyAuthors.length) {
-    fail("SOURCE_CONTENT_MISMATCH", `${arxivId} author count disagrees between citation metadata and the visible body.`);
+    fail(
+      "SOURCE_CONTENT_MISMATCH",
+      `${arxivId} author count disagrees between citation metadata (${metaAuthors.length}) `
+      + `and the visible body (${bodyAuthors.length}).`,
+    );
   }
   for (const [index, bodyAuthor] of bodyAuthors.entries()) {
     if (!citationAuthorMatchesVisibleBody(metaAuthors[index], bodyAuthor, index)) {

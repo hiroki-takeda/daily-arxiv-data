@@ -230,6 +230,8 @@ function abstractPageHtml({
   canonicalUrl = `https://arxiv.org/abs/${arxivId}`,
   citationPdfUrl = `https://arxiv.org/pdf/${arxivId}`,
   metaId = arxivId,
+  collapsedAuthorCount = 0,
+  bodyAuthorPrefixes = authors.map(() => ""),
 } = {}) {
   const escapeAttribute = (value) => value
     .replaceAll("&", "&amp;")
@@ -240,6 +242,17 @@ function abstractPageHtml({
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;");
+  const authorLinks = authors.map((author, index) => (
+    `${escapeText(bodyAuthorPrefixes[index] ?? "")}<a href="https://arxiv.org/search/${slug}?searchtype=author&amp;query=${encodeURIComponent(author)}" rel="nofollow">${escapeText(author)}</a>`
+  ));
+  const visibleAuthorCount = authors.length - collapsedAuthorCount;
+  const authorBody = collapsedAuthorCount === 0
+    ? authorLinks.join(", ")
+    : [
+      authorLinks.slice(0, visibleAuthorCount).join(", "),
+      `<div id="long-author-list" style="display: none;">${authorLinks.slice(visibleAuthorCount).join(", ")}</div>`,
+      `<a href="javascript:toggleAuthorList('long-author-list','et al. (${collapsedAuthorCount} additional authors not shown)');" title="Show Entire Author List" id="toggle">et al. (${collapsedAuthorCount} additional authors not shown)</a>`,
+    ].join("\n");
   return `<!doctype html><html><head>
     <link rel="canonical" href="${escapeAttribute(canonicalUrl)}" />
     <meta name="citation_title" content="${escapeAttribute(metaTitle)}" />
@@ -250,9 +263,7 @@ function abstractPageHtml({
   </head><body>
     <strong>arXiv:${arxivId}${version}</strong> (${slug})
     <h1 class="title mathjax"><span class="descriptor">Title:</span>${escapeText(title)}</h1>
-    <div class="authors"><span class="descriptor">Authors:</span>${authors.map((author) => (
-      `<a href="https://arxiv.org/search/${slug}?searchtype=author">${escapeText(author)}</a>`
-    )).join(", ")}</div>
+    <div class="authors"><span class="descriptor">Authors:</span>${authorBody}</div>
     <blockquote class="abstract mathjax"><span class="descriptor">Abstract:</span>${bodyAbstractHtml ?? escapeText(abstract)}</blockquote>
     ${comments === null ? "" : `<table><tr><td class="tablecell label">Comments:</td><td class="tablecell comments mathjax">${commentsHtml ?? escapeText(comments)}</td></tr></table>`}
     <span class="primary-subject">Quantum Physics (${slug})</span>
@@ -1467,6 +1478,92 @@ test("abstract-page parser tolerates only an exactly reconstructable citation-au
     authors: ["Aditi कि", "Jovan Potrebić"],
     metaAuthors: ["क, Aditi", "Potrebić, Jovan"],
   }), { arxivId: "2608.06359", slug: "quant-ph" }), /author 1 disagrees/);
+});
+
+test("abstract-page parser accepts a bounded large-collaboration author list", () => {
+  const authors = [
+    "LIGO Scientific Collaboration",
+    "Virgo Collaboration",
+    "KAGRA Collaboration",
+    ...Array.from({ length: 1_808 }, (_, index) => `Member ${index + 1}`),
+  ];
+  const metaAuthors = [
+    "The LIGO Scientific Collaboration",
+    "the Virgo Collaboration",
+    "the KAGRA Collaboration",
+    ...Array.from({ length: 1_808 }, (_, index) => `${index + 1}, Member`),
+  ];
+  const paper = parseArxivAbstractPage(abstractPageHtml({
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+    authors,
+    metaAuthors,
+    collapsedAuthorCount: 1_711,
+    bodyAuthorPrefixes: ["The ", "the ", "the "],
+  }), { arxivId: "2608.11620", slug: "gr-qc" });
+  assert.equal(paper.authors.length, 1_811);
+  assert.equal(paper.authors[0], "The LIGO Scientific Collaboration");
+  assert.equal(paper.authors[1], "the Virgo Collaboration");
+  assert.equal(paper.authors.at(-1), "Member 1808");
+});
+
+test("abstract-page parser keeps the expanded collaboration list bounded and self-consistent", () => {
+  const oversizedAuthors = Array.from({ length: 5_001 }, (_, index) => `Member ${index + 1}`);
+  const oversizedMetaAuthors = Array.from({ length: 5_001 }, (_, index) => `${index + 1}, Member`);
+  const boundedPaper = parseArxivAbstractPage(abstractPageHtml({
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+    authors: oversizedAuthors.slice(0, 5_000),
+    metaAuthors: oversizedMetaAuthors.slice(0, 5_000),
+  }), { arxivId: "2608.11620", slug: "gr-qc" });
+  assert.equal(boundedPaper.authors.length, 5_000);
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+    authors: oversizedAuthors,
+    metaAuthors: oversizedMetaAuthors,
+  }), { arxivId: "2608.11620", slug: "gr-qc" }), /observed 5001/);
+
+  const malformedToggle = abstractPageHtml({
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+    authors: ["Alice Example", "Bob Researcher"],
+    metaAuthors: ["Example, Alice", "Researcher, Bob"],
+    collapsedAuthorCount: 1,
+  }).replaceAll("1 additional authors not shown", "2 additional authors not shown");
+  assert.throws(() => parseArxivAbstractPage(malformedToggle, {
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+  }), /toggle count disagrees/);
+
+  const missingToggle = abstractPageHtml({
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+    authors: ["Alice Example", "Bob Researcher"],
+    metaAuthors: ["Example, Alice", "Researcher, Bob"],
+    collapsedAuthorCount: 1,
+  }).replace(/<a href="javascript:toggleAuthorList[^\n]+<\/a>/u, "");
+  assert.throws(() => parseArxivAbstractPage(missingToggle, {
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+  }), /must occur together/);
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+    authors: ["LIGO Scientific Collaboration"],
+    metaAuthors: ["The LIGO Scientific Collaboration"],
+    bodyAuthorPrefixes: ["garbage, The "],
+  }), { arxivId: "2608.11620", slug: "gr-qc" }), /author 1 disagrees/);
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    arxivId: "2608.11620",
+    slug: "gr-qc",
+    authors: ["LIGO Scientific Collaboration"],
+    metaAuthors: ["The LIGO Scientific Collaboration"],
+    bodyAuthorPrefixes: ["; The "],
+  }), { arxivId: "2608.11620", slug: "gr-qc" }), /author 1 disagrees/);
 });
 
 test("citation title and abstract stay canonical across known arXiv visible-rendering differences", () => {
