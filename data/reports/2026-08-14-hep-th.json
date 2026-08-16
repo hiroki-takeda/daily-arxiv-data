@@ -1,0 +1,694 @@
+{
+  "audit": {
+    "announcementDate": "2026-08-14",
+    "authorPolicy": "著者の評判、所属、受賞歴、引用数、職位を得点に使用しない",
+    "evaluationPolicy": "著者の知名度を用いず、各論文の題名、著者、要旨、コメントと、上位候補では版固定の公式本文だけに基づく独立評価",
+    "fullTextEvaluatedCount": 12,
+    "fullTextPolicy": "全要旨比較後に固定した上位12候補だけを版固定の公式本文で確認し、最終上位10件すべてに全文根拠を要求",
+    "generatedAtJst": "2026-08-16T17:31:01+09:00",
+    "listingUrl": "https://arxiv.org/list/hep-th/pastweek",
+    "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpact、arXiv ID昇順",
+    "scoreRubric": "Daily arXiv rubric 3.0：broadImpact、categoryImpact、originality、technicalStrengthを各0〜25の整数で評価し、高得点には本文中の具体的根拠と検証を要求",
+    "selectionRule": "hep-thをprimary categoryとするNew submission v1を全件評価し、Cross submissionを除外",
+    "sourceCounts": {
+      "crosslistsExcluded": 20,
+      "newPrimary": 15,
+      "titleAuthorAbstractEvaluated": 15
+    }
+  },
+  "crosslistsExcluded": 20,
+  "evaluatedCount": 15,
+  "evaluationRun": {
+    "modelDisplayName": "GPT-5.6-Sol",
+    "modelId": "gpt-5.6-sol",
+    "modelSelectionVerified": true,
+    "reasoningEffort": "high",
+    "runId": "run-20260816T072436Z-847e0f4bcc7f"
+  },
+  "fullTextEvaluatedCount": 12,
+  "label": "High Energy Physics - Theory",
+  "papers": [
+    {
+      "abstractLines": [
+        "宇宙定数問題に対する余剰次元の異方的スケーリング機構を、バルク方向に力学がある場合へ拡張する。",
+        "z=1変形の二次スペクトルを調べ、五次元アインシュタイン重力、最高階形式フラックス、空間的クロノン場からなる共変模型を構成した。",
+        "背景で真空エネルギー相殺は保たれるが、健全性にはFierz–Pauli関係が必要で、バルク物質のCasimir項は自動相殺されない。"
+      ],
+      "arxivId": "2608.12460",
+      "arxivVersion": "v1",
+      "assessment": "背景相殺、ゴースト条件、共変実現を一つの機構として結び付けた点が強い。宇宙定数問題の全面的解決には、Casimir項と量子論的安定性を制御する追加構造が必要である。",
+      "authors": [
+        "Justin Khoury",
+        "Benjamin Muntz",
+        "Antonio Padilla"
+      ],
+      "concept": "射影可能な葉層が与える大域制約で真空エネルギーの定数シフトを消し、押出曲率結合をFierz–Pauli形に選んで余分なスカラーを除く。",
+      "conclusion": "真空エネルギーの代数的相殺とバルク力学は特定の共変5次元模型で両立する。ただし巻き付く物質が生む有限Casimirエネルギーの抑制には、伝播自由度のスペクトル設計が残る。",
+      "curiosity": "放射補正を重力から切り離す余剰次元機構は、バルク伝播を許してもゴーストなしで維持できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、背景方程式、カルツァ–クライン摂動、クロノンによる共変化、巻き数表示、議論を確認した。非線形領域のゴースト解析と重力・拘束場のループ計算は実施されていない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 1,
+      "scoreReasons": {
+        "broadImpact": "物質の真空エネルギー補正を重力方程式から相殺する機構は、宇宙論と量子重力の双方に直接関係する。ただしバルク物質のCasimir寄与には追加のスペクトル条件が要る。",
+        "categoryImpact": "宇宙定数問題に対し、異方的な余剰次元模型を動的な共変5次元重力へ拡張した。背景での相殺を保つ一方、健全性がFierz–Pauli関係を選ぶという強い制約を得た。",
+        "originality": "先行する超局所的なz=0機構を継承しつつ、空間的クロノン・スカラーと葉空間の補助一次元計量により、射影可能な葉層を実現した点が新しい。単なるパラメータ変形にとどまらず、共変な定式化を与える。",
+        "technicalStrength": "真空シフトの代数的相殺、零・非零Kaluza–Kleinモードから独立に得るゴースト条件、巻き数和の既知極限が主張を支える。非線形安定性と重力ループは未解析である。"
+      },
+      "scores": {
+        "broadImpact": 20,
+        "categoryImpact": 22,
+        "originality": 19,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.12460v1",
+        "https://arxiv.org/pdf/2608.12460v1"
+      ],
+      "submissionType": "new",
+      "title": "A Lapse in the Cosmological Constant Problem with Bulk Dynamics",
+      "titleJa": "バルク力学を伴う宇宙定数問題におけるラプス関数",
+      "totalScore": 80,
+      "url": "https://arxiv.org/abs/2608.12460"
+    },
+    {
+      "abstractLines": [
+        "弦理論由来の高曲率スカラー・テンソル重力で、境界観測量から高次元結合を復元できるかを問う。",
+        "線形ディラトンを持つ漸近的局所AdS分枝について、境界共変な動径階層から繰り込み生成汎関数とWard恒等式を構成した。",
+        "四つの規格化不変な応答量が縮約結合への大域的有理逆写像を持ち、Gauss–Bonnet係数を符号不定性なく復元できる。"
+      ],
+      "arxivId": "2608.13319",
+      "arxivVersion": "v1",
+      "assessment": "完全な境界汎関数の構成を微視的結合の逆問題へ直結させた成果である。一方、復元可能性は厳密に選ばれた背景分枝と模型の結合空間に依存する。",
+      "authors": [
+        "Tianhao Wu"
+      ],
+      "concept": "計量とスカラーの混合を二つの応答行列式で組織し、繰り込み後の規格化不変量を微視的結合の逆座標として用いる。",
+      "conclusion": "正則な線形ディラトン分枝では、境界応答がSDLH縮約結合を過剰決定する指紋となる。適用範囲は固定されたコンパクト化次元と連続結合の正則領域である。",
+      "curiosity": "境界の異常係数と1点応答だけから、弦コンパクト化が残した高次元結合を一意に読み戻せるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "変分境界項、Fefferman–Graham再帰、異常、有限1点関数、Ward恒等式、閉じた逆写像、結論を確認した。特異応答面と離散次元の識別は解いていない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 3,
+      "scoreReasons": {
+        "broadImpact": "高曲率重力の微視的結合を境界応答から逆算する枠組みは、ホログラフィーと有効重力理論を接続する。対象は線形ディラトンを持つ特定のSDLH分枝に限られる。",
+        "categoryImpact": "任意の境界計量と時空依存スカラー源に対する繰り込み生成汎関数を構成し、変分原理からWard恒等式まで統一した。弦コンパクト化結合の再構成を具体的に可能にする。",
+        "originality": "応答行列式で再帰と共鳴を整理し、規格化不変な四つの組合せから縮約結合への大域的有理逆写像を得た点が特徴である。標準的なホログラフィック繰り込みを逆問題へ進めた。",
+        "technicalStrength": "12本の射影による階数証明、Wess–Zumino整合性、二経路のWard恒等式、逆写像の非零Jacobianが相互に検証する。正則分枝の外と離散コンパクト化仮説は対象外である。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 20,
+        "originality": 18,
+        "technicalStrength": 21
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13319v1",
+        "https://arxiv.org/pdf/2608.13319v1"
+      ],
+      "submissionType": "new",
+      "title": "Holographic Renormalization for String-Derived Lovelock--Horndeski Theory",
+      "titleJa": "弦理論由来Lovelock–Horndeski理論のホログラフィック繰り込み",
+      "totalScore": 76,
+      "url": "https://arxiv.org/abs/2608.13319"
+    },
+    {
+      "abstractLines": [
+        "非共形ゲージ理論の熱的閉じ込め転移について、重力側ポテンシャルに依存しにくい予測を探る。",
+        "重力双対をD+1次元へ一般化し、1/D展開の先頭次数で地平面近傍に局在するブラックブレーン解を解析的に構成した。",
+        "最大過冷却は一般に1/D²で抑制され、先頭次数では臨界温度の音速によりε_sc=c_s²/2と定まる。"
+      ],
+      "arxivId": "2608.13557",
+      "arxivVersion": "v1",
+      "assessment": "模型依存の熱転移計算から音速による簡潔な過冷却則を抽出し、複数模型との一致を示す。現象論へ用いるには大D展開の収束性と次次数補正の大きさが鍵となる。",
+      "authors": [
+        "Prateek Agrawal",
+        "Gaurang Ramakant Kane",
+        "Vazha Loladze"
+      ],
+      "concept": "大D極限でブラックブレーンの熱力学を地平面近傍へ局在させ、相転移の存在限界をゲージ理論の音速へ写像する。",
+      "conclusion": "広い非共形ホログラフィック模型で過冷却が1/D²に抑えられ、先頭次数の上限は臨界点の音速だけで表される。有限D補正が定量的普遍性の残る課題である。",
+      "curiosity": "模型ごとに異なるスカラーポテンシャルを越えて、閉じ込め相転移の過冷却限界を何が普遍的に決めるのか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、境界層整合、熱力学、音速関係、三つの比較、赤外積分の付録、結論を確認した。次次数補正と近共形領域の過冷却は計算されていない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 4,
+      "scoreReasons": {
+        "broadImpact": "閉じ込め相転移の最大過冷却を音速へ結ぶ関係は、ホログラフィックQCD、相転移宇宙論、重力波予測に利用できる。有限Dでの精度と模型依存補正が範囲を制限する。",
+        "categoryImpact": "Einstein–スカラー模型のポテンシャル依存性を1/D展開で抑え、熱的閉じ込め転移に普遍的な予測構造を与える。最小温度と過冷却限界を解析式にした前進は大きい。",
+        "originality": "大Dで地平面近傍に局在する効果を用い、過冷却率を臨界温度での音速の二乗に直接結び付ける。個別ポテンシャルの数値研究から普遍関係へ移した点が新しい。",
+        "technicalStrength": "近・遠地平面解の整合、Hamilton拘束、自由エネルギー積分の抑制境界を確認し、数値解と二模型でも比較する。次の1/D補正と近共形領域は制御外である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 19,
+        "originality": 17,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13557v1",
+        "https://arxiv.org/pdf/2608.13557v1"
+      ],
+      "submissionType": "new",
+      "title": "Localised Horizons and Holographic Thermodynamics: Supercooling in the 1/D Expansion",
+      "titleJa": "局在化した地平面とホログラフィック熱力学：1/D展開における過冷却",
+      "totalScore": 74,
+      "url": "https://arxiv.org/abs/2608.13557"
+    },
+    {
+      "abstractLines": [
+        "量子場理論の局所領域に現れるIII型von Neumann代数と、非Clifford資源であるマジックの関係を調べる。",
+        "有限次元格子系の熱力学極限を考え、状態のマジックが一様に有界な場合に得られる局所作用素環の型を解析した。",
+        "有界なマジックからIII型代数は生じないため、III型局所代数の実現には極限で発散するマジックが必要となる。"
+      ],
+      "arxivId": "2608.12512",
+      "arxivVersion": "v1",
+      "assessment": "作用素環の型を計算資源の必要条件へ読み替える概念的な橋渡しが際立つ。実用的な回路下限へ進むには、極限の仮定とマジックの発散率を定量化する必要がある。",
+      "authors": [
+        "Mudassir Moosa"
+      ],
+      "concept": "有限系のマジックに一様上界を仮定し、その熱力学極限が許す局所作用素環の型を制限することで、III型なら資源発散が必要だと逆向きに示す。",
+      "conclusion": "III型局所代数は有限系近似で有界なマジックからは生成できず、場の理論シミュレーションに漸増する非Clifford資源を要求する。必要な発散速度は未確定である。",
+      "curiosity": "有限量の非Clifford資源で近似を重ねたとき、量子場理論に固有のIII型局所代数へ到達できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、作用素環と帰納極限の定義、補題、主定理、二つの付録証明、議論を確認した。マジックの発散率、十分条件、III型の細分類は未導出である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 2,
+      "scoreReasons": {
+        "broadImpact": "局所量子場理論のIII型代数を耐故障量子計算のマジック資源へ結ぶため、量子シミュレーションと作用素環論の双方に帰結がある。定量的な実装コストへの翻訳は別途必要である。",
+        "categoryImpact": "局所部分領域に密度行列やトレースが存在しない性質へ、有限次元近似の資源下限という新しい意味を与える。場の理論の量子シミュレーション可能性に直接制約を課す。",
+        "originality": "熱力学極限でマジックが一様有界なら局所代数はIII型になれないという反証形式は、有限次元資源理論と無限次元代数を非自明に接続する。中心概念は既存のマジック単調量を継承する。",
+        "technicalStrength": "弱*極限の正常部分、平坦スペクトル、支持射影上の有限トレースを順に証明して主定理へ結ぶ。必要条件のみで、発散率とIII型の細分類は導かない。"
+      },
+      "scores": {
+        "broadImpact": 19,
+        "categoryImpact": 18,
+        "originality": 19,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.12512v1",
+        "https://arxiv.org/pdf/2608.12512v1"
+      ],
+      "submissionType": "new",
+      "title": "Type III von Neumann Algebras are Magical",
+      "titleJa": "III型von Neumann代数は無限のマジックを要する",
+      "totalScore": 76,
+      "url": "https://arxiv.org/abs/2608.12512"
+    },
+    {
+      "abstractLines": [
+        "$O(n)$模型でフレーバー数nを変数として扱うとき、負の値が演算子スペクトルへ課す制約を調べる。",
+        "$O(n)$と$Sp(-n)$の双対性を用い、一般フレーバー構造の演算子を既約表現へ分解して摂動論を解析した。",
+        "任意のnで続く新たな異常次元縮退を見いだし、既知結果だけから任意の$\\phi^k$型演算子の2ループ異常次元を導出した。"
+      ],
+      "arxivId": "2608.12481",
+      "arxivVersion": "v1",
+      "assessment": "抽象的な負フレーバー双対性を、任意の複合演算子の2ループ情報を再構成する道具へ具体化した。非摂動的データやOPE係数への有効性はまだ確立されていない。",
+      "authors": [
+        "Daniele Artico",
+        "Jasper Roosmale Nepveu"
+      ],
+      "concept": "$Sp(-n)$側で表現が消滅・同一化する条件を既約成分ごとに追い、その解析的帰結を一般nでの縮退と繰り込み混合へ持ち上げる。",
+      "conclusion": "負のフレーバー数における表現論が、一般nの異常次元と混合行列に計算不要の関係を課す。OPE係数と次元継続に同じ機構が及ぶかは今後の課題である。",
+      "curiosity": "負の偶数フレーバーで成立する表現論的恒等式は、物理的な一般nの演算子データをどこまで拘束するか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、正負nの表現制約、O–Sp双対性、テンソルによる別導出、任意のφ^k演算子、混合行列、結論を確認した。3ループ閉形式と負の奇数nは未解決である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 5,
+      "scoreReasons": {
+        "broadImpact": "$O(n)$模型の任意の複合演算子に対する制約は、臨界現象、共形場理論、摂動的繰り込みへ再利用できる。現段階の明示結果は主に摂動論と特定演算子族に限られる。",
+        "categoryImpact": "$O(n)$と$Sp(-n)$の双対性を演算子表現へ展開し、任意の$\\phi^k$型演算子の2ループ異常次元を既知結果から導けるようにした。混合行列の非繰り込み構造も与える。",
+        "originality": "負の偶数フレーバーで消える表現から、任意のnで持続する異なる演算子間の縮退を引き出す点が非自明である。既知の解析接続を具体的なスペクトル制約へ変換した。",
+        "technicalStrength": "表現指標、明示テンソル導出、4ループまでのSp模型計算、既知の大k挙動が独立に関係を支える。3ループでは微分演算子との混合が加わり、閉形式は未導出である。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.12481v1",
+        "https://arxiv.org/pdf/2608.12481v1"
+      ],
+      "submissionType": "new",
+      "title": "Constraints on the $O(n)$ model from a negative number of flavors",
+      "titleJa": "負のフレーバー数から得られる$O(n)$模型の制約",
+      "totalScore": 72,
+      "url": "https://arxiv.org/abs/2608.12481"
+    },
+    {
+      "abstractLines": [
+        "2次元CFTの固有状態自己相関に現れる禁制特異点を、固有状態における相転移として理解する。",
+        "AGT対応で相関関数をN=2超対称ゲージ理論のNekrasov分配関数へ写し、重軽極限に対応するインスタントン気体を解析した。",
+        "異なるひも状Young図が支配する二相の間でインスタントンが増殖し、計算した臨界フガシティは禁制特異点と一致する。"
+      ],
+      "arxivId": "2608.13246",
+      "arxivVersion": "v1",
+      "assessment": "禁制特異点、固有状態熱化、インスタントン統計を臨界点の一致まで結び付けた構成が明確である。主張の一般性は大中心電荷極限とAGT対応可能な理論に制約される。",
+      "authors": [
+        "Yongjiang Xu",
+        "Weixin Sun",
+        "Chushun Tian",
+        "Huajia Wang"
+      ],
+      "concept": "AGT対応でCFT相関関数をインスタントン分配関数へ変換し、Young図の支配形状の交替を固有状態相転移の微視的像として読む。",
+      "conclusion": "禁制特異点は、インスタントン増殖と支配Young図の再編成が起こる臨界点に対応する。この解釈の有限中心電荷およびAGT外のCFTへの拡張は未確定である。",
+      "curiosity": "大中心電荷の相関関数に現れる禁制特異点は、どの微視的自由度が切り替わる相転移なのか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "Virasoro零点、AGT写像、低フガシティ有効作用、複素鞍点、高フガシティ極限、付録を確認した。遷移近傍と対称鞍点の細流選択は未解決である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 7,
+      "scoreReasons": {
+        "broadImpact": "2次元CFTの固有状態熱化を、超対称ゲージ理論のインスタントン相転移へ写すため、量子熱化と数理的ゲージ理論を結ぶ。対応はAGTが使える模型と重軽極限に依存する。",
+        "categoryImpact": "禁制特異点を単なる半古典近似の病理ではなく、Nekrasov分配関数の相転移として同定した。臨界フガシティが特異点と一致する具体的機構を与える。",
+        "originality": "AGT対応を通じ、異なる形のひも状Young図が支配する二相とインスタントン増殖を熱化相関関数へ対応させる。意外な分野間接続が中心的な新規性である。",
+        "technicalStrength": "有限cの零点計算、Young図全列挙、複素鞍点の解析解が臨界値を支持する。ただし積分路の解析接続を仮定し、より優勢な対称鞍点の除外はLefschetz細流による推論に留まる。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13246v1",
+        "https://arxiv.org/pdf/2608.13246v1"
+      ],
+      "submissionType": "new",
+      "title": "Phase transition from eigenstate thermalization: forbidden singularity and instanton proliferation via AGT correspondence",
+      "titleJa": "固有状態熱化が生む相転移：AGT対応による禁制特異点とインスタントン増殖",
+      "totalScore": 69,
+      "url": "https://arxiv.org/abs/2608.13246"
+    },
+    {
+      "abstractLines": [
+        "ホログラフィックCFTの部分的エンタングル熱状態で、部分系密度行列のスタビライザー複雑性を調べる。",
+        "固定エネルギー境界条件のもと、Wigner負値性を古典回路シミュレーションの資源尺度として解析した。",
+        "パイソンの昼食がなければ複雑性はO(1)だが、存在すれば二つの極値面の面積差に従って指数的に増大する。"
+      ],
+      "arxivId": "2608.12472",
+      "arxivVersion": "v1",
+      "assessment": "幾何学的な再構成障壁にWigner負値性という操作的意味を与え、面積公式まで示した点が有用である。擬似乱雑性仮定の検証と他の状態族への拡張が必要となる。",
+      "authors": [
+        "Abhirup Bhattacharya",
+        "Jatin Narde",
+        "Onkar Parrikar",
+        "Suprakash Paul"
+      ],
+      "concept": "部分系状態のWigner負値性をマジック単調量として選び、極値面間の面積障壁を古典シミュレーション費用の指数へ写す。",
+      "conclusion": "パイソンの昼食を構成する二つの極値面の面積差は、部分的にもつれた熱的状態の部分系におけるスタビライザー複雑性を指数的に増幅する。この結論は、共形場理論のスペクトルと重い演算子挿入の擬似乱雑性に依存する。",
+      "curiosity": "バルク内部のパイソンの昼食が境界状態の準備や模擬計算を難しくする度合いを、操作的な資源量で測れるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "PET状態、離散Wigner関数、Haar平均、相対負値性、分散、積分表示、SYK試験、議論を確認した。Dirichlet境界条件と擬似乱雑性を外した一般化は未解決である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 6,
+      "scoreReasons": {
+        "broadImpact": "境界状態の古典シミュレーション費用をバルク極値面の面積差へ結ぶため、量子情報とブラックホール内部再構成を橋渡しする。擬似乱雑性の仮定が適用対象を狭める。",
+        "categoryImpact": "パイソンの昼食と呼ばれる幾何がある場合に、部分系のスタビライザー複雑性が指数増大する定量式を与える。バルク再構成の障壁に、操作的なマジック尺度を対応させた。",
+        "originality": "PET状態のWigner負値性を外側極値面と最小極値面の面積差で表す接続が新しい。複雑性と極値面を結ぶ既存像を、古典シミュレーション資源へ具体化した。",
+        "technicalStrength": "Haar平均のレプリカ計算を積分表示で再検証し、分散抑制とSYK数値試験も示す。重い演算子の独立Gauss乱数性と狭い微正準窓が中心仮定である。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 17,
+        "originality": 18,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.12472v1",
+        "https://arxiv.org/pdf/2608.12472v1"
+      ],
+      "submissionType": "new",
+      "title": "Stabilizer complexity and the Python's lunch",
+      "titleJa": "スタビライザー複雑性とパイソンの昼食",
+      "totalScore": 70,
+      "url": "https://arxiv.org/abs/2608.12472"
+    },
+    {
+      "abstractLines": [
+        "有限幅の帯状領域に置かれたMaxwell–Chern–Simons理論で、端の電流代数とCasimir相互作用を同時に調べる。",
+        "Symanzikの境界場理論を用い、局所境界汎関数から境界条件、Ward恒等式、バルク反射係数を導出した。",
+        "両端には逆符号のU(1)電流代数が生じ、位相質量が大きな幅でCasimir力をYukawa型に抑制する。"
+      ],
+      "arxivId": "2608.12622",
+      "arxivVersion": "v1",
+      "assessment": "位相的境界データと有限幅のCasimir力を一つの変分問題から導いた点にまとまりがある。一般形状や高階境界相互作用に対する安定性は扱われていない。",
+      "authors": [
+        "Nicola Maggiore"
+      ],
+      "concept": "局所境界作用を変分原理とWard恒等式で絞り、その結合を端電流の準位とバルク波の反射係数の双方へ用いる。",
+      "conclusion": "端のKac–Moody準位はChern–Simons結合と向きで決まり、端間力はMaxwell極限で長距離、位相質量があるとYukawa抑制される。結論は採用した境界演算子の打ち切り内で成立する。",
+      "curiosity": "位相的な端電流の異常流入と、有限幅を介する動力学的Casimir力は同じ境界条件からどう結び付くか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "境界変分、Ward恒等式、電流代数、物理偏極の整合条件、反射振幅、Casimir行列式、極限、付録を確認した。表面極領域の離散スペクトルは未評価である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 9,
+      "scoreReasons": {
+        "broadImpact": "境界電流代数とCasimir力を同じ境界データから導くため、位相的物質と境界量子場理論に応用可能である。解析対象は2次までの局所境界汎関数と帯状幾何に限られる。",
+        "categoryImpact": "Symanzik境界形式で許容境界条件、Ward恒等式、反射係数、有限相互作用エネルギーを統一した。位相的な準位とバルク質量の動力学的効果を明確に分離する。",
+        "originality": "向きが反対の二つのU(1)端電流代数と散乱行列式によるCasimir相互作用を同一の境界結合から得る。既知のChern–Simons端状態を有限幅相互作用へ拡張した。",
+        "technicalStrength": "変分条件、正準電荷代数、物理偏極の因子化、Maxwell・純CS極限、数値漸近が相互に整合する。表面極を持つ領域と非反転対称境界の離散寄与は未計算である。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 16,
+        "originality": 15,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.12622v1",
+        "https://arxiv.org/pdf/2608.12622v1"
+      ],
+      "submissionType": "new",
+      "title": "Edge physics and the Casimir interaction in Maxwell--Chern--Simons theory on a strip",
+      "titleJa": "帯状領域上のMaxwell–Chern–Simons理論における端の物理とCasimir相互作用",
+      "totalScore": 64,
+      "url": "https://arxiv.org/abs/2608.12622"
+    },
+    {
+      "abstractLines": [
+        "固立量子系の固有状態熱化から、Lee–Yang型の熱力学的相転移が生じる可能性を調べる。",
+        "ホログラフィックCFTの自己相関を、共形写像を介して相互作用するインスタントン気体の分配関数へ対応させた。",
+        "中心電荷が無限大になると複素零点が禁制特異点へ接近し、その通過で低・高フガシティ相のスケーリングが切り替わる。"
+      ],
+      "arxivId": "2608.13174",
+      "arxivVersion": "v1",
+      "assessment": "固有状態相関の特異点へLee–Yang零点という明瞭な診断を与える。一方、対応の微視的導出と有限中心電荷での振る舞いは、より長い解析による裏付けを要する。",
+      "authors": [
+        "Yongjiang Xu",
+        "Weixin Sun",
+        "Chushun Tian",
+        "Huajia Wang"
+      ],
+      "concept": "虚時間をインスタントンフガシティへ共形写像し、中心電荷を有効体積とみなして、分配関数の零点凝縮を禁制特異点へ対応させる。",
+      "conclusion": "大中心電荷のホログラフィックCFTでは、禁制特異点がインスタントン気体の低・高フガシティ相を分けるLee–Yang臨界点として現れる。有限サイズでの相転移像は今後の検証対象である。",
+      "curiosity": "熱浴を持たない固有状態の相関関数に、Lee–Yang零点が実軸を挟む相転移をどう定義できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "重軽極限、AGT写像、低・高フガシティ解析、複素鞍点、有限c零点、一般化の議論を確認した。作用相殺と鞍点方程式の詳証は同時発表論文に委ねられる。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 8,
+      "scoreReasons": {
+        "broadImpact": "固立量子系の熱化をLee–Yang零点とインスタントン気体で記述し、量子統計とホログラフィーを接続する。結果はホログラフィックCFTと大中心電荷極限が中心である。",
+        "categoryImpact": "自己相関の禁制特異点を、仮想ゲージ理論分配関数の零点が実軸へ接近する相転移として再解釈した。固有状態熱化に相構造を持ち込む明示例となる。",
+        "originality": "虚時間の共形写像、中心電荷と体積、インスタントンフガシティを対応させ、Lee–Yang機構を固有状態期待値へ移す点が独創的である。",
+        "technicalStrength": "複素鞍点の臨界値をVirasoroブロックの有限c零点と照合し、高フガシティ極限も交差対称性と一致する。作用の相殺証明と鞍点導出の詳細は同時発表論文に委ねる。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 16,
+        "originality": 17,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13174v1",
+        "https://arxiv.org/pdf/2608.13174v1"
+      ],
+      "submissionType": "new",
+      "title": "Lee-Yang paradigm of phase transition in eigenstate thermalized systems",
+      "titleJa": "固有状態熱化系における相転移のLee–Yang描像",
+      "totalScore": 64,
+      "url": "https://arxiv.org/abs/2608.13174"
+    },
+    {
+      "abstractLines": [
+        "Virasoro最小模型を実現する3次元rank-0超共形場理論を、穴あきレンズ空間上のM5ブレーンから構成する。",
+        "既知の理論T_nをL(2n+3,2)から導き、L(2n+3,1)に対応する3次元N=2可換ゲージ理論族を提案した。",
+        "その赤外相は最小模型のモジュラーテンソル圏のGalois軌道にあるユニタリ元を実現し、自己鏡映固定点も予想される。"
+      ],
+      "arxivId": "2608.13300",
+      "arxivVersion": "v1",
+      "assessment": "3d–3d対応の幾何学からrank-0理論と最小模型の関係を体系化する構成である。新しい理論族と自己鏡映性には予想が含まれ、赤外同値の追加検証が必要となる。",
+      "authors": [
+        "Sungjoon Kim"
+      ],
+      "concept": "二枚のM5ブレーンを頂点を除いたレンズ空間へ巻き、3次元可換ゲージ理論の赤外位相を多様体の位相不変量へ対応させる。",
+      "conclusion": "穴あきレンズ空間から既知のT_nを導出し、別のレンズ空間族がユニタリなGalois共役を与えると提案する。自己鏡映固定点の部分は両手性に基づく予想である。",
+      "curiosity": "レンズ空間の位相と穴のデータは、rank-0超共形固定点と最小模型のGalois共役をどう選別するか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "DGG手順、二つの最小三角形分割、CS行列、Galois軌道、自己鏡映条件、指数検査、付録の模型例を確認した。可約平坦接続の役割は未解決である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 10,
+      "scoreReasons": {
+        "broadImpact": "3次元超共形場理論、3次元多様体、Virasoro最小模型の対応を広げるが、直接の波及先はrank-0理論とモジュラーテンソル圏に集中する。",
+        "categoryImpact": "既知のGang–Kim–Stubbs理論を穴あきL(2n+3,2)上のM5ブレーンから導き、L(2n+3,1)に対応する可換ゲージ理論族を提案した。3d–3d対応の具体例を拡張する。",
+        "originality": "レンズ空間の穴あけとGalois軌道のユニタリ元を結び、両手性条件から自己鏡映rank-0固定点を予想する。既存構成を別のレンズ空間族へ非自明に移した。",
+        "technicalStrength": "最小三角形分割からCS行列とモノポール超ポテンシャルを導き、既知のn≤4を再現し、自己鏡映指数をq¹⁰まで検査する。可約平坦接続を捉える仕組みは未解明である。"
+      },
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13300v1",
+        "https://arxiv.org/pdf/2608.13300v1"
+      ],
+      "submissionType": "new",
+      "title": "3d $\\mathcal{N}=$ 4 rank-0 SCFT from punctured lens space",
+      "titleJa": "穴あきレンズ空間から得られる3次元$\\mathcal{N}=4$ランク0 SCFT",
+      "totalScore": 64,
+      "url": "https://arxiv.org/abs/2608.13300"
+    },
+    {
+      "abstractLines": [
+        "5次元N=2 SCFTを位相的円板または半紡錘へコンパクト化した3次元理論の重力双対を探る。",
+        "三つのベクトル多重項を伴うF(4)ゲージ超重力で、8超電荷を保つAdS4×Σ解を構成してmassive IIAへ持ち上げた。",
+        "D4–D8ブレーン系として解釈でき、AdS6へ漸近して自由エネルギーが発散する欠陥解と、有限自由エネルギー解が得られる。"
+      ],
+      "arxivId": "2608.12850",
+      "arxivVersion": "v1",
+      "assessment": "多数の超対称解を10次元解釈と自由エネルギーまで整理した資料価値がある。新規性は既知部分模型の解空間拡張が中心で、双対SCFTの独立な照合は限定的である。",
+      "authors": [
+        "Patharadanai Nuchino",
+        "Parinya Karndumri"
+      ],
+      "concept": "F(4)超重力の可換部分模型でBPS流を解き、円板の縮退円と磁束を10次元D4–D8ブレーンの巻き付き幾何へ持ち上げる。",
+      "conclusion": "半紡錘上のD4–D8系から、有限自由エネルギーを持つ3次元SCFT候補とAdS6漸近の共形欠陥解が得られる。双対理論の演算子データ同定は残されている。",
+      "curiosity": "境界にU(1)ホロノミーを持つ半紡錘へのコンパクト化は、どの3次元SCFTと5次元共形欠陥を生むか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "二つの対称性のBPS解、正則範囲、Killingスピノル、massive IIA持ち上げ、自由エネルギー、既知解との対応、付録を確認した。完全な次元間流は未構成である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 11,
+      "scoreReasons": {
+        "broadImpact": "5次元SCFTの半紡錘コンパクト化と3次元SCFTの重力双対を供給するが、応用範囲は特定のF(4)超重力部分模型とD4–D8系に限られる。",
+        "categoryImpact": "物質結合F(4)ゲージ超重力で8超電荷を保つAdS4×Σ解を複数構成し、10次元へ持ち上げた。有限自由エネルギー解と共形欠陥解を区別する有用な拡張である。",
+        "originality": "既知の半紡錘解をU(1)×U(1)部分模型内で拡張し、新しい解のクラスを得る。基本手法はBPS方程式の求解と既知のmassive IIA埋め込みである。",
+        "technicalStrength": "BPS条件と全場の方程式を照合し、正則範囲、Euler標数、Killingスピノル、10次元持ち上げ、自由エネルギーを確認する。完全な繰り込み群流と双対SCFTデータは未構成である。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 15,
+        "originality": 13,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.12850v1",
+        "https://arxiv.org/pdf/2608.12850v1"
+      ],
+      "submissionType": "new",
+      "title": "D4-branes wrapped on topological disks from matter-coupled F(4) gauged supergravity",
+      "titleJa": "物質結合F(4)ゲージ超重力から得られる位相的円板上のD4ブレーン",
+      "totalScore": 58,
+      "url": "https://arxiv.org/abs/2608.12850"
+    },
+    {
+      "abstractLines": [
+        "回転QGPの閉じ込め温度が静止系と共回転系で逆に変化する座標系依存性を、より一般の回転背景で調べる。",
+        "等角運動量の制限を外した一般Myers–Perryブラックホールを用い、共回転観測者が測る局所温度を解析した。",
+        "球対称性の破れにより温度は角度依存となり、回転速度に対して減少、増加、または非単調に変化し得る。"
+      ],
+      "arxivId": "2608.13301",
+      "arxivVersion": "v1",
+      "assessment": "回転温度の見掛けの矛盾を非対称な一般回転背景まで広げ、角度依存を具体化した。新規性は既存の座標系解釈の拡張であり、QCDとの定量比較は今後に残る。",
+      "authors": [
+        "Nelson R. F. Braga",
+        "Alexsandre L. Ferreira Jr"
+      ],
+      "concept": "二つの独立角運動量を持つMyers–Perry幾何で、局所的な赤方偏移温度を共回転観測者ごとに評価し、閉じ込め条件へ代入する。",
+      "conclusion": "回転下の臨界温度は座標系だけでなく共回転観測者の角位置にも依存し、単調性さえ一意でない。実在QGPへの定量適用はホログラフィック模型依存性を伴う。",
+      "curiosity": "回転プラズマの臨界温度に相反する傾向は、観測者の座標系と角度を指定すれば一つの描像へ統合できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "Myers–Perry熱力学、Hawking–Page作用、静止・共回転温度、低速・光速近傍展開、格子比較、結論を確認した。境界は三次元球面で、実在QCDとの定量誤差は未評価である。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 12,
+      "scoreReasons": {
+        "broadImpact": "回転QGPの閉じ込め温度に関する格子計算とホログラフィーの見掛けの不一致を座標系で整理する。現象論への接続には局所温度の観測量への翻訳が必要である。",
+        "categoryImpact": "等角運動量の対称な場合から一般Myers–Perryブラックホールへ拡張し、共回転観測者の局所臨界温度が角度依存になることを示す。既存結果の有用な一般化である。",
+        "originality": "球対称性を破った二つの独立回転により、温度が回転速度に対して増加、減少、非単調の全てを示し得る。中心原理である座標系依存性は先行研究を継承する。",
+        "technicalStrength": "一般Myers–Perry解の熱力学量とHawking–Page作用を導き、静止系と共回転系の温度を低速域および光速近傍で解析する。境界が三次元球面である模型と実在QCDとの定量誤差は残る。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 14,
+        "originality": 12,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13301v1",
+        "https://arxiv.org/pdf/2608.13301v1"
+      ],
+      "submissionType": "new",
+      "title": "Frame-dependency of the confinement temperature in a strongly-coupled plasma under rotation: a holographic description",
+      "titleJa": "回転する強結合プラズマの閉じ込め温度の座標系依存性：ホログラフィック記述",
+      "totalScore": 57,
+      "url": "https://arxiv.org/abs/2608.13301"
+    },
+    {
+      "abstractLines": [
+        "任意次元・任意ポテンシャルの単一スカラー場について、格子正則化した真空振幅の新しい計算法を提案する。",
+        "経路積分の運動指数因子を全格子点置換について対称化し、得られた式へWaring分解を適用する。",
+        "この操作により真空振幅を厳密評価する枠組みを与えるが、計算量や連続極限での性能は示されていない。"
+      ],
+      "arxivId": "2608.13117",
+      "arxivVersion": "v1",
+      "assessment": "経路積分を対称多項式の問題へ移す着想には独自性がある。ただし実用上の複雑性と既知解による検証が明確でなく、任意次元・任意ポテンシャルという射程を支える証拠は限定的である。",
+      "authors": [
+        "Vadim Asnin"
+      ],
+      "concept": "格子点ラベルの置換対称性を運動項へ人工的に回復し、対称多項式を冪和のWaring分解へ移して積分を因子化する。",
+      "conclusion": "格子点置換とWaring分解に基づく真空振幅の形式的な厳密計算法が提示された。大格子での計算量、分解の安定性、連続極限への到達可能性は不明である。",
+      "curiosity": "相互作用ポテンシャルが任意でも、格子経路積分を数値標本化なしの有限な代数操作へ還元できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 13,
+      "scoreReasons": {
+        "broadImpact": "任意次元・任意ポテンシャルの格子スカラー場を厳密に扱えるなら広い用途があるが、計算量と連続極限への実用性が示されていない。",
+        "categoryImpact": "真空振幅を格子点置換による運動項の対称化とWaring分解へ帰着する計算法を提案する。標準的なモンテカルロ法に代わる可能性はあるが検証範囲が狭い。",
+        "originality": "格子点の全置換で運動指数因子を対称化し、多項式のWaring分解を用いる組合せは特徴的である。格子経路積分そのものは既存の枠組みを使う。",
+        "technicalStrength": "任意ポテンシャルへの形式的手順を示す一方、全置換の階乗的増大、分解の構成可能性、既知可解模型との数値比較が明示されず、実効的な厳密評価かは未確定である。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 12,
+        "originality": 15,
+        "technicalStrength": 10
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13117v1"
+      ],
+      "submissionType": "new",
+      "title": "Exact Evaluation of Lattice-Regularized Scalar Field Vacuum Amplitude via Site Permutations",
+      "titleJa": "格子点置換による格子正則化スカラー場の真空振幅の厳密評価",
+      "totalScore": 49,
+      "url": "https://arxiv.org/abs/2608.13117"
+    },
+    {
+      "abstractLines": [
+        "スカラー場とAbelゲージ場を含む広いD次元重力理論で、単一変数に依存する時空解を体系化する。",
+        "スカラー多様体の幾何を組み込んだ一般形式を構成し、N=2およびN=8の4次元超重力などへ適用した。",
+        "非自明なスカラー場とゲージ場を持つ四族の計量が得られるが、正則性や安定性による物理的分類は扱われていない。"
+      ],
+      "arxivId": "2608.13155",
+      "arxivVersion": "v1",
+      "assessment": "異なる超重力の解析解をスカラー幾何で統一する実用的な形式である。物理的に新しい時空の同定よりも解生成法の整理が中心で、正則性や安定性の分析を欠く。",
+      "authors": [
+        "W. A. Sabra",
+        "R. Slim"
+      ],
+      "concept": "場の依存性を一変数へ制限し、スカラー多様体の測地的構造とゲージ結合を用いて運動方程式を可積分な形へ整理する。",
+      "conclusion": "広いEinstein–スカラー–Abel系に共通する四族の一変数解が構成され、複数の超重力模型で具体化された。解の大域構造と物理的安定性による選別は残る。",
+      "curiosity": "異なる超重力模型の単一変数解を、スカラー標的空間の幾何だけでどこまで統一して生成できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 14,
+      "scoreReasons": {
+        "broadImpact": "多様な重力・超重力模型の解析解を統一的に生成する道具だが、物理的境界条件や具体的現象への接続は提示された応用例に限られる。",
+        "categoryImpact": "スカラー場とAbelゲージ場を含むD次元理論で、単一変数に依存する計量を四族構成する。N=2およびN=8超重力への適用は解のカタログを広げる。",
+        "originality": "スカラー多様体の幾何を用いて複数模型の一変数解を同じ形式にまとめる。中心的な次元還元的仮定と超重力への適用は既存手法に近い。",
+        "technicalStrength": "一般形式を複数の超重力打ち切りとSL(N,R)/SO(N,R)余剰類へ適用し、明示解を得る。正則性、保存電荷、安定性による物理解の選別は示されていない。"
+      },
+      "scores": {
+        "broadImpact": 10,
+        "categoryImpact": 13,
+        "originality": 11,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13155v1"
+      ],
+      "submissionType": "new",
+      "title": "Single-Variable Solutions in Supergravity",
+      "titleJa": "超重力における単一変数解",
+      "totalScore": 48,
+      "url": "https://arxiv.org/abs/2608.13155"
+    },
+    {
+      "abstractLines": [
+        "線積分から密度を戻すRadon変換を、有限速度の粒子散乱からポテンシャルを復元する問題へ一般化する。",
+        "復元に必要な粒子速度の下限を、単純な理論例と機械学習によるポテンシャル復元手順で調べた。",
+        "速度閾値がポテンシャルのパラメータにどう依存するかを探索するが、一般的な復元可能条件は提示されていない。"
+      ],
+      "arxivId": "2608.13105",
+      "arxivVersion": "v1",
+      "assessment": "逆Radon問題を有限速度散乱へ広げる問いは明快だが、現状は単純例と学習実験による探索に留まる。復元限界を支える解析的条件と定量的な誤差検証が不足している。",
+      "authors": [
+        "Matvei Fedin",
+        "Kirill Gubarev",
+        "Andrey Morozov"
+      ],
+      "concept": "直線積分の逆変換を基準に、有限速度軌道が作る非線形な測定写像を学習器へ与え、復元が破綻する速度を探索する。",
+      "conclusion": "有限速度散乱からのポテンシャル復元について、速度下限を調べる理論例と機械学習手順が示された。一般のポテンシャルに対する一意性と安定性の条件は未解決である。",
+      "curiosity": "粒子がポテンシャル内で十分に曲げられる低速領域でも、散乱データから元の空間構造を一意に復元できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 15,
+      "scoreReasons": {
+        "broadImpact": "有限速度粒子からポテンシャルを復元する問題は散乱逆問題とトモグラフィーに関係するが、物理模型と測定設定が単純例に留まり、波及経路はまだ探索的である。",
+        "categoryImpact": "粒子速度の下限をポテンシャルのパラメータと結び付ける問いを設定し、理論例と機械学習復元を組み合わせる。hep-thの中心課題への前進は限定的である。",
+        "originality": "Radon逆変換と有限速度の古典粒子散乱の間を補間し、復元可能性の速度閾値を問う設定には新味がある。手段となる機械学習自体は標準的である。",
+        "technicalStrength": "単純な理論例と機械学習手順でポテンシャル復元を試みるが、識別可能性の定理、誤差評価、基準法との比較、訓練分布外での頑健性は明示されていない。"
+      },
+      "scores": {
+        "broadImpact": 11,
+        "categoryImpact": 10,
+        "originality": 12,
+        "technicalStrength": 9
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13105v1"
+      ],
+      "submissionType": "new",
+      "title": "Limits of the inverse scattering problem",
+      "titleJa": "逆散乱問題の限界",
+      "totalScore": 42,
+      "url": "https://arxiv.org/abs/2608.13105"
+    }
+  ],
+  "reportDate": "2026-08-14",
+  "schemaVersion": "1.4",
+  "slug": "hep-th",
+  "totalNew": 15
+}
