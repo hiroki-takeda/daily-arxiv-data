@@ -102,8 +102,10 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
     assert.doesNotMatch(pendingRow, /class="paper-original-title"/);
   }
 
-  const lower = report.papers[10];
-  await context.loadReport(category, lower.arxivId);
+  const lower = report.papers.find((paper) => paper.arxivId === lowerSummary.arxivId);
+  assert.ok(lower, `the archived ${category} report must contain its first lower-ranked summary`);
+  assert.equal(lower.rank, lowerSummary.rank);
+  await context.loadReport(category, lowerSummary.arxivId);
   assert.match(elements["#app"].innerHTML, new RegExp(lower.titleJa.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   const loadedRow = context.paperRow(lowerSummary, "report");
   assert.doesNotMatch(loadedRow, /pending-detail/);
