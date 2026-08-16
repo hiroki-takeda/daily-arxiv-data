@@ -127,6 +127,19 @@ test("official e-print parser accepts a gzip-compressed single TeX source", () =
   assert.deepEqual(files[0].content, source);
 });
 
+test("official e-print parser normalizes only the known legacy quote controls", () => {
+  const tarSource = Buffer.from("\\documentclass{article}\n%% remove \u0093Numbered\u0094 here\n", "utf8");
+  const tarFiles = parseArxivSourceArchive(gzipSync(makeTar([
+    { path: "main.tex", content: tarSource },
+  ])), "2607.00001");
+  assert.equal(tarFiles[0].content.toString("utf8"), "\\documentclass{article}\n%% remove “Numbered” here\n");
+  assert.equal(tarFiles[0].content.includes(Buffer.from("\u0093", "utf8")), false);
+  assert.equal(tarFiles[0].content.includes(Buffer.from("\u0094", "utf8")), false);
+
+  const singleFiles = parseArxivSourceArchive(gzipSync(tarSource), "2607.00001");
+  assert.equal(singleFiles[0].content.toString("utf8"), "\\documentclass{article}\n%% remove “Numbered” here\n");
+});
+
 test("official e-print parser rejects archive traversal and malformed IDs", () => {
   const archive = gzipSync(makeTar([
     { path: "../escape.tex", content: "\\documentclass{article}\n" },
@@ -145,12 +158,19 @@ test("official e-print parser rejects invalid UTF-8 and text control characters"
   const controlCharacter = gzipSync(makeTar([
     { path: "main.tex", content: Buffer.from("\\documentclass{article}\nBad\u001bText\n", "utf8") },
   ]));
+  const unsupportedC1 = gzipSync(makeTar([
+    { path: "main.tex", content: Buffer.from("\\documentclass{article}\nBad\u009bText\n", "utf8") },
+  ]));
   assert.throws(
     () => parseArxivSourceArchive(invalidUtf8, "2607.00001"),
     (error) => /valid UTF-8/u.test(error.message) && isArxivSourceFormatUnsupported(error),
   );
   assert.throws(
     () => parseArxivSourceArchive(controlCharacter, "2607.00001"),
+    (error) => /control characters/u.test(error.message) && isArxivSourceFormatUnsupported(error),
+  );
+  assert.throws(
+    () => parseArxivSourceArchive(unsupportedC1, "2607.00001"),
     (error) => /control characters/u.test(error.message) && isArxivSourceFormatUnsupported(error),
   );
 });
@@ -385,6 +405,12 @@ test("source writer publishes only a complete atomically renamed directory", (t)
   ], "2607.00002", { env }));
   assert.equal(existsSync(`${runRoot}/sources/2607.00002`), false);
   assert.deepEqual(readdirSync(`${runRoot}/sources`).sort(), ["2607.00001"]);
+
+  const normalized = writeArxivSourceFiles([
+    { path: "main.tex", content: Buffer.from("\\documentclass{article}\n%% \u0093quoted\u0094\n", "utf8") },
+  ], "2607.00003", { env });
+  assert.equal(readFileSync(normalized.files[0], "utf8"), "\\documentclass{article}\n%% “quoted”\n");
+  assert.deepEqual(readdirSync(`${runRoot}/sources`).sort(), ["2607.00001", "2607.00003"]);
 });
 
 test("source pacing state is atomically replaced before a fetch attempt", async (t) => {

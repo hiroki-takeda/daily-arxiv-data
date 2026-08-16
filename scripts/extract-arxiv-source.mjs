@@ -41,6 +41,10 @@ const MAX_SOURCE_REQUEST_TIMEOUT_MS = 120_000;
 const ARXIV_SOURCE_FORMAT_UNSUPPORTED_CODE = "ARXIV_SOURCE_FORMAT_UNSUPPORTED";
 const ARXIV_SOURCE_UNAVAILABLE_CODE = "ARXIV_SOURCE_UNAVAILABLE";
 const DISALLOWED_TEXT_CONTROLS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/u;
+const LEGACY_SOURCE_PUNCTUATION = Object.freeze(new Map([
+  ["\u0093", "\u201c"],
+  ["\u0094", "\u201d"],
+]));
 const TEXT_EXTENSIONS = new Set([
   ".tex", ".ltx", ".bib", ".bbl", ".txt", ".md",
   ".cls", ".sty", ".def", ".cfg", ".ins", ".dtx",
@@ -177,16 +181,23 @@ function parsePaxPath(payload) {
 }
 
 function decodeStrictSourceText(bytes, label) {
-  let text;
+  let decoded;
   try {
-    text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     formatUnsupported(`arXiv source text is not valid UTF-8: ${label}.`);
+  }
+  let text = decoded;
+  for (const [legacy, replacement] of LEGACY_SOURCE_PUNCTUATION) {
+    if (text.includes(legacy)) text = text.replaceAll(legacy, replacement);
   }
   if (DISALLOWED_TEXT_CONTROLS.test(text)) {
     formatUnsupported(`arXiv source text contains disallowed control characters: ${label}.`);
   }
-  return text;
+  return Object.freeze({
+    text,
+    content: text === decoded ? Buffer.from(bytes) : Buffer.from(text, "utf8"),
+  });
 }
 
 function looksLikeTexText(text) {
@@ -195,22 +206,22 @@ function looksLikeTexText(text) {
   return /\\(?:documentclass|begin\s*\{document\}|section\s*\{|title\s*\{)/u.test(sample);
 }
 
-function eligibleTextFile(path, content, { skipMalformedOptionalBibliography = false } = {}) {
+function normalizedTextFile(path, content, { skipMalformedOptionalBibliography = false } = {}) {
   const extension = extname(path).toLocaleLowerCase("en-US");
   if (TEXT_EXTENSIONS.has(extension)) {
     try {
-      decodeStrictSourceText(content, path);
+      return decodeStrictSourceText(content, path).content;
     } catch (error) {
-      if (skipMalformedOptionalBibliography && OPTIONAL_BIBLIOGRAPHY_EXTENSIONS.has(extension)) return false;
+      if (skipMalformedOptionalBibliography && OPTIONAL_BIBLIOGRAPHY_EXTENSIONS.has(extension)) return null;
       throw error;
     }
-    return true;
   }
-  if (extension !== "") return false;
+  if (extension !== "") return null;
   try {
-    return looksLikeTexText(decodeStrictSourceText(content, path));
+    const decoded = decodeStrictSourceText(content, path);
+    return looksLikeTexText(decoded.text) ? decoded.content : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -255,14 +266,19 @@ function parseTarArchive(buffer) {
         if (TEXT_EXTENSIONS.has(extension) && content.length > MAX_SOURCE_FILE_BYTES) {
           fail(`arXiv source text file is too large: ${path}.`);
         }
-        if (eligibleTextFile(path, content, { skipMalformedOptionalBibliography: true })) {
-          if (content.length > MAX_SOURCE_FILE_BYTES) fail(`arXiv source text file is too large: ${path}.`);
+        const normalizedContent = normalizedTextFile(
+          path,
+          content,
+          { skipMalformedOptionalBibliography: true },
+        );
+        if (normalizedContent !== null) {
+          if (normalizedContent.length > MAX_SOURCE_FILE_BYTES) fail(`arXiv source text file is too large: ${path}.`);
           if (seen.has(path)) fail(`arXiv source archive repeats a text path: ${path}.`);
           seen.add(path);
-          totalExtracted += content.length;
+          totalExtracted += normalizedContent.length;
           if (totalExtracted > MAX_EXTRACTED_BYTES) fail("arXiv source archive contains too much text.");
           if (files.length >= MAX_TEXT_FILES) fail("arXiv source archive contains too many text files.");
-          files.push(Object.freeze({ path, content: Buffer.from(content) }));
+          files.push(Object.freeze({ path, content: normalizedContent }));
         }
       } else if (!["5", "1", "2", "3", "4", "6", "7", "K"].includes(type)) {
         fail(`arXiv source archive contains unsupported tar entry type ${JSON.stringify(type)}.`);
@@ -300,11 +316,14 @@ export function parseArxivSourceArchive(compressed, arxivId) {
     }
     if (isTar) return Object.freeze(parseTarArchive(unpacked));
   }
-  const sourceText = decodeStrictSourceText(unpacked, `${arxivId}.tex`);
-  if (!looksLikeTexText(sourceText)) {
+  const source = decodeStrictSourceText(unpacked, `${arxivId}.tex`);
+  if (!looksLikeTexText(source.text)) {
     formatUnsupported("arXiv source payload is neither a supported tar archive nor a TeX source.");
   }
-  return Object.freeze([Object.freeze({ path: `${arxivId}.tex`, content: Buffer.from(unpacked) })]);
+  if (source.content.length > MAX_SOURCE_FILE_BYTES) {
+    fail(`arXiv source text file is too large: ${arxivId}.tex.`);
+  }
+  return Object.freeze([Object.freeze({ path: `${arxivId}.tex`, content: source.content })]);
 }
 
 async function readBoundedBody(response) {
@@ -632,9 +651,11 @@ function normalizeSourceFiles(files) {
     }
     const path = safeArchivePath(file.path);
     if (seen.has(path)) fail(`Parsed arXiv source files repeat a path: ${path}.`);
-    const content = Buffer.from(file.content);
+    const sourceContent = Buffer.from(file.content);
+    if (sourceContent.length > MAX_SOURCE_FILE_BYTES) fail(`arXiv source text file is too large: ${path}.`);
+    const content = normalizedTextFile(path, sourceContent);
+    if (content === null) fail(`Parsed arXiv source file is not supported text: ${path}.`);
     if (content.length > MAX_SOURCE_FILE_BYTES) fail(`arXiv source text file is too large: ${path}.`);
-    if (!eligibleTextFile(path, content)) fail(`Parsed arXiv source file is not supported text: ${path}.`);
     totalBytes += content.length;
     if (totalBytes > MAX_EXTRACTED_BYTES) fail("Parsed arXiv source files contain too much text.");
     seen.add(path);
