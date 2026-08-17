@@ -1,0 +1,211 @@
+{
+  "audit": {
+    "announcementDate": "2026-08-17",
+    "authorPolicy": "著者の知名度、所属、受賞歴、引用数、キャリア段階を採点に使用しない",
+    "evaluationPolicy": "著者属性を用いず、論文に記載された科学的内容だけを評価",
+    "fullTextEvaluatedCount": 4,
+    "fullTextPolicy": "全abstract比較後の暫定上位min(12,totalNew)を固定し、最終上位min(10,totalNew)の公式v1全文を確認",
+    "generatedAtJst": "2026-08-17T12:00:23+09:00",
+    "listingUrl": "https://arxiv.org/list/gr-qc/pastweek",
+    "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpact、arXiv IDの順",
+    "scoreRubric": "Daily arXiv rubric 3.0：broadImpact、categoryImpact、originality、technicalStrengthを各0〜25の整数で採点し、高得点には本文中の具体的根拠を要求",
+    "selectionRule": "primary category gr-qc のNew submission v1を全件評価し、Cross submissionを除外",
+    "sourceCounts": {
+      "crosslistsExcluded": 11,
+      "newPrimary": 4,
+      "titleAuthorAbstractEvaluated": 4
+    }
+  },
+  "crosslistsExcluded": 11,
+  "evaluatedCount": 4,
+  "evaluationRun": {
+    "modelDisplayName": "GPT-5.6-Sol",
+    "modelId": "gpt-5.6-sol",
+    "modelSelectionVerified": true,
+    "reasoningEffort": "high",
+    "runId": "run-20260817T023005Z-31f84d7bb2e6"
+  },
+  "fullTextEvaluatedCount": 4,
+  "label": "General Relativity and Quantum Cosmology",
+  "papers": [
+    {
+      "abstractLines": [
+        "修正重力の追加自由度が将来ヌル無限遠へ達すると、一般相対論の漸近平坦な枠組みが保たれるとは限らない。",
+        "任意の応力エネルギーテンソルについてBondi–Sachs階層を積分し、一般的なスカラー・ベクトル・テンソル理論の各演算子を減衰条件と照合した。",
+        "許容される結合関数の条件を表にまとめ、条件を満たす理論群ではBMS群が漸近対称群になると結論した。"
+      ],
+      "arxivId": "2608.14204",
+      "arxivVersion": "v1",
+      "assessment": "模型ごとに分散していたヌル無限遠の整合条件を、作用の結合関数へ直接適用できる表へ集約した点が強い。適用範囲は二階方程式の理論群と特定の漸近真空に限定される。",
+      "authors": [
+        "David Maibach"
+      ],
+      "concept": "物質成分ごとに漸近展開する代わりに、有効応力エネルギーテンソルの必要減衰次数を先に定め、作用中の全演算子をその表へ代入して結合関数を選別する。",
+      "conclusion": "漸近真空でポテンシャルが三次まで消え、Newton定数が有限正値で、伝播モードが正準規格化されれば、広い理論群で標準的な漸近平坦構造が閉じる。共形結合部門にはフレーム選択の注意が残る。",
+      "curiosity": "追加のスカラー場やベクトル場を含む重力理論でも、重力波の記憶を拘束するBMS対称性はどの条件で残るのか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "一般応力源のBondi–Sachs階層、Brans–Dicke例、全SVT演算子の減衰条件、場の方程式と真空安定性、制約表、結論を確認した。付録の全成分計算は独立再計算していない。",
+      "paperType": "理論",
+      "primaryCategory": "gr-qc",
+      "rank": 1,
+      "scoreReasons": {
+        "broadImpact": "漸近平坦性の条件表は重力波の記憶効果、修正重力模型の選別、宇宙論的真空の安定性を結ぶ。ただし、対象は二階運動方程式をもつスカラー・ベクトル・テンソル理論に限られる。",
+        "categoryImpact": "任意の応力エネルギーテンソルに対するBondi–Sachs階層から、標準的な計量減衰を閉じる条件を導いた。修正重力でBMS群を維持するための模型別解析を共通の判定表へ整理している。",
+        "originality": "模型別だった修正重力の漸近解析を、一般的なスカラー・ベクトル・テンソル作用の演算子別制約表へ再編した。Bondi–Sachs法は継承する一方、計量条件だけで許される特異結合を場の方程式で再選別する接続は非自明である。",
+        "technicalStrength": "一般応力源で階層を積分し、自由スカラー場とEinstein–Maxwell理論で減衰表を検査したうえ、Brans–Dicke理論のフレーム差も追跡している。演算子別計算と場の方程式、真空安定性が独立に条件を補強する。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 20,
+        "originality": 18,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14204v1",
+        "https://arxiv.org/pdf/2608.14204v1"
+      ],
+      "submissionType": "new",
+      "title": "Asymptotic flatness beyond General Relativity",
+      "titleJa": "一般相対論を超える理論における漸近平坦性",
+      "totalScore": 76,
+      "url": "https://arxiv.org/abs/2608.14204"
+    },
+    {
+      "abstractLines": [
+        "跡結合重力で、有限の核領域だけがSchwarzschild幾何からずれる静的球対称ワームホールを考える。",
+        "無限回微分可能なコンパクト台変形を用い、異方的物質の密度と圧力を跡変数の三次方程式から再構成した。",
+        "外部は薄い殻なしで厳密にSchwarzschildとなるが、許容枝でも喉の動径方向の零エネルギー条件違反は残る。"
+      ],
+      "arxivId": "2608.14259",
+      "arxivVersion": "v1",
+      "assessment": "幾何の滑らかな局在化と物質枝の可否を明確に分離し、構成可能な領域と破綻境界を示している。物質処方への依存と喉での零エネルギー条件違反が物理的実現性を抑える。",
+      "authors": [
+        "Mushtaq Ahmad",
+        "M. Farasat Shamir",
+        "Ahdab K. Althukair"
+      ],
+      "concept": "計量変形を有限半径で全微分とともにゼロにし、二階の計量方程式から得る有効源を、真空へ連続する三次方程式の実根で物質変数へ戻す。",
+      "conclusion": "選んだ作用と計量族では、曲率と物質を有限領域に局在させつつ厳密なSchwarzschild外部へ滑らかに接続できる。ただし、異常物質は除去されず、動的安定性も保証されない。",
+      "curiosity": "喉を支える異常性を有限領域へ閉じ込め、境界面を導入せず外部を厳密な真空Schwarzschild時空にできるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "場の方程式、コンパクト台変形、三次方程式による物質反転、数値相図、曲率と接合、再現手順、結論を確認した。表示外の形状族と動的摂動安定性は検証されていない。",
+      "paperType": "理論",
+      "primaryCategory": "gr-qc",
+      "rank": 2,
+      "scoreReasons": {
+        "broadImpact": "有限領域だけで一般相対論からずれる構成は、ワームホール模型と外部観測の整合性に利用できる。ただし、特定の跡結合作用と球対称静的な仮定に波及範囲が限られる。",
+        "categoryImpact": "薄い殻なしで外部を厳密なSchwarzschild時空に保つワームホール族を構成し、物質再構成の許容枝を分類した。ワームホールの異常性を除かず、特定の作用と形状族に限るため前進は有用な存在構成の範囲である。",
+        "originality": "Schwarzschild計量の無限回微分可能なコンパクト台変形と、跡変数の三次方程式による局所反転を組み合わせた。既存の形状関数法を継承しつつ、全階微分が一致する真空境界と真空接続枝を一体化する点が新しい。",
+        "technicalStrength": "閉形式の幾何と反転式に加え、三次方程式の残差、修正TOV釣合い、解析的相境界、曲率不変量、接合条件を照合している。数値走査は二つの形状族に限られ、動的摂動安定性は検証していない。"
+      },
+      "scores": {
+        "broadImpact": 11,
+        "categoryImpact": 14,
+        "originality": 16,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14259v1",
+        "https://arxiv.org/pdf/2608.14259v1"
+      ],
+      "submissionType": "new",
+      "title": "C-infinity Compact-Support Wormholes with Exact Schwarzschild Exterior in Trace-Coupled Gravity",
+      "titleJa": "跡結合重力における無限回微分可能なコンパクト台ワームホールと厳密なSchwarzschild外部",
+      "totalScore": 59,
+      "url": "https://arxiv.org/abs/2608.14259"
+    },
+    {
+      "abstractLines": [
+        "重力崩壊で生じる中心特異点を、異常物質や非線形電磁気に頼らず回避する機構を検討する。",
+        "球対称な塵と暗黒エネルギーの相互作用について、無相互作用、一定相互作用、動径依存相互作用の三場合を解析した。",
+        "中心で十分強くなる相互作用は質量をM∼χ³にし、有限曲率とw≤−1のde Sitter型核を与えると報告した。"
+      ],
+      "arxivId": "2608.13619",
+      "arxivVersion": "v1",
+      "assessment": "塵を残したまま有限密度とM∼χ³を同じ明示解で示した点は有用である。積分関数の調整、現象論的な交換則、未導出のαの時間発展が物理的説得力を制限する。",
+      "authors": [
+        "Qazi Abdul Ghafoor"
+      ],
+      "concept": "中心近傍で相互作用強度を増加させ、塵の発散する密度寄与と中心質量の次数を同時に変えて、質量関数を体積に比例する三次挙動へ移す。",
+      "conclusion": "選んだ動径依存相互作用は、w≤−1で有限曲率をもつ正則核を構成し、中心では強エネルギー条件だけを破る。ただし、αの安定化は仮定であり、摂動下の持続性も未解決である。",
+      "curiosity": "暗黒エネルギーと崩壊物質の交換だけで、中心密度と曲率の発散を同時に抑えた永続的な正則核を作れるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "三種の相互作用模型、密度・質量の中心展開、曲率不変量、エネルギー条件、外部接続、結論を確認した。αの時間発展、摂動安定性、接続時空の独立構成は行われていない。",
+      "paperType": "理論",
+      "primaryCategory": "gr-qc",
+      "rank": 3,
+      "scoreReasons": {
+        "broadImpact": "重力崩壊の特異点回避を暗黒エネルギーとの相互作用へ結び付け、正則ブラックホールと宇宙論的流体の接点を作る。現象的な相互作用則と球対称内部解に依存し、宇宙論や観測へ至る経路はまだ限定的である。",
+        "categoryImpact": "塵を含む崩壊模型で中心密度と質量寄与を有限化し、正則なde Sitter型核を構成した。特異点回避に直接関わるが、相互作用の動力学や摂動安定性を解かず、存在例の段階に留まる。",
+        "originality": "電荷や非線形電磁気の代わりに、動径依存する塵・暗黒エネルギー交換を正則化機構に用いる。正則核と流体交換は既存研究を継承し、特定の交換関数で有限密度とM∼χ³を同時に得る点が差分である。",
+        "technicalStrength": "三種の交換則を解析し、明示解の中心展開、曲率不変量、中心でのエネルギー条件を確認している。一方、二つの積分関数を正則性で調整し、αの時間発展と安定化を場の方程式から導かず、外部接続も条件提示に留まる。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 16,
+        "originality": 15,
+        "technicalStrength": 12
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13619v1",
+        "https://arxiv.org/pdf/2608.13619v1"
+      ],
+      "submissionType": "new",
+      "title": "Regular Black Holes from Collapsing Dust in a Dark Energy Background",
+      "titleJa": "暗黒エネルギー背景中の塵崩壊が生む正則ブラックホール",
+      "totalScore": 57,
+      "url": "https://arxiv.org/abs/2608.13619"
+    },
+    {
+      "abstractLines": [
+        "二つのEinstein–Hilbert部門を対応ブリッジで結び、重力波放射が見える部門と隠れた部門へ分配される模型を扱う。",
+        "固定ブリッジ下の二次作用と、正準外向きデータを回転させる相反的な一次輸送則を解析した。",
+        "総四重極光度とチャープ位相を保ったまま可視振幅が減り、標準サイレン距離に系統的なずれが生じると予測した。"
+      ],
+      "arxivId": "2608.13634",
+      "arxivVersion": "v1",
+      "assessment": "位相分散ではなく振幅移送として観測効果を切り分け、源での振幅変更とのエネルギー収支の差を示した。中心となるユニタリ輸送則が有効境界条件として仮定され、作用原理による裏付けを欠く。",
+      "authors": [
+        "Medeu E. Abishev",
+        "Daulet Z. Berkimbayev"
+      ],
+      "concept": "二つの外向き正準データに流束保存回転を作用させ、源の放射量ではなく検出可能なチャネルへの配分だけを変える。",
+      "conclusion": "仮定した相反輸送則の下では、二つの質量ゼロチャネル間で放射強度を分けても一般相対論のチャープ位相を保てる。放射写像と場の方程式を結ぶ動力学は確立されていない。",
+      "curiosity": "重力波の位相と総放射反作用を変えず、観測される振幅だけを隠れた質量ゼロテンソル部門へ移せるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "射影源の定義、Minkowski背景の二次作用、ヌル無限遠での輸送則、光度配分、放射反作用、標準サイレン推定、静的・一様極限を確認した。ブリッジの作用原理は提示されていない。",
+      "paperType": "理論",
+      "primaryCategory": "gr-qc",
+      "rank": 4,
+      "scoreReasons": {
+        "broadImpact": "二つの質量ゼロ重力波チャネル間の振幅移送は、標準サイレン距離と隠れた重力部門を結ぶ観測経路を与える。総光度とチャープ位相を保つため、識別可能な効果は主に振幅へ限定される。",
+        "categoryImpact": "一般相対論と同じ位相発展を保ちながら見える重力波振幅を減らす機構を提示し、距離推定の系統偏差へ結び付ける。具体的なデータ解析は感度見積もりに留まる。",
+        "originality": "大質量重力子の分散や伝播振動とは異なり、対応ブリッジの輸送則で二つの質量ゼロテンソル場の放射データを回転させる。二重Einstein–Hilbert部門は既知要素だが、放射流束の分配機構に差分がある。",
+        "technicalStrength": "Bianchi恒等式、二次作用、正準外向きデータの反エルミート輸送を用い、光度保存と源での振幅変更との差を解析している。放射写像のユニタリ性と時間非依存性は仮定であり、ブリッジ作用や一般背景での安定性は導かれていない。"
+      },
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 12,
+        "originality": 15,
+        "technicalStrength": 13
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.13634v1",
+        "https://arxiv.org/pdf/2608.13634v1"
+      ],
+      "submissionType": "new",
+      "title": "Radiative Matching Across a Projector Bridge",
+      "titleJa": "射影演算子ブリッジを介した放射の整合",
+      "totalScore": 53,
+      "url": "https://arxiv.org/abs/2608.13634"
+    }
+  ],
+  "reportDate": "2026-08-17",
+  "schemaVersion": "1.4",
+  "slug": "gr-qc",
+  "totalNew": 4
+}
