@@ -1,0 +1,1324 @@
+{
+  "audit": {
+    "announcementDate": "2026-08-18",
+    "authorPolicy": "著者の評判、所属、引用、キャリア段階は得点に用いない。",
+    "evaluationPolicy": "著者の知名度・所属・経歴を用いず、各論文の内容と証拠だけを独立評価する。",
+    "fullTextEvaluatedCount": 12,
+    "fullTextPolicy": "全要旨の比較後に固定した暫定上位12件だけを版固定の公式全文で確認し、最終上位10件すべてに本文証拠を要求する。",
+    "generatedAtJst": "2026-08-18T17:52:36+09:00",
+    "listingUrl": "https://arxiv.org/list/hep-th/pastweek",
+    "rankingTieBreak": "totalScore、broadImpact、originality、technicalStrength、categoryImpactの降順、最後にarXiv IDの昇順。",
+    "scoreRubric": "Daily arXiv rubric 3.0：broadImpact、categoryImpact、originality、technicalStrengthを各0〜25の整数で採点し、高得点には本文で確認した具体的な比較・検証・限界を要求する。",
+    "selectionRule": "primary categoryがhep-thのNew submission v1全件を要旨で評価し、暫定上位12件だけを全文確認候補に固定する。",
+    "sourceCounts": {
+      "crosslistsExcluded": 24,
+      "newPrimary": 30,
+      "titleAuthorAbstractEvaluated": 30
+    }
+  },
+  "crosslistsExcluded": 24,
+  "evaluatedCount": 30,
+  "evaluationRun": {
+    "modelDisplayName": "GPT-5.6-Sol",
+    "modelId": "gpt-5.6-sol",
+    "modelSelectionVerified": true,
+    "reasoningEffort": "high",
+    "runId": "run-20260818T073006Z-fba96687b43a"
+  },
+  "fullTextEvaluatedCount": 12,
+  "label": "高エネルギー物理学・理論",
+  "papers": [
+    {
+      "abstractLines": [
+        "単純な行列模型が局所的な重力双対を持ち得るかというホログラフィーの問題を扱う。",
+        "Hoppeの二行列模型を一般化し、強結合・大N極限で現れる面積保存微分同相対称性を利用する。",
+        "全連結n点関数が創発的二次元時空のWitten図型展開を持つが、解析は先頭次数に限られる。"
+      ],
+      "arxivId": "2608.14781",
+      "arxivVersion": "v1",
+      "assessment": "全$n$点関数の樹形公式を独立な組合せ計算でも確かめた点が強い一方、先頭伝播子は位置に依存せず、通常の局所バルク量子論には未到達である。",
+      "authors": [
+        "Harish Murali",
+        "Pedro Vieira"
+      ],
+      "concept": "強結合で現れる面積保存微分同相対称性を解法の核とし、行列相関関数を二次元時空上の図式へ組み替える。",
+      "conclusion": "一般化二行列模型は大N・強結合の先頭次数で完全に解け、二次元ホログラフィック記述を示す。双対の量子化と有限N補正が残る。",
+      "curiosity": "最小限の行列自由度から、局所的な時空とその相関関数展開はどこまで必然的に生じるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、面積保存対称性の導出、密度汎関数、全$n$点樹形公式、ウィック収縮による二・三点検査、将来課題を確認した。有限N補正とバルク量子化は独立再現していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 1,
+      "scoreReasons": {
+        "broadImpact": "大N行列模型の相関関数を創発的な二次元時空のWitten図へ結び、行列模型、ホログラフィー、量子重力に共通の計算経路を与える。現段階は強結合の先頭次数に限られる。",
+        "categoryImpact": "Hoppe型二行列模型で強結合・大N極限の全連結n点関数を解き、ホログラフィック双対を明示するという中心課題を具体的に前進させる。量子化と高次元化は未完成である。",
+        "originality": "既存の二行列模型を一般化し、面積保存微分同相対称性から創発時空とWitten図展開を同時に引き出す点が非自明である。模型自体と大N解析の発想は既存研究を継承する。",
+        "technicalStrength": "ループ方程式から密度と全$n$点関数の樹形公式を導き、別経路のウィック収縮で二・三点関数を照合する。単一カット、強結合・平面極限を要し、位置依存伝播や$1/N^2$補正は未導出である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 20,
+        "originality": 19,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14781v1",
+        "https://arxiv.org/pdf/2608.14781v1"
+      ],
+      "submissionType": "new",
+      "title": "What is the simplest holographic matrix model?",
+      "titleJa": "最も単純なホログラフィック行列模型とは何か",
+      "totalScore": 76,
+      "url": "https://arxiv.org/abs/2608.14781"
+    },
+    {
+      "abstractLines": [
+        "標準Yang--Mills作用のFeynman図では色運動学双対性が顕在化しない問題を考える。",
+        "BV代数上の二階を超える微分作用素が与える運動学Jacobi恒等式の断片を解析する。",
+        "一次形式では全時空次元に六階作用素が存在し、木・ループ振幅に弱い双対性が生じる。"
+      ],
+      "arxivId": "2608.15393",
+      "arxivVersion": "v1",
+      "assessment": "六階作用素の存在と平方零性を詳細に証明した代数的完成度は高いが、得られる恒等式が重力二重コピーを可能にするかは未検査である。",
+      "authors": [
+        "Leron Borsten",
+        "Dimitri Kanakaris",
+        "Hyungrok Kim"
+      ],
+      "concept": "微分作用素の階数を双対性の強さと対応させ、六階BV作用素から高次の弱い運動学恒等式を抽出する。",
+      "conclusion": "一次Yang--Mills図は六階作用素に由来する弱い色運動学双対性を自動的に満たすが、完全な二重コピー構造は確立されていない。",
+      "curiosity": "完全な運動学Jacobi恒等式がなくても、作用の代数構造だけから振幅に普遍的制約を課せるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、コズル階層、図式恒等式、一次Yang--Mills超空間、六階作用素、結論、交換子・平方零・階数の計算付録を確認した。具体的振幅と二重コピーは独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 2,
+      "scoreReasons": {
+        "broadImpact": "振幅の代数構造をLagrangianとBV形式へ結び、ゲージ理論、二重コピー、摂動量子重力に利用できる可能性がある。得られるのは完全なJacobi恒等式より弱い断片である。",
+        "categoryImpact": "標準作用では非顕在な色運動学関係を、一次Yang--Millsの全時空次元・木およびループ図に自動的に現れる弱い双対性として導く。完全な双対性への距離は残る。",
+        "originality": "二階BV作用素による既知のJacobi構造を高階微分作用素へ拡張し、六階作用素から弱い運動学恒等式を得る着想が新しい。BV形式と色運動学の接続自体は継承される。",
+        "technicalStrength": "拡張ド・ラーム複体上で作用素を構成し、$[Q,b]=\\Box$、$b^2=0$、六階性を成分計算で証明する。平坦時空の二形式Kを要し、具体的振幅や二重コピーの検査は行っていない。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 19,
+        "originality": 19,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15393v1",
+        "https://arxiv.org/pdf/2608.15393v1"
+      ],
+      "submissionType": "new",
+      "title": "Higher-order analogues of colour-kinematics duality in first-order Yang-Mills Feynman diagrams",
+      "titleJa": "一次形式Yang--Mills Feynman図における色運動学双対性の高階類似",
+      "totalScore": 74,
+      "url": "https://arxiv.org/abs/2608.15393"
+    },
+    {
+      "abstractLines": [
+        "IIB弦理論のCalabi--Yauコンパクト化で、短い場の範囲からインフレーションを得る問題を扱う。",
+        "体積を調整して複数のアクシオンポテンシャル臨界点を合体させる幾何を探索する。",
+        "数千回の指数膨張を続ける例を得るが、観測された振幅とスペクトル傾斜を同時には再現していない。"
+      ],
+      "arxivId": "2608.14780",
+      "arxivVersion": "v1",
+      "assessment": "具体的幾何の多場軌道と摂動量まで追った検証は充実するが、必要な約$10^{-4}$の体積調整点でサクシオンを安定化できるかが決定的な未解決点である。",
+      "authors": [
+        "Naomi Gendler",
+        "Oliver Janssen",
+        "Matthew Kleban",
+        "Cameron Norton"
+      ],
+      "concept": "臨界点の合体で勾配とHessian行列式が同時に小さくなる領域を作り、短い場の範囲で長い膨張を実現する。",
+      "conclusion": "カタストロフィー領域は小場アクシオン膨張を可能にするが、特別な体積安定化と観測量の同時一致が未解決である。",
+      "curiosity": "整列や大きな場変位を使わず、弦アクシオンだけで観測整合的な緩慢転がりを作れるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、弦アクシオンポテンシャル、制御条件、探索算法、N=5・8の全場軌道、摂動量、結論と付録解析を確認した。サクシオン安定化と初期条件は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 3,
+      "scoreReasons": {
+        "broadImpact": "弦コンパクト化から小場インフレーションを具体化し、弦理論の真空構造と宇宙背景放射の予言を接続する。体積モジュライを特別な値に安定化できるという条件が適用範囲を狭める。",
+        "categoryImpact": "超Planck場変位や整列に頼らず弦アクシオンで長い緩慢転がりを得る明示例を示す。ただし観測される振幅とスペクトル傾斜を同時に再現する例には到達していない。",
+        "originality": "複数の臨界点が合体するカタストロフィーをCalabi--Yauアクシオンポテンシャル探索へ用いる点が独特である。IIBアクシオンと体積調整という基盤は既存の枠組みに依拠する。",
+        "technicalStrength": "約40万幾何の既存統計を踏まえ24例を抽出し、N=5・8の全場軌道、横方向ヘッセ行列、摂動振幅を検査する。オリエンティフォールド、サクシオン安定化、未知補正、初期条件は仮定である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14780v1",
+        "https://arxiv.org/pdf/2608.14780v1"
+      ],
+      "submissionType": "new",
+      "title": "Catastrophic Inflation in the Axiverse",
+      "titleJa": "アクシバースにおけるカタストロフィー的インフレーション",
+      "totalScore": 73,
+      "url": "https://arxiv.org/abs/2608.14780"
+    },
+    {
+      "abstractLines": [
+        "Calabi--Yau多様体のRicci平坦Kähler計量を少ないパラメータで数値近似する問題を扱う。",
+        "高次代数計量のHermite係数行列を、全域で正値な行列積因子分解へ置き換える。",
+        "三つのgCICYで基準法より誤差を下げるが、結合次元の増加には明確な利得が見えない。"
+      ],
+      "arxivId": "2608.16083",
+      "arxivVersion": "v1",
+      "assessment": "全域正値性の証明と独立標本上の多面的比較が揃い、圧縮の実効性を慎重に示す。最大表現が最良でないほどの経路依存性が一般化を阻む。",
+      "authors": [
+        "Juntao Wang"
+      ],
+      "concept": "Hermite行列を行列積へ分解し、局所次元と結合次元を固定したまま代数次数に線形な表現を作る。",
+      "conclusion": "正値テンソルネットワークは三つのgCICYで効率と精度を両立するが、飽和、初期化依存、広い幾何族への一般化が残る。",
+      "curiosity": "計量の正値性を厳密に保ちながら、高次数で爆発するCalabi--Yau計量のパラメータ数を抑えられるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、正値行列積による仮定形と計数、gCICY幾何、誤差設計、X11・X21・X22比較、等更新・次数系列、結論、再現設定を確認した。別幾何での性能は独立再現していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 4,
+      "scoreReasons": {
+        "broadImpact": "Ricci平坦計量の低資源近似を弦コンパクト化と幾何学的機械学習へ提供し、物理量の数値計算を軽量化し得る。実証対象は三つのgCICY三次元多様体に限られる。",
+        "categoryImpact": "高次代数計量の巨大Hermite係数行列を線形増大の行列積へ置換し、正値性を保って複数の基準法を上回る。一般のCalabi--Yau族での性能は未確定である。",
+        "originality": "正値な代数計量をテンソルネットワークで因子化し、全パラメータ領域で計量正値性を保証する組合せが新しい。数値Ricci平坦計量と行列積表現は既存要素である。",
+        "technicalStrength": "共通初期計量、独立標本、全体域と裾の誤差、ファイバー再標本化で三方式を比較し、等更新回数の結合次元対照と次数系列も行う。三幾何に限られ、最良解は初期化経路へ強く依存する。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16083v1",
+        "https://arxiv.org/pdf/2608.16083v1"
+      ],
+      "submissionType": "new",
+      "title": "Positive Tensor-Network K\\\"ahler Metrics on gCICY Threefolds",
+      "titleJa": "gCICY三次元多様体上の正値テンソルネットワークKähler計量",
+      "totalScore": 73,
+      "url": "https://arxiv.org/abs/2608.16083"
+    },
+    {
+      "abstractLines": [
+        "異なる場が非整列な異方的伝播円錐を持つとき、赤外で共通幾何が生じるかを問う。",
+        "有限グラフ上のYukawa相互作用について、1ループの非線形行列流とThompson直径を解析する。",
+        "持続的な辺活動の下で円錐固定を示すが、弱結合かつ特定の完成模型に範囲が限られる。"
+      ],
+      "arxivId": "2608.15661",
+      "arxivVersion": "v1",
+      "assessment": "有限の非可換行列不一致を大域収縮定理と実在する結合流で閉じた技術的完成度が高い。時間空間傾斜、ゲージ場、高次ループでも三つの符号条件が保たれるかは未解決である。",
+      "authors": [
+        "Shuai Zeng"
+      ],
+      "concept": "結合がゼロへ流れても発散する相互作用時間を利用し、正定値運動行列間の距離を反復的に縮める。",
+      "conclusion": "連結Yukawaネットワークは有限不一致から共通空間円錐を選べるが、証明は1ループ流と持続活動条件に依存する。",
+      "curiosity": "赤外で消える相互作用でも、その累積効果だけで異種場の因果円錐を一つに揃えられるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "1ループ有限不一致核、Thompson非膨張、有限窓定理、Pauli--Dirac持続域、グラフ距離定理、数値・正則化検査、証明付録を確認した。高次ループとローレンツ符号への一般化は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 5,
+      "scoreReasons": {
+        "broadImpact": "異なる場の有効光円錐が相互作用で一致する機構を与え、創発Lorentz対称性と多成分臨界系に応用できる。弱結合Yukawaネットワークと持続活動条件に依存する。",
+        "categoryImpact": "有限で非整列な運動項から共通赤外円錐へ至ることを大域的な行列流として示し、微小不一致近似を越える。一般の相互作用や強結合への拡張は残る。",
+        "originality": "正定値行列間のThompson直径とグラフ上の累積相互作用時間を用いて円錐固定を証明する組合せが新しい。速度の繰り込み群収束という問題設定は既知である。",
+        "technicalStrength": "非膨張・有限窓収縮・距離依存開始次数を厳密証明し、Pauli--Dirac完成で持続条件を導き、二種の正則化法と高精度数値を照合する。1ループ、時間空間傾斜なし、固定グラフ、共通円錐近傍に制約される。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 21
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15661v1",
+        "https://arxiv.org/pdf/2608.15661v1"
+      ],
+      "submissionType": "new",
+      "title": "Renormalization-group locking of finite anisotropic propagation cones in Yukawa networks",
+      "titleJa": "Yukawaネットワークにおける有限異方的伝播円錐の繰り込み群固定",
+      "totalScore": 73,
+      "url": "https://arxiv.org/abs/2608.15661"
+    },
+    {
+      "abstractLines": [
+        "N=2超対称Lagrangian理論のSchur指数を一般的に閉形式で求める課題を考える。",
+        "従来の周期性と極の問題を避け、積分を差分方程式の解へ変換する。",
+        "有限個の準Jacobi形式の和を得て多様なゲージ理論で試すが、非Lagrangian理論は扱わない。"
+      ],
+      "arxivId": "2608.15878",
+      "arxivVersion": "v1",
+      "assessment": "既存公式の欠陥を具体的反例で確定し、多数のゲージ理論で新手法を照合した点が強い。逐次積分の組合せ増大と一般的な幾何学的解釈が課題となる。",
+      "authors": [
+        "Yutong Li",
+        "Yiwen Pan"
+      ],
+      "concept": "積分領域の周期性を無理に保つ代わりに差分方程式を解き、欠落していた環外の極を有限和へ取り込む。",
+      "conclusion": "Schur指数は広いラグランジュ型理論で準Jacobi形式の有限和として計算でき、ゲージ化を介した非ラグランジュ型の例も射程に入るが、高階数で式が急増する。",
+      "curiosity": "高次元の積分で定義されるSchur指数を、一般のゲージ群・物質内容でも有限な代数データへ還元できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、旧Bethe Ansatz公式の二変数反例、差分方程式と逐次積分公式、BCD型・箙理論の例、議論、Grothendieck留数付録を確認した。全階数での簡約と非ラグランジュ型への拡張は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 6,
+      "scoreReasons": {
+        "broadImpact": "四次元超対称場理論の指数を有限和で計算でき、共形場理論、可積分系、準Jacobi形式の接点へ応用できる。対象はLagrangianを持つN=2理論である。",
+        "categoryImpact": "一般のN=2 Lagrangian理論についてSchur指数の閉形式計算法を与え、従来のBethe Ansatz型導出における周期性喪失と環外極を回避する。非Lagrangian理論は範囲外である。",
+        "originality": "積分を単純な差分方程式へ変換し、ねじれEisenstein級数を含む有限な準Jacobi形式和を得る点が非自明である。超共形指数とBethe Ansatzの対応は既知の発想を継承する。",
+        "technicalStrength": "二変数反例で周期性喪失と環外極を逐次積分・Grothendieck留数の双方から示し、BCD型N=4と複数の箙理論で閉形式を高次q展開や解析極限と照合する。高階数では極数が急増する。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 19,
+        "originality": 18,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15878v1",
+        "https://arxiv.org/pdf/2608.15878v1"
+      ],
+      "submissionType": "new",
+      "title": "Lagrangian Schur index and Bethe ansatz type formula",
+      "titleJa": "Lagrangian Schur指数とBethe Ansatz型公式",
+      "totalScore": 73,
+      "url": "https://arxiv.org/abs/2608.15878"
+    },
+    {
+      "abstractLines": [
+        "散乱振幅の局所性と因子化を正値幾何の境界・特異点から理解する課題を扱う。",
+        "双対体積表示、AmplituhedronとLandau解析、クラスター代数を三つの方向で組み合わせる。",
+        "非線形幾何の測度と特異点の無限族を得るが、一般的なクラスター予想は未証明である。"
+      ],
+      "arxivId": "2608.15606",
+      "arxivVersion": "v1",
+      "assessment": "正測度の明示構成からLandau判別式の消去計算まで証拠の種類が豊富である一方、統一像の一部は予想で、平面$\\mathcal N=4$理論への依存が強い。",
+      "authors": [
+        "Elia Mazzucchelli"
+      ],
+      "concept": "正準形式を双対体積として読み替え、その正値性をLandau特異点とクラスター再帰へ橋渡しする。",
+      "conclusion": "正値幾何は体積からループ特異点までを整理する有効な言語となるが、提案された一般的対応には未証明部分が残る。",
+      "curiosity": "ループ積分後の特異点まで、振幅の正値性と幾何学的境界から統一的に予測できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、双対体積と完全単調性、半ピザ型領域の測度、幾何学的Landau解析、グラスマン入射多様体、判別式例、クラスター構造、結論を確認した。一般予想は独立証明していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 7,
+      "scoreReasons": {
+        "broadImpact": "正値幾何、Landau特異点、クラスター代数を散乱振幅の解析構造へ統合し、幾何学と量子場理論の双方へ道具を提供する。主対象は平面最大超対称Yang--Millsに偏る。",
+        "categoryImpact": "非線形正値幾何の双対体積表示、挿入付きWilsonループの先頭特異点分類、ループ間再帰構造をまとめて前進させる。一般振幅への拡張は未確立である。",
+        "originality": "多面体の双対体積像を超越的測度を持つ非線形幾何へ広げ、Landau特異点とクラスター構造へ接続する。Amplituhedronと運動量ツイスターの基盤は既知である。",
+        "technicalStrength": "非線形な半ピザ型領域の正測度を解析式で構成し、Landau入射多様体の結果式・判別式を消去計算で検査し、複数の無限族を証明する。クラスター対応と積分後の正値性には予想が残る。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15606v1",
+        "https://arxiv.org/pdf/2608.15606v1"
+      ],
+      "submissionType": "new",
+      "title": "Positive Singularities and Volumes in Scattering Amplitudes",
+      "titleJa": "散乱振幅における正値特異点と体積",
+      "totalScore": 72,
+      "url": "https://arxiv.org/abs/2608.15606"
+    },
+    {
+      "abstractLines": [
+        "四次元F理論フラックスコンパクト化から標準模型型物理を構成する課題を扱う。",
+        "剛体E7・E6をフラックスで破り、キラル物質と近似対称性およびU(1)電荷を解析する。",
+        "三世代模型と最大657の電荷を持つ例を得るが、電荷上限の解釈は発見的である。"
+      ],
+      "arxivId": "2608.14844",
+      "arxivVersion": "v1",
+      "assessment": "フラックスによる対称性の破れを体系化し、複数の大域模型と極端電荷まで具体化した厚みがある。自然さの確率測度、未知の$(4,6)$特異点、質量・結合の未計算が現象論を制約する。",
+      "authors": [
+        "Shing Yan Li"
+      ],
+      "concept": "剛体例外群を垂直・剰余フラックスで段階的に破り、残る群論構造を低エネルギー選択則として用いる。",
+      "conclusion": "E7を核とするF理論模型は複数の標準模型的性質を自然に備えるが、完全な現象論と巨大電荷の一般上限は確立していない。",
+      "curiosity": "F理論の幾何とフラックスだけで、世代数、陽子安定性、許容結合を同時に選別できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "動機、フラックスによる対称性の破れ、世代数と大域E6例、E7選択則・陽子崩壊、電荷657構成、各結論と全体展望を確認した。連続パラメータとモジュライ安定化は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 8,
+      "scoreReasons": {
+        "broadImpact": "F理論のフラックス幾何を標準模型世代数、陽子崩壊抑制、巨大U(1)電荷へ結び、弦現象論と代数幾何に複数の利用先を持つ。学位論文として既発表成果の集成も含む。",
+        "categoryImpact": "剛体E7・E6から標準模型型スペクトルを得る系統的構成と、電荷657の明示例を提示する。真空選択や低エネルギー全現象の同時実現は残る。",
+        "originality": "垂直・剰余フラックスによる対称性破れを統一し、E7由来の近似大域対称性と極端なU(1)電荷を具体化する。F理論GUTとフラックス破れの基盤は既知である。",
+        "technicalStrength": "特異点解消法に依存しないフラックス公式を導き、大域的E6・E7模型とKreuzer--Skarke四次元多様体上の電荷657を明示する。連続的質量・結合、ベクトル状粒子の全スペクトル、モジュライ安定化は未計算で、電荷上限は発見的である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14844v1",
+        "https://arxiv.org/pdf/2608.14844v1"
+      ],
+      "submissionType": "new",
+      "title": "Applications of Flux Compactifications in F-Theory",
+      "titleJa": "F理論におけるフラックスコンパクト化の応用",
+      "totalScore": 71,
+      "url": "https://arxiv.org/abs/2608.14844"
+    },
+    {
+      "abstractLines": [
+        "M2・M5・D3ブレーンのアノマリーと双対性を一つの十二次元記述で捉える問題を扱う。",
+        "大域角形式の積分を同変Euler類と同変体積で表し、電気・磁気荷を統合する。",
+        "M2/M5双対性と位相的弦の定数写像を再解釈するが、対応の力学的検証は今後に残る。"
+      ],
+      "arxivId": "2608.14932",
+      "arxivVersion": "v1",
+      "assessment": "既知のM5 anomaly、M2局所化結果、D3自己双対性を同じ同変積分で回収する整合性は強い。AGT型対応と非摂動完成は幾何学的類似を越えていない。",
+      "authors": [
+        "Kiril Hristov",
+        "Pedro Vicente Marto"
+      ],
+      "concept": "球面の両極を貼り合わせた同変Euler類積分として角形式公式を再構成し、流入を体積へ翻訳する。",
+      "conclusion": "同変積分はM2・M5・D3のアノマリーを統一的に記述し得るが、提案されたAGT型対応の力学的内容は確定していない。",
+      "curiosity": "異なる次元と荷を持つブレーンのアノマリーは、単一の同変幾何から双対的に生成できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "導入、Euler類積分とBott--Cattaneo、M5異常、M2自由エネルギーと定数写像、D3電気・磁気表示、一般トーリック例、議論を確認した。AGT型対応と非摂動項は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 9,
+      "scoreReasons": {
+        "broadImpact": "ブレーンのアノマリー流入、同変局所化、位相的弦の定数写像を共通の体積表示へ結び、M理論と弦振幅に波及する。物理的対応の一部は解釈段階にある。",
+        "categoryImpact": "M5とD3の十二次元アノマリー構成を電気・磁気荷を持つM2まで統一し、提案済みM2/M5双対性に具体的枠組みを与える。力学的双対性の完全証明ではない。",
+        "originality": "Bott--Cattaneo公式を同変Euler類積分として読み替え、反対極を貼り合わせて複数ブレーンを統一する接続が意外である。アノマリー多項式と局所化の素材は既知である。",
+        "technicalStrength": "Bott--Cattaneo公式と標準M5異常を再導出し、M2自由エネルギーを十一次元局所化結果と照合し、自己双対D3の電気・磁気表示を相互検査する。一般トーリック磁気仮定形と規格化には未確定部分がある。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 18
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14932v1",
+        "https://arxiv.org/pdf/2608.14932v1"
+      ],
+      "submissionType": "new",
+      "title": "On M2-, M5-, and D3-branes from 12d anomalies: an equivariant perspective on duality",
+      "titleJa": "十二次元アノマリーから見たM2・M5・D3ブレーン：双対性の同変的視点",
+      "totalScore": 71,
+      "url": "https://arxiv.org/abs/2608.14932"
+    },
+    {
+      "abstractLines": [
+        "0B型弦理論の$\\Gamma_0(2)$自己双対性が許す7ブレーン荷と強結合背景を調べる。",
+        "モジュラー形式で荷演算子を作り、制限Weierstrass模型に8枚の新しい7ブレーンを配置する。",
+        "一定アクシオ・ディラトン背景を得る一方、Q奇セクターの閉弦タキオンは不安定なままである。"
+      ],
+      "arxivId": "2608.16522",
+      "arxivVersion": "v1",
+      "assessment": "双対群の新しい$\\mathbb{Z}_4$荷を8枚のコンパクトなブレーン背景と揺らぎ解析まで具体化した点が強い。背景はタキオンを残し、完全な0B型弦理論での大域的整合性とブレーン自由度が未確定である。",
+      "authors": [
+        "Naoto Kan",
+        "Masashi Kawahira",
+        "Hiroki Wada"
+      ],
+      "concept": "$\\Gamma_0(2)$のAbel化$\\mathbb{Z}\\times\\mathbb{Z}_4$を物理的荷へ翻訳し、モジュラー形式と楕円ファイバーで背景を組み立てる。",
+      "conclusion": "新しい$\\mathbb{Z}_4$荷7ブレーンと一定結合背景が具体化されたが、閉弦タキオンのため安定な0B真空とはならない。",
+      "curiosity": "0B型弦の縮小された双対群は、D7とは独立な荷とコンパクトな強結合背景を許すか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "双対群、Abel化とモジュラー荷演算子、制限Weierstrass模型のモノドロミー、8枚の$\\mathbb{Z}_4$ブレーン背景、Q奇揺らぎ、タキオン質量、議論を確認した。0B型弦の完全な変換則は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 10,
+      "scoreReasons": {
+        "broadImpact": "非超対称0B型弦の強結合構造を新しい7ブレーンとM理論臨界点へ結び、弦双対性とde Sitter構成に接点を作る。閉弦タキオン不安定性は解消されない。",
+        "categoryImpact": "$\\Gamma_0(2)$のAbel化から二種の7ブレーン荷を導き、8枚の$\\mathbb{Z}_4$ブレーンを持つコンパクト背景を構成する。安定真空の実現には至らない。",
+        "originality": "モジュラー形式で$\\mathbb{Z}_4$荷演算子を作り、制限Weierstrass模型で一定アクシオ・ディラトン背景を得る点が新しい。D7ブレーンと双対群解析は既存構造を継承する。",
+        "technicalStrength": "Abel化を二種のモジュラー荷演算子へ実装し、制限Weierstrass模型のモノドロミーと総荷を検算し、Q奇線形方程式の大域的整合性とタキオン質量を調べる。Q奇変換則と完全な弦背景は未知である。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 18,
+        "originality": 18,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16522v1",
+        "https://arxiv.org/pdf/2608.16522v1"
+      ],
+      "submissionType": "new",
+      "title": "7-branes and $\\Gamma_0(2)$ Duality in Type 0B String Theory",
+      "titleJa": "0B型弦理論における7ブレーンと$\\Gamma_0(2)$双対性",
+      "totalScore": 71,
+      "url": "https://arxiv.org/abs/2608.16522"
+    },
+    {
+      "abstractLines": [
+        "行列量子力学で表したファジー球ブラックホール地平面の摂動安定性を調べる。",
+        "大N計数で平面ボソン1ループを抽出し、揺らぎヘッセ行列の因子化を用いる。",
+        "古典的タキオンを安定化するが、十分大きい有限Nと滑らかさ・非飽和仮定を必要とする。"
+      ],
+      "arxivId": "2608.16374",
+      "arxivVersion": "v1",
+      "assessment": "例外モードの直接計算と全スペクトルの因子化評価を接続した技術的完成度が高い。結論は特定模型の十分大きい有限Nにおける局所曲率安定性であり、一様性の仮定と非摂動トンネル崩壊を残す。",
+      "authors": [
+        "Chong-Sun Chu"
+      ],
+      "concept": "大Nで残る1ループ曲率をヘッセ行列の因子化から評価し、低角運動量の負・零モードを正へ押し上げる。",
+      "conclusion": "ファジー球地平面は十分大きい有限Nで局所的に量子安定化されるが、非摂動トンネルと中間領域の仮定は残る。",
+      "curiosity": "古典的に不安定な非可換地平面は、支配的な量子揺らぎによって自己安定化できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "大N図式計数、例外モードの係数、Hessian因子化と非負性証明、低・中・高角運動量の安定性、有限N全モード走査、議論を確認した。滑らかさ・非飽和仮定と非摂動崩壊は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 11,
+      "scoreReasons": {
+        "broadImpact": "行列量子力学のブラックホール地平面で量子補正による安定化を示し、非可換幾何と量子重力模型に具体的検査を与える。結論は特定模型の大N領域に限られる。",
+        "categoryImpact": "古典的タキオンおよび限界モードが1ループで正曲率を得ることを示し、ファジー地平面模型の致命的な摂動不安定性を除く。非摂動安定性は主張しない。",
+        "originality": "ヘッセ行列の因子化と$L\\sim\\sqrt{N}$の中間角運動量領域を、局所安定化とモノポール・トンネルの双方へ結び付ける点が特徴的である。大Nの1ループ解析は既知手法である。",
+        "technicalStrength": "平面ボソン1ループの大N計数、二つの例外モードの漸近係数、因子化による非負性、角運動量領域別の評価を組み合わせ、N=30,50,100の全モード走査で補強する。有限N一様性には滑らかさ・非飽和仮定が残る。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 20
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16374v1",
+        "https://arxiv.org/pdf/2608.16374v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum Stability of the Fuzzy Sphere Black Hole Horizon",
+      "titleJa": "ファジー球ブラックホール地平面の量子安定性",
+      "totalScore": 71,
+      "url": "https://arxiv.org/abs/2608.16374"
+    },
+    {
+      "abstractLines": [
+        "量子重力の有効記述として現れる面積計量が重力波観測に残す効果を調べる。",
+        "安定な線形化面積計量理論の波動解と電磁場結合から干渉計応答を導く。",
+        "偏光光で複屈折を測れる可能性があるが、Planck質量の励起では信号が極めて弱い。"
+      ],
+      "arxivId": "2608.16046",
+      "arxivVersion": "v1",
+      "assessment": "線形面積計量作用から偏光読出しの具体式まで一貫して導き、量子重力パラメータを原理的観測量へ移した点が強い。Planck質量なら偏光位相は通常信号の約$10^{-81}$で、負エネルギー分枝と非線形化も残る。",
+      "authors": [
+        "Bianca Dittrich"
+      ],
+      "concept": "面積計量のパリティ奇結合を電磁波の複屈折へ変換し、偏光した干渉計光をBarbero--Immirziパラメータの読出し器とする。",
+      "conclusion": "面積計量重力は偏光依存の干渉計信号を生み得るが、自然なPlanck尺度の励起では観測可能性が著しく低い。",
+      "curiosity": "通常の計量では見えない面積計量の自由度を、重力波干渉計の偏光依存応答として識別できるか。",
+      "evaluationBasis": "full_text_major_sections",
+      "fullTextEvaluated": true,
+      "fullTextReviewStatus": "面積計量の由来、線形作用と現実条件、波動分枝、負エネルギー項、シフト対称性の破れ、電磁結合、複屈折固有軸、偏光検出器応答、議論を確認した。非線形・物質応答は独立検証していない。",
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 12,
+      "scoreReasons": {
+        "broadImpact": "量子重力由来の面積計量を偏光干渉計の複屈折へ結び、基礎理論と重力波観測の具体的な接点を作る。Planck質量励起を仮定すると信号は極端に小さい。",
+        "categoryImpact": "ゴーストとタキオンを避ける線形面積計量理論で重力波様解と電磁場結合を導き、Barbero--Immirziパラメータの観測経路を示す。非線形・現実的感度解析は範囲外である。",
+        "originality": "非位相的なパリティ破れを光の複屈折として読み出す提案は、通常の重力波偏光検査と異なる。面積計量作用と干渉計応答という各要素は既存枠組みを用いる。",
+        "technicalStrength": "ローレンツ符号で場を既約分解し、シフト対称性による極構造、二つの波動分枝、電磁構成則、複屈折固有軸、偏光位相まで解析する。負エネルギー分枝の紫外完備化、非線形背景、物質応答は未解決である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 16,
+        "originality": 17,
+        "technicalStrength": 19
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16046v1",
+        "https://arxiv.org/pdf/2608.16046v1"
+      ],
+      "submissionType": "new",
+      "title": "Gravitational wave signatures from area metric gravity",
+      "titleJa": "面積計量重力が与える重力波シグナル",
+      "totalScore": 70,
+      "url": "https://arxiv.org/abs/2608.16046"
+    },
+    {
+      "abstractLines": [
+        "IIA型トーラスオリエンティフォールドで強いCP問題を動的に解く構成を提案する。",
+        "交差D6ブレーンと四形式フラックスを用い、整合条件、モジュライ安定化、反D6持上げを組み合わせる。",
+        "小さな$\\bar{\\theta}$と観測可能なアクシオンを予測するが、反ブレーンによるド・ジッター構成に依存する。"
+      ],
+      "arxivId": "2608.15611",
+      "arxivVersion": "v1",
+      "assessment": "素粒子問題を量子化フラックスまで落とした明示性は高い一方、反ブレーン逆反応と真空制御に関する強い主張の裏づけが評価を抑える。",
+      "authors": [
+        "Yang Liu"
+      ],
+      "concept": "四形式の場の理論パラメータをIIAフラックスへ一対一に対応させ、CP角の緩和を大域的ブレーン整合条件へ埋め込む。",
+      "conclusion": "強いCP問題を解く大域的IIA模型が提示されたが、反D6持上げとde Sitter真空の制御可能性が結論の鍵を握る。",
+      "curiosity": "量子化された弦フラックスだけで、強いCP角を抑えつつ全モジュライを固定できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 13,
+      "scoreReasons": {
+        "broadImpact": "強いCP問題を弦フラックス、モジュライ安定化、次世代アクシオン探索へ結び、素粒子現象論と弦真空に直接接点を持つ。反D6によるド・ジッター持上げの制御が主要条件である。",
+        "categoryImpact": "IIA型交差D6模型で四形式機構を大域的に実装し、tadpole、K理論、超対称条件とフラックス量子化を同時に課す。信頼できるde Sitter真空かどうかが残る。",
+        "originality": "場の理論パラメータと弦フラックスの一対一辞書、反D6逆反応、スワンプランド窓を一模型で組み合わせる。四形式による強いCP解決は先行研究を発展させる。",
+        "technicalStrength": "整合条件と$|\\delta\\bar{\\theta}|<10^{-11}$の逆反応見積りを掲げるが、反ブレーン持上げ、全モジュライ安定化、スワンプランド条件の同時制御を裏づける検証は限定的である。"
+      },
+      "scores": {
+        "broadImpact": 18,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15611v1"
+      ],
+      "submissionType": "new",
+      "title": "Strong CP Problem in Type IIA Toroidal Orientifold String Theory",
+      "titleJa": "IIA型トーラスオリエンティフォールド弦理論における強いCP問題",
+      "totalScore": 67,
+      "url": "https://arxiv.org/abs/2608.15611"
+    },
+    {
+      "abstractLines": [
+        "五次元超対称場理論に対応する離散Painlevé方程式の双線形関係を決める課題を扱う。",
+        "Ω背景分配関数でtau関数を定義し、有効前ポテンシャル、摂動項、大域対称性から拘束する。",
+        "$N_f\\leq8$のSU(2)理論で楕円型・q型関係を得るが、一般ゲージ理論での検証は残る。"
+      ],
+      "arxivId": "2608.15756",
+      "arxivVersion": "v1",
+      "assessment": "可積分系の恒等式を少数の場の理論データから復元する効率性が強みであり、SU(2)を越える実例の不足が一般性を制限する。",
+      "authors": [
+        "Minsung Kim",
+        "Xin Wang"
+      ],
+      "concept": "有効前ポテンシャルが固定する指数構造と大域対称性を組み合わせ、許される双線形恒等式を復元する。",
+      "conclusion": "五次元SU(2)系列から楕円・q-Painlevéの双線形関係を統一的に得られるが、一般理論への普遍性は未検証である。",
+      "curiosity": "完全な分配関数を既知とせず、低エネルギー情報だけから離散可積分系のtau関数関係を決定できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 14,
+      "scoreReasons": {
+        "broadImpact": "五次元超対称ゲージ理論の分配関数から離散可積分系を系統的に導き、場の理論とPainlevé方程式の双方に計算法を与える。直接の対象は特定の超対称理論群である。",
+        "categoryImpact": "有効prepotential、摂動寄与、大域対称性だけからtau関数の双線形関係を決め、$N_f\\leq8$のSU(2)系列を統一する。より一般のゲージ群では実証が残る。",
+        "originality": "非摂動分配関数を全面計算せず、低エネルギーデータから双線形式を復元する手順が新しい。五次元理論とPainlevé対応自体は既存研究に基づく。",
+        "technicalStrength": "楕円型とq型の両Painlevé系をSU(2)物質理論全系列へ適用するが、一般五次元理論へ拡張可能という主張の具体的検査範囲は限られる。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 18,
+        "originality": 17,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15756v1"
+      ],
+      "submissionType": "new",
+      "title": "Bootstrapping bilinear relations of discrete Painlev\\'e systems from 5d gauge theories",
+      "titleJa": "五次元ゲージ理論から離散Painlevé系の双線形関係をブートストラップする",
+      "totalScore": 67,
+      "url": "https://arxiv.org/abs/2608.15756"
+    },
+    {
+      "abstractLines": [
+        "時間的エンタングルメントデータからホログラフィック時空の計量を逆算する問題を扱う。",
+        "選択した複素極値面の枝でAbel密度を求め、追加の幾何学的基準点から径方向計量を定める。",
+        "複数のブラックホール計量を再現するが、空間ワープがある場合は一つの関数結合しか決まらない。"
+      ],
+      "arxivId": "2608.16517",
+      "arxivVersion": "v1",
+      "assessment": "成功例だけでなくGubser--Rochaで情報不足を特定した点が堅実であり、複素枝選択と合理関数接続の頑健性が主要な制約となる。",
+      "authors": [
+        "Hao Feng",
+        "Tian-Shun Chen",
+        "Shao-Feng Wu"
+      ],
+      "concept": "時間幅依存性を選択枝上のAbel入力へ変換し、紫外端または地平面の基準点で密度を具体的な径方向座標へ対応させる。",
+      "conclusion": "時間的エンタングルメントは標準ブラックホール計量を再構成できるが、処方・枝・基準点に依存し、一般背景では縮退が残る。",
+      "curiosity": "Lorentz的な一種類の境界エンタングルメント量は、地平面内外の計量をどこまで一意に固定するか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 15,
+      "scoreReasons": {
+        "broadImpact": "時間的エンタングルメントからローレンツ時空を逆算する手順を与え、ホログラフィーと量子情報の橋渡しになる。単一の帯状領域の観測量では一般計量の一関数結合しか決まらない。",
+        "categoryImpact": "BTZではAbel密度から解析的に、より高次元では複素経路と幾何学的基準点から計量を復元し、処方と枝依存性を明示する。唯一性には追加情報が必要である。",
+        "originality": "複素極値面の選択枝上で時間幅データをAbel逆変換へ落とし、基準点で径方向を固定する構成が非自明である。エンタングルメントによる計量再構成は既存課題である。",
+        "technicalStrength": "BTZ、四次元Schwarzschild、RNを再現し、Gubser--Rochaで非一意性を示す複数検査がある。合理関数による接続と基準点選択への感度が残る。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16517v1"
+      ],
+      "submissionType": "new",
+      "title": "Metric Reconstruction from Timelike Entanglement Entropy",
+      "titleJa": "時間的エンタングルメントエントロピーからの計量再構成",
+      "totalScore": 66,
+      "url": "https://arxiv.org/abs/2608.16517"
+    },
+    {
+      "abstractLines": [
+        "前幾何的MacDowell--Mansouri重力で自然なインフレーション源が欠ける問題を扱う。",
+        "Lie代数をリー亜代数束へ拡張し、スカラー結合した位相項を創発させる。",
+        "Horndeski型理論と観測制約に適合する膨張を得るが、微視的な弦導出は示されない。"
+      ],
+      "arxivId": "2608.14596",
+      "arxivVersion": "v1",
+      "assessment": "幾何学的代数の拡張をインフレーション源へ直結した機構は明快だが、観測適合を越える安定性と初期条件の検査が総合評価を抑える。",
+      "authors": [
+        "Egor Pluzhnikov",
+        "Stanislav Alexeyev"
+      ],
+      "concept": "固定Lie代数を場に依存するリー亜代数束へ替え、代数構造の変化をスカラー結合位相項として低エネルギー作用へ写す。",
+      "conclusion": "拡張MacDowell--Mansouri模型は観測整合的なHorndeski膨張を生成し得るが、微視的起源と宇宙史全体の成立は残る。",
+      "curiosity": "時空幾何の創発機構そのものから、別途インフラトンを置かずに初期宇宙膨張を生み出せるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 16,
+      "scoreReasons": {
+        "broadImpact": "前幾何的重力模型からインフレーションと現在の重力波制約を接続し、量子重力、修正重力、初期宇宙に波及する。予言の独自性と微視的完成度は限定される。",
+        "categoryImpact": "MacDowell--Mansouri模型のLie代数をリー亜代数束へ拡張し、スカラー結合位相項とHorndeski型作用を生成する。弦理論からの直接導出ではない。",
+        "originality": "代数を束上の構造へ昇格させることでインフレーション源を創発させる機構が新しい。位相項、Horndeski理論、観測制約は既存要素を組み合わせる。",
+        "technicalStrength": "Horndeski類への還元とPlanck/BICEP/Keck、GW170817との整合性を報告するが、安定性、初期条件、再加熱まで含む検証範囲は明らかでない。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 16,
+        "originality": 17,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14596v1"
+      ],
+      "submissionType": "new",
+      "title": "MacDowell-Mansouri ${\\sigma}$-model",
+      "titleJa": "MacDowell--Mansouri $\\sigma$模型",
+      "totalScore": 65,
+      "url": "https://arxiv.org/abs/2608.14596"
+    },
+    {
+      "abstractLines": [
+        "磁場と回転を受けるQCD物質でカイラルソリトン格子が基底状態になる条件を調べる。",
+        "回転を背景ゲージ場としてホログラフィックQCDへ入れ、バルク方程式とブレーン像を解析する。",
+        "異方的崩壊定数と状態方程式を得るが、結論は採用した重力双対模型に依存する。"
+      ],
+      "arxivId": "2608.16579",
+      "arxivVersion": "v1",
+      "assessment": "回転を含む格子相の重力側構成と熱力学を一貫して示す一方、ホログラフィック模型依存性が観測的解釈を制約する。",
+      "authors": [
+        "Markus A. G. Amano",
+        "Minoru Eto",
+        "Muneto Nitta",
+        "Shin Sasaki"
+      ],
+      "concept": "回転を重力側の背景ゲージ場へ符号化し、磁場との結合がバルク解と異方的メソン運動項をどう変えるかを追う。",
+      "conclusion": "磁場・回転下でカイラルソリトン格子がホログラフィック基底状態となるが、実QCDへの定量的外挿は未確定である。",
+      "curiosity": "磁場と渦度が共存する強結合QCDで、どの異常結合が空間周期的な基底状態を選ぶか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 17,
+      "scoreReasons": {
+        "broadImpact": "回転・強磁場QCDの非一様相をホログラフィーと有効物質へ結び、重イオン・中性子星物質に接点を持つ。現実的QCDへの定量的対応は模型依存である。",
+        "categoryImpact": "回転を背景ゲージ場として重力双対へ組み込み、カイラルソリトン格子が基底状態となることと異方的崩壊定数を導く。有限密度や模型間比較は残る。",
+        "originality": "磁場と回転を同時に持つ格子相をブレーン像と異方的行列$\\tilde f$で記述する点が特徴的である。カイラルソリトン格子とホログラフィックQCDは既存基盤である。",
+        "technicalStrength": "バルク方程式を解いて有効ハミルトニアン、熱力学、状態方程式を導くが、重力近似、特定ホログラフィック模型、現象論パラメータへの依存が残る。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16579v1"
+      ],
+      "submissionType": "new",
+      "title": "Chiral Soliton Lattices under Magnetic Fields and Rotation: a Holographic Analysis",
+      "titleJa": "磁場と回転下のカイラルソリトン格子：ホログラフィック解析",
+      "totalScore": 65,
+      "url": "https://arxiv.org/abs/2608.16579"
+    },
+    {
+      "abstractLines": [
+        "偶数次元$(A)dS$の共形Yang--Mills多重項を一般次元で分離する代数問題を扱う。",
+        "低次元のGram行列を全NのBezout行列へ延長し、根での評価により対角化する。",
+        "逆行列・行列式・慣性の閉公式を得るが、一般次元の非線形係数代数は構成しない。"
+      ],
+      "arxivId": "2608.15628",
+      "arxivVersion": "v1",
+      "assessment": "全N公式と組合せ論的解釈の精密さが際立つ一方、物理的波及は自由理論の分離に集中し、非線形完成を与えない。",
+      "authors": [
+        "Weiqi Jiang"
+      ],
+      "concept": "Gram形式を多項式と1のBezout行列として同定し、その単純根でのVandermonde合同変換を場の再定義に用いる。",
+      "conclusion": "全偶数次元の自由な共形Yang--Mills多重項には統一的分離公式があるが、一般の相互作用代数は未構成である。",
+      "curiosity": "低次元で見つかった共形多重項の分離行列は、任意偶数次元で一意な閉形式を持つか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 18,
+      "scoreReasons": {
+        "broadImpact": "任意偶数次元の共形Yang--Mills自由理論を閉形式で分離し、高階スピン場と特殊関数に利用できる。非線形係数代数そのものは一般次元で構成しない。",
+        "categoryImpact": "既知の6・8・10次元行列から全NのGram形式を一意に延長し、逆行列、行列式、慣性を与える。相互作用理論の一般完成には届かない。",
+        "originality": "場の再定義行列を特定多項式のBezout行列と同定し、Johnsonグラフ多重度へ結ぶ点が新しい。低次元での分離構造はMetsaevの結果を継承する。",
+        "technicalStrength": "全$D=2N+4$で対角化恒等式と閉公式を導き、N=4の係数代数も分類する。ただし任意次元の非線形代数構成は明示的に対象外である。"
+      },
+      "scores": {
+        "broadImpact": 13,
+        "categoryImpact": 17,
+        "originality": 17,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15628v1"
+      ],
+      "submissionType": "new",
+      "title": "Bezoutian Decoupling for Conformal Yang--Mills Multiplets in $(A)dS$",
+      "titleJa": "$(A)dS$共形Yang--Mills多重項のBezout行列による分離",
+      "totalScore": 64,
+      "url": "https://arxiv.org/abs/2608.15628"
+    },
+    {
+      "abstractLines": [
+        "決定論的な離散固有時力学から量子場の交換代数が創発する可能性を調べる。",
+        "場配置空間の有限差分更新を粗視化し、Grassmann表現にも同じ更新を適用する。",
+        "共通の有効Planck定数で交換・反交換関係を得るが、高エネルギー帰結は提案段階である。"
+      ],
+      "arxivId": "2608.14816",
+      "arxivVersion": "v1",
+      "assessment": "ボソンとフェルミオンを一更新則へ統合する発想は大胆であるが、標準場の理論の再現と検証可能な差異が不足している。",
+      "authors": [
+        "Alessio Maiezza"
+      ],
+      "concept": "未分解な微視的多重度を走るPlanck定数へ写し、更新の表現空間だけを通常変数とGrassmann変数で切り替える。",
+      "conclusion": "粗視化された離散固有時力学は両統計の正準代数を生成し得るが、現実的な量子場理論への十分性は確立していない。",
+      "curiosity": "一つの決定論的更新則から、ボソンとフェルミオンで異なる正準代数を同じ量子化尺度とともに導けるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 19,
+      "scoreReasons": {
+        "broadImpact": "量子代数、繰り込み群、Hawking放射を決定論的微視構造から統一する構想は量子基礎と場の理論へ広い含意を持つ。経験的識別可能性は示されていない。",
+        "categoryImpact": "走るPlanck定数を有限差分更新と粗視化から演算子的に実現し、ボソン・フェルミオンへ共通の量子化尺度を与える。標準QFTの完全な再現には隔たりがある。",
+        "originality": "同じ離散固有時更新を通常の場配置空間とGrassmann代数で表し、交換・反交換関係を並行して創発させる点が独特である。粗視化による創発量子論は既存系譜を持つ。",
+        "technicalStrength": "有限差分平行移動と解像度変換から代数構造を導くが、ローレンツ不変性、相互作用場、ループ振幅、ホーキング放射への主張を支える独立検証は限定的である。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 15,
+        "originality": 18,
+        "technicalStrength": 13
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14816v1"
+      ],
+      "submissionType": "new",
+      "title": "Universal Emergence of Bosonic and Fermionic Algebras in a Deterministic Proper-Time Framework",
+      "titleJa": "決定論的固有時枠組みにおけるボソン・フェルミオン代数の普遍的創発",
+      "totalScore": 63,
+      "url": "https://arxiv.org/abs/2608.14816"
+    },
+    {
+      "abstractLines": [
+        "神経ネットワークからスピンを持つ共形場と相関関数を構成できるかを調べる。",
+        "埋込み形式を使ってネットワーク場の二・三・四点関数を具体例で計算する。",
+        "特定の無限幅集団から四次元Maxwell CFTを得るが、一般の相互作用理論は未提示である。"
+      ],
+      "arxivId": "2608.15001",
+      "arxivVersion": "v1",
+      "assessment": "Maxwell場をネットワーク極限として具体化した点は鮮明だが、構成できるCFTの範囲とゲージ整合性の一般条件が見えていない。",
+      "authors": [
+        "Manas Dogra",
+        "James Halverson",
+        "Joydeep Naskar"
+      ],
+      "concept": "埋込み空間の偏極変数をニューロン出力へ組み込み、無限幅平均をスピン付き共形テンソル構造へ変換する。",
+      "conclusion": "ニューラルネットワーク集団はMaxwell CFTを含むスピン付き共形場を生成できるが、相互作用理論と有限幅の物理は未解明である。",
+      "curiosity": "ネットワークの重み分布だけで、ゲージ場のスピン構造と共形相関関数を同時に生成できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 20,
+      "scoreReasons": {
+        "broadImpact": "神経ネットワーク極限をスピン付き共形場へ拡張し、機械学習とCFTの接点を具体化する。物理理論の生成範囲と有限幅での用途はまだ狭い。",
+        "categoryImpact": "埋込み形式で二・三・四点関数を計算し、特定の独立同分布ニューロン集団から四次元Maxwell CFTを再現する。一般の相互作用CFTには到達していない。",
+        "originality": "スカラー場に限られていたネットワークCFT構成へスピンを導入し、Maxwell理論を無限幅極限として得る点が新しい。無限幅と共形場の対応は既存研究を発展させる。",
+        "technicalStrength": "低点相関関数の具体例とMaxwell極限を示すが、unitarity、演算子積展開の整合性、有限幅補正、広いスピン表現の検査は不明である。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 16,
+        "originality": 17,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15001v1"
+      ],
+      "submissionType": "new",
+      "title": "Spinning Conformal Correlators from Neural Networks",
+      "titleJa": "ニューラルネットワークから得るスピン付き共形相関関数",
+      "totalScore": 63,
+      "url": "https://arxiv.org/abs/2608.15001"
+    },
+    {
+      "abstractLines": [
+        "複数のLandau不安定モードが競合する駆動超流動で、どのモードが選ばれるかを調べる。",
+        "時間依存ホログラフィック背景上のQNM成長率を積分し、完全な時間発展と比較する。",
+        "現在条件が同じでも履歴で順序が反転し、その記憶を累積成長率差が再現する。"
+      ],
+      "arxivId": "2608.14997",
+      "arxivVersion": "v1",
+      "assessment": "非平衡記憶を単一の積分量で予測した点は明快である一方、非線形飽和や別の強結合系で同じ基準が保たれるかは不明である。",
+      "authors": [
+        "Bo-Xuan Ge"
+      ],
+      "concept": "各瞬間の最速モードを選ぶのではなく、駆動全履歴にわたるQNM成長指数の差を選択基準とする。",
+      "conclusion": "有限速度駆動のモード選択は履歴依存であり、累積QNM成長率が記憶を捉えるが、模型を越えた普遍性は未確定である。",
+      "curiosity": "現在の不安定度が同じ系で、過去の駆動は最終的な秩序モードをどの量として記憶するか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 21,
+      "scoreReasons": {
+        "broadImpact": "非平衡パターン選択の記憶効果を準固有モードの累積成長率へ還元し、超流動と駆動臨界系に応用できる。実証は一つのホログラフィック模型に集中する。",
+        "categoryImpact": "瞬間最大成長モードではなく駆動履歴が選択を決めることを示し、時間依存線形発展で非線形力学を再現する。普遍的な非線形飽和則は与えない。",
+        "originality": "同じ現在条件から逆のモード順序が生じる現象を、競合QNM成長率差の時間積分で定量化する点が明確な差分である。Landau不安定性とQNM解析は既存手法である。",
+        "technicalStrength": "時間依存背景上の線形発展と完全力学を比較し、複数駆動手順を成長率積分で説明するが、模型・初期摂動・非線形領域への感度は限定される。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 16,
+        "originality": 16,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.14997v1"
+      ],
+      "submissionType": "new",
+      "title": "History-Dependent Mode Selection in a Driven Holographic Superfluid",
+      "titleJa": "駆動ホログラフィック超流動における履歴依存モード選択",
+      "totalScore": 62,
+      "url": "https://arxiv.org/abs/2608.14997"
+    },
+    {
+      "abstractLines": [
+        "ヌル無限遠ではなく有限距離のヌル超曲面で高スピン荷代数を構成する問題を扱う。",
+        "Weyl基準枠で進化Bianchi恒等式を積分し、切断面計量の時間発展を荷へ組み込む。",
+        "$w_{1+\\infty}$線形代数を得るが、非局所項の処理と$(A)dS$への拡張が残る。"
+      ],
+      "arxivId": "2608.16781",
+      "arxivVersion": "v1",
+      "assessment": "無限遠の漸近代数を有限距離へ移す構成は興味深いが、線形段階に留まり、非局所な荷再定義の物理的解釈も確定していない。",
+      "authors": [
+        "Gianfranco De Simone"
+      ],
+      "concept": "切断面計量の履歴を非局所な荷再定義へ吸収し、進化する境界自由度を含む括弧を閉じる。",
+      "conclusion": "有限ヌル面にも$w_{1+\\infty}$構造が現れるが、荷の非局所性、非線形完成、宇宙定数を持つ背景への一般化が残る。",
+      "curiosity": "境界計量自体が動く有限距離でも、ヌル無限遠の高スピン対称性を局所的な荷代数として保てるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 22,
+      "scoreReasons": {
+        "broadImpact": "有限距離のヌル境界で高スピン荷と記憶効果を扱い、漸近対称性、重力放射、将来の$(A)dS$解析へ波及する。現状は線形荷代数と四次元ヌル面が中心である。",
+        "categoryImpact": "任意の有限ヌル超曲面で$w_{1+\\infty}$代数を導き、無限遠では凍結する切断面計量を力学化する。非線形代数と宇宙定数を持つ場合は未完成である。",
+        "originality": "履歴に由来する非局所項を高スピン荷の定義へ吸収し、有限距離の記憶効果として読む点が新しい。Bianchi恒等式とヌル無限遠の荷代数は既存構造を継承する。",
+        "technicalStrength": "Weyl基準枠で進化Bianchi恒等式を積分して線形括弧を得るが、非局所再定義の一意性、非線形閉包、$(A)dS$への適用は検証されていない。"
+      },
+      "scores": {
+        "broadImpact": 14,
+        "categoryImpact": 17,
+        "originality": 16,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16781v1"
+      ],
+      "submissionType": "new",
+      "title": "Higher spin dynamics in Weyl reference frame",
+      "titleJa": "Weyl基準枠における高スピン力学",
+      "totalScore": 62,
+      "url": "https://arxiv.org/abs/2608.16781"
+    },
+    {
+      "abstractLines": [
+        "非平衡量子場の実時間発展を切断ウィグナー法より高精度に追う課題を扱う。",
+        "確率的初期条件を持つ有効場方程式へ高次ループ・高運動量補正を加える方法を論じる。",
+        "偽真空崩壊などへの拡張可能性を示すが、近似の収束域は定量化されていない。"
+      ],
+      "arxivId": "2608.16486",
+      "arxivVersion": "v1",
+      "assessment": "実時間非摂動計算を系統的に改善する方向は有用だが、基準解との定量比較と近似の破綻条件が明示されない点が弱い。",
+      "authors": [
+        "Ian G. Moss"
+      ],
+      "concept": "初期ウィグナー分布による揺らぎ標本化を保ちつつ、有効方程式側へループと運動量展開の補正を順次組み込む。",
+      "conclusion": "切断ウィグナー法は有効場方程式として拡張できるが、補正展開の収束性と実問題での精度向上は十分に確立していない。",
+      "curiosity": "古典統計軌道の集合に量子ループ補正を加え、非摂動実時間現象を系統的に精密化できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 23,
+      "scoreReasons": {
+        "broadImpact": "実時間の非摂動量子現象を数値追跡する切断ウィグナー法を有効方程式へ拡張し、真空崩壊や非平衡場に利用できる。実用範囲と計算費用は不明である。",
+        "categoryImpact": "古典統計近似に留まる切断ウィグナー法へ高次ループ・高運動量補正を組み込む枠組みを論じる。完全な量子有効作用との対応範囲は限定される。",
+        "originality": "確率初期条件を保ったままループ補正を系統化して有効場方程式とする点が非自明である。切断ウィグナー法と非平衡有効作用は既存手法である。",
+        "technicalStrength": "ループと運動量補正を含む拡張を提示するが、収束性、偽真空崩壊の基準計算との誤差比較、数値安定性の全体像は明確でない。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 16,
+        "originality": 16,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16486v1"
+      ],
+      "submissionType": "new",
+      "title": "Effective field equations with stochastic initial conditions",
+      "titleJa": "確率的初期条件を持つ有効場の方程式",
+      "totalScore": 61,
+      "url": "https://arxiv.org/abs/2608.16486"
+    },
+    {
+      "abstractLines": [
+        "Taub--NUT空間の対称インスタントンと平坦空間解との関係を分類する問題を扱う。",
+        "bow構成を使い、区間上の可積分常微分方程式と代数条件から三種の荷の解を作る。",
+        "四次元平坦空間の解・カロロンへの極限を再現し、どちらにも移らないTaub--NUT固有解も得る。"
+      ],
+      "arxivId": "2608.16487",
+      "arxivVersion": "v1",
+      "assessment": "明示解と極限対応の数学的制御は強いが、限定された対称性と荷に集中し、物理的応用範囲は狭い。",
+      "authors": [
+        "Matthew Dales"
+      ],
+      "concept": "幾何学的極限をゲージ場へ直接かけず、bowデータの区間長と境界条件の極限として追跡する。",
+      "conclusion": "三つの荷セクターで平坦インスタントンとカロロンを統一的に回収でき、曲がった空間だけに存在する解も確認された。",
+      "curiosity": "曲率と円周方向を変える極限で、Taub--NUTインスタントンのどのデータが平坦解として生き残るか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 24,
+      "scoreReasons": {
+        "broadImpact": "曲がったTaub--NUT上のインスタントンを平坦空間・カロロンへつなぎ、ゲージ場のモジュライ空間に有用である。対象の対称性と三つの荷セクターが範囲を狭める。",
+        "categoryImpact": "一般ホロノミーと$(k,m)=(2,0),(1,1),(2,-1)$のU(1)対称解を構成し、各平坦極限を分類する。一般のインスタントン数・磁荷は扱わない。",
+        "originality": "ボウ構成のデータ極限から四次元平坦空間のインスタントンとカロロンを一括回収し、どちらにも極限を持たないTaub--NUT解を示す点が新しい。変換手法は既知である。",
+        "technicalStrength": "可積分常微分方程式と区間上の代数関係を解き、複数の荷と極限を明示的に追う。完全なモジュライ空間や非U(1)対称解への一般化は含まれない。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 16,
+        "originality": 15,
+        "technicalStrength": 17
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16487v1"
+      ],
+      "submissionType": "new",
+      "title": "Flat space limits of symmetric Taub-NUT instantons",
+      "titleJa": "対称Taub--NUTインスタントンの平坦空間極限",
+      "totalScore": 60,
+      "url": "https://arxiv.org/abs/2608.16487"
+    },
+    {
+      "abstractLines": [
+        "境界エンタングルメント情報だけからブラックホール時空を再構成できるかを調べる。",
+        "熱的二次元CFTの四種の空間的・時間的エントロピーを区間と転回点で微分する。",
+        "地平面内外のBTZ計量を再現するが、解析は高対称な一背景に限られる。"
+      ],
+      "arxivId": "2608.15862",
+      "arxivVersion": "v1",
+      "assessment": "地平面内外を一つの情報論的構成で復元する見通しは明瞭だが、BTZの高い対称性を越える検証がないため一般的な創発重力の証拠には届かない。",
+      "authors": [
+        "Mohammad Ali-Akbari"
+      ],
+      "concept": "互いに相補的な四つの極値面データを微分し、各計量成分を別々のエントロピー応答から逆算する。",
+      "conclusion": "BTZではエンタングルメントデータが全計量を再現するが、一般背景での一意性や処方依存性は結論に含まれない。",
+      "curiosity": "境界の時間的・空間的エントロピーを揃えれば、Einstein方程式なしに地平面内部まで決められるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 25,
+      "scoreReasons": {
+        "broadImpact": "境界エンタングルメントから時空計量を復元し、量子情報と重力創発を結ぶ。対象が熱的二次元CFTとBTZに限定され、一般性はまだ示されない。",
+        "categoryImpact": "空間的・時間的な四種のエンタングルメント量の微分から地平面内外のBTZ計量成分を得る。既知背景を前提にした逆問題であり、任意計量の一意性は扱わない。",
+        "originality": "相補的な時間的・空間的エントロピーを組み合わせて内部まで再構成する点は有用な拡張である。エンタングルメントからの計量復元という中心思想は既知である。",
+        "technicalStrength": "BTZ全領域と零温度AdS3極限を整合的に再現するが、一つの高対称背景以外の検査、データ誤差、処方依存性は示されていない。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 15,
+        "originality": 14,
+        "technicalStrength": 14
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15862v1"
+      ],
+      "submissionType": "new",
+      "title": "Holographic Entanglement and Emergent Gravity",
+      "titleJa": "ホログラフィックエンタングルメントと創発重力",
+      "totalScore": 58,
+      "url": "https://arxiv.org/abs/2608.15862"
+    },
+    {
+      "abstractLines": [
+        "高次元の量子補正重力崩壊がブラックホール残骸と降着へ与える効果を調べる。",
+        "修正Friedmann方程式から打切らない計量関数を使い、地平面の退化条件を解く。",
+        "D=4〜7で有限残骸と無次元不変積を得るが、WGCとの関係は類似に留まる。"
+      ],
+      "arxivId": "2608.16369",
+      "arxivVersion": "v1",
+      "assessment": "端点解析の次元整合性を修正した点は堅実だが、電荷のない模型へのWGC類推と現象論を一つの有効補正へ載せるため結論が拡散している。",
+      "authors": [
+        "Saeed Noori Gashti",
+        "Umair Anwar",
+        "Abdul Jawad",
+        "Behnam Pourhassan",
+        "İzzet Sakallı",
+        "Sanjar Shaymatov",
+        "Aram Bahroz Brzo"
+      ],
+      "concept": "端点近傍で破綻する質量展開を捨て、完全な計量関数の二重根条件から残骸量と無次元比を同時に求める。",
+      "conclusion": "高次元でも有限残骸と普遍的な積関係が現れるが、WGC的解釈と採用した有効量子補正の基礎づけは限定的である。",
+      "curiosity": "量子補正で蒸発が止まる端点に、次元によらない物理的な極限関係は存在するか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 26,
+      "scoreReasons": {
+        "broadImpact": "量子重力補正をブラックホール残骸、WGC様比、Bondi降着へ接続するが、観測可能な量と基礎理論との対応は模型依存である。",
+        "categoryImpact": "非一様な質量展開を避けた退化条件からD=4〜7の残骸を閉形式で求め、無次元不変量を整理する。有効Friedmann補正の妥当域が主要な境界である。",
+        "originality": "次元付き比の見かけの増大を除き、$\\mathcal{R}\\mathcal{U}M=(D-3)/2$という不変積を同定する点は具体的である。量子補正残骸とWGC類推は既存題材である。",
+        "technicalStrength": "打切らない計量関数で解析式を得て次元ごとに数値確認するが、LQG補正の導出、非一様崩壊、残骸安定性、WGCとの物理的同一性は確立していない。"
+      },
+      "scores": {
+        "broadImpact": 15,
+        "categoryImpact": 13,
+        "originality": 13,
+        "technicalStrength": 16
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16369v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum-Corrected Black Holes in Higher Dimensions: From Gravitational Collapse to Remnants, WGC-Like Behavior and Accretion Signatures",
+      "titleJa": "高次元の量子補正ブラックホール：重力崩壊から残骸、WGC様挙動、降着シグナルまで",
+      "totalScore": 57,
+      "url": "https://arxiv.org/abs/2608.16369"
+    },
+    {
+      "abstractLines": [
+        "AdSと線形ディラトンを補間する五次元背景の粒子物理・宇宙論応用を概説する。",
+        "実数パラメータ$\\nu$で背景を統一し、階層性、ブレーン宇宙論、バルク伝播場を解析する。",
+        "ギャップ付き連続スペクトルと二種の暗黒物質候補を論じるが、いずれも五次元模型に依存する。"
+      ],
+      "arxivId": "2608.16772",
+      "arxivVersion": "v1",
+      "assessment": "異なる応用を補間背景の共通スペクトルで整理する利便性はあるが、レビュー色が強く、暗黒物質候補の決定的予測は示されない。",
+      "authors": [
+        "Eugenio Megias",
+        "Mariano Quiros"
+      ],
+      "concept": "$\\nu=0$のAdSから$\\nu=1$の線形ディラトンまでを補間し、同じギャップ付きバルク伝播関数を複数現象へ用いる。",
+      "conclusion": "線形ディラトン背景は階層性と暗黒成分へ多様な経路を持つが、提示された候補の現象論的成立は模型依存である。",
+      "curiosity": "線形ディラトンの連続スペクトルは、階層問題と非熱的暗黒物質を一つの五次元幾何で説明できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 27,
+      "scoreReasons": {
+        "broadImpact": "線形ディラトン背景を階層性、ブレーン宇宙論、暗黒物質、アンパーティクルへ横断的に接続する。レビューであり、複数の帰結は特定の五次元有効模型に依存する。",
+        "categoryImpact": "AdSと線形ディラトンを補間する五次元背景を整理し、ギャップ付き連続スペクトルと暗黒成分の可能性を体系化する。新しい中心定理や決定的模型構成は提示しない。",
+        "originality": "圧力なしホログラフィック流体や長寿命グラビトンを暗黒物質候補として並べるが、主眼は既存成果の統合である。補間背景とリトルストリング理論の対応も既知の枠組みに属する。",
+        "technicalStrength": "粒子物理とブレーン宇宙論の複数応用を同一パラメータ族で比較する一方、暗黒物質生成と放射補正による共鳴の定量的成立域は模型仮定に左右される。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 13,
+        "originality": 11,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.16772v1"
+      ],
+      "submissionType": "new",
+      "title": "The linear dilaton in cosmology and particle physics",
+      "titleJa": "宇宙論と素粒子物理学における線形ディラトン",
+      "totalScore": 56,
+      "url": "https://arxiv.org/abs/2608.16772"
+    },
+    {
+      "abstractLines": [
+        "局所揺らぎを持つ確率微分方程式が自由度のない位相的場の理論に属する矛盾を考える。",
+        "確率力学の超対称理論を用い、カオスを位相的超対称性の自発的破れとして記述する。",
+        "1/f雑音をゴールドストーン現象と解釈するが、バタフライ効果とAdS/CFTの接続は推測である。"
+      ],
+      "arxivId": "2608.15220",
+      "arxivVersion": "v1",
+      "assessment": "確率力学を位相的対称性で再編する統一像は魅力的だが、カオス以外の広い現象との接続に推測が多く、技術的支持が限られる。",
+      "authors": [
+        "Igor V. Ovchinnikov"
+      ],
+      "concept": "時間発展の外微分的超対称性を秩序変数とみなし、その自発的破れをカオスと長距離相関の起源に据える。",
+      "conclusion": "STSはTFTと確率揺らぎの両立を説明する枠組みを与えるが、1/f雑音とAdS/CFTへの広い主張には定量的確証が乏しい。",
+      "curiosity": "確率軌道の局所的揺らぎと長期記憶は、位相的超対称性の相として同時に説明できるか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 28,
+      "scoreReasons": {
+        "broadImpact": "確率微分方程式、位相的場の理論、chaos、1/f雑音を超対称性の破れで結び、統計物理と場の理論に広い含意を持つ。後半の接続は推測的である。",
+        "categoryImpact": "局所揺らぎを持つ確率系が自由度のないTFTに属するという見かけの矛盾をSTSで整理する。AdS/CFTを用いる有効記述は確立された導出ではない。",
+        "originality": "カオスを位相的超対称性の自発的破れ、1/f雑音をゴールドストーン現象として統一する像は非自明である。Parisi--Sourlas型定式化は既知の基盤である。",
+        "technicalStrength": "任意形のSDEへ広げたSTS枠組みを用いるが、バタフライ効果の場の理論とAdS/CFT接続は推測と明記され、定量的検証が不足する。"
+      },
+      "scores": {
+        "broadImpact": 16,
+        "categoryImpact": 14,
+        "originality": 14,
+        "technicalStrength": 11
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15220v1"
+      ],
+      "submissionType": "new",
+      "title": "Topological Field Theory and Stochastic Dynamics",
+      "titleJa": "位相的場の理論と確率力学",
+      "totalScore": 55,
+      "url": "https://arxiv.org/abs/2608.15220"
+    },
+    {
+      "abstractLines": [
+        "SYK模型のバルク境界対応をカオス、量子もつれ、作用素代数から理解する課題を扱う。",
+        "Lyapunov指数、スペクトル統計、von Neumann代数を調べ、物質結合と乱数分布を変形する。",
+        "JT重力との情報論的対応を整理するが、主要なカオス結果の多くは既知である。"
+      ],
+      "arxivId": "2608.15589",
+      "arxivVersion": "v1",
+      "assessment": "カオスから作用素代数までを広く接続する一方、既知結果の再整理が中心に見え、新しい定量的前進の輪郭が弱い。",
+      "authors": [
+        "Chen-Te Ma",
+        "Jeff Murugan",
+        "Masaki Tezuka"
+      ],
+      "concept": "時間域ごとのカオス診断と代数型を同じバルク境界辞書で比較し、模型変形に対する幾何学的構造の頑健性を測る。",
+      "conclusion": "SYKの量子情報構造はJT重力との対応を支えるが、標準結果を越える新規な機構と変形依存性の定量像は明確でない。",
+      "curiosity": "SYKの乱数分布や物質結合を変えても、時空創発を担う量子もつれと作用素代数の特徴は残るか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 29,
+      "scoreReasons": {
+        "broadImpact": "SYK模型をchaos、entanglement、作用素代数からJT重力へ結び、量子情報と量子重力を横断する。記載された主要対応の多くは既知の標準結果である。",
+        "categoryImpact": "早期Lyapunov境界、後期ランダム行列統計、フォン・ノイマン代数の遷移をまとめ、変形への頑健性を議論する。新たに解かれた中心問題は特定しにくい。",
+        "originality": "物質結合と乱数分布を変えて情報論的構造の頑健性を比べるが、最大chaos、JT双対、後期統計という核は既存知見を統合する。",
+        "technicalStrength": "複数の診断量と変形を扱う一方、71頁に対して具体的な新規計算結果、有限N誤差、代数型遷移の条件が要約では明瞭でない。"
+      },
+      "scores": {
+        "broadImpact": 17,
+        "categoryImpact": 12,
+        "originality": 10,
+        "technicalStrength": 13
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15589v1"
+      ],
+      "submissionType": "new",
+      "title": "Quantum Information in SYK Model",
+      "titleJa": "SYK模型における量子情報",
+      "totalScore": 52,
+      "url": "https://arxiv.org/abs/2608.15589"
+    },
+    {
+      "abstractLines": [
+        "ディラトンEuler--Heisenberg de Sitterブラックホールの軸性波動応答を調べる。",
+        "分離した重力・電磁摂動に漸近反復法と六次WKB法を適用し、透過率も求める。",
+        "二手法の周波数は一致し異常な軌跡も現れるが、対象は特定の磁気荷模型に限られる。"
+      ],
+      "arxivId": "2608.15111",
+      "arxivVersion": "v1",
+      "assessment": "二つの計算法を照合した点は堅実だが、既知手法の特定ブラックホールへの適用が中心で、異常応答の物理的説明も限定的である。",
+      "authors": [
+        "Ming Zhang",
+        "Guo-Xin Chen",
+        "Xufen Zhang",
+        "Cheng-Fu Feng",
+        "Sheng-Yuan Li",
+        "Rui-Hong Yue",
+        "De-Cheng Zou"
+      ],
+      "concept": "軸性の重力・電磁セクターを分離し、独立な二つの近似算法で複素周波数を照合して結合依存性を追う。",
+      "conclusion": "磁荷と非線形結合はQNM軌跡と透過率を変えるが、異常構造の一般性と観測的識別可能性は示されていない。",
+      "curiosity": "非線形電磁結合はド・ジッターブラックホールのリングダウンと波動透過に識別可能な異常を残すか。",
+      "evaluationBasis": "title_authors_abstract",
+      "fullTextEvaluated": false,
+      "paperType": "理論",
+      "primaryCategory": "hep-th",
+      "rank": 30,
+      "scoreReasons": {
+        "broadImpact": "弦に着想を得た非線形電磁ブラックホールの波動応答を整理し、リングダウンと散乱研究に使える。特定背景・軸性摂動への適用で波及範囲は狭い。",
+        "categoryImpact": "重力・電磁軸性摂動を分離し、磁荷、宇宙定数、非線形結合へのQNMと透過率依存を計算する。既知の数値法による特定模型の調査に留まる。",
+        "originality": "電磁周波数軌跡の位相的異常と$\\epsilon=1$での異常応答を報告するが、AIM・WKBによるQNM解析という中心手法は標準的である。",
+        "technicalStrength": "漸近反復法と六次WKBの一致を検査し、グレーボディ因子も計算する。一致範囲、境界条件、異常軌跡の物理的頑健性に関する追加検査は明らかでない。"
+      },
+      "scores": {
+        "broadImpact": 12,
+        "categoryImpact": 12,
+        "originality": 10,
+        "technicalStrength": 15
+      },
+      "sourceUrls": [
+        "https://arxiv.org/abs/2608.15111v1"
+      ],
+      "submissionType": "new",
+      "title": "Quasinormal frequencies and greybody factors for axial perturbations of dilaton-Euler-Heisenberg de Sitter black holes",
+      "titleJa": "ディラトンEuler--Heisenbergド・ジッターブラックホールの軸性摂動に対する準固有振動数とグレーボディ因子",
+      "totalScore": 49,
+      "url": "https://arxiv.org/abs/2608.15111"
+    }
+  ],
+  "reportDate": "2026-08-18",
+  "schemaVersion": "1.4",
+  "slug": "hep-th",
+  "totalNew": 30
+}
