@@ -6,7 +6,7 @@ OpenAI API課金なしで現在もっとも確実な本番経路は、ChatGPTア
 
 自動処理用Macは電源オンかつユーザーがログイン済みである必要があります。画面ロックとディスプレイスリープは問題ありません。予定時刻にシステムがスリープ中なら、`launchd`は次の起床時に1 runだけ進めます。複数日を同時実行せず、active authorizationまたはcheckpointがあれば同じ日から再開します。完全シャットダウン中やログアウト中には動きません。
 
-次回ログイン時は、arXiv公式`pastweek`の直近5発表日に公開済み日が含まれていれば、抜けた日のうち最古の1日を復元します。1回の起動では1日だけを処理し、次の定時runで次の日へ進みます。選択済みの日は公式照合証跡をdurable authorizationとして保持するため、途中失敗中にpastweek範囲外へ落ちても同じcheckpointを再開できます。これにより中間日を飛ばさず、長時間runとChatGPT利用枠の集中を避けます。最初の選択前から公開済み日が公式範囲より古い場合は、最新日へ飛ばず安全停止します。
+次回ログイン時は、arXiv公式`pastweek`の直近5発表日に公開済み日が含まれていれば、抜けた日のうち最古の1日を復元します。1回の起動では1日だけを処理し、次の毎時確認、11:30・16:30 run、またはログイン時runで次の日へ進みます。選択済みの日は公式照合証跡をdurable authorizationとして保持するため、途中失敗中にpastweek範囲外へ落ちても同じcheckpointを再開できます。これにより中間日を飛ばさず、長時間runとChatGPT利用枠の集中を避けます。最初の選択前から公開済み日が公式範囲より古い場合は、最新日へ飛ばず安全停止します。
 
 普段ChatGPTを使う画面は`chatgpt.com`をChrome等の通常ブラウザで開く形が長期的な基準です。デスクトップアプリはローカルフォルダを対話操作したい時だけで構いません。このDaily arXivの登録済み自動処理は、どちらの画面にも依存しません。
 
@@ -14,30 +14,29 @@ OpenAI API課金なしで現在もっとも確実な本番経路は、ChatGPTア
 
 - OpenAI APIキーとAPI従量課金は使いません。
 - ChatGPTログイン済みCodex CLIを使うため、契約中ChatGPTプランのCodex利用枠を消費します。
-- fresh category generationの前に、ホストがsnapshotの全IDについて公式`https://arxiv.org/abs/<ID>v1`を1件ずつ礼儀正しい間隔で取得し、原題、自然順の完全な著者一覧、abstract、comments、primary categoryを厳格検証します。この全件metadataだけを全abstract一次評価の入力としてCodexへ渡し、1件でも取得・検証できなければCodexを起動せず延期または安全停止して公開済み版を維持します。その後、各カテゴリの暫定上位12件だけを全文確認します。最終上位10件の全文確認を維持しつつ、全文取得を最大36件へ制限します。カテゴリは`quant-ph`、`gr-qc`、`hep-th`の順に独立実行し、検証済みcheckpointを再利用するため、利用枠、モデル、ネットワークのいずれかで失敗しても次回は失敗または未完了のカテゴリだけを再試行します。
+- fresh category generationの前に、ホストがsnapshotの全IDについて公式`https://arxiv.org/abs/<ID>v1`を1件ずつ礼儀正しい間隔で取得し、原題、自然順の完全な著者一覧、abstract、comments、primary categoryを厳格検証します。この全件metadataだけを全abstract一次評価の入力としてCodexへ渡します。その後、各カテゴリ最大12件の本文を確認しますが、個別のe-print・PDF取得または解析に失敗した論文は`title_authors_abstract`の要旨評価で掲載し、カテゴリ処理を続けます。全文評価件数はカテゴリごとの実数0〜12件です。カテゴリは`quant-ph`、`gr-qc`、`hep-th`の順に独立実行し、検証済みcheckpointを再利用するため、次回は失敗または未完了のカテゴリだけを再試行します。
 - 公式一覧の日付が既に公開済みならCodexを起動しないため、午後runを含め利用枠を消費しません。
-- 公式一覧だけが先に更新された場合は、全New IDを取得せず、当日バッチの最大arXiv IDをcanaryとして版固定PDFとe-printへ順次`HEAD`します。PDFが未配信なら`AUTOMATION_DEFERRED`で正常終了し、Codexを起動せず次の定時runへ回します。PDFが利用可能でe-printだけが不調なら`FULL_TEXT_PDF_FALLBACK_READY`として続行します。これはバッチ伝播の軽量確認であり、全件metadataの取得・検証と個別候補の本文確認は後続の独立した段階で行います。
-- 全abstract比較後に個別候補の本文だけが取得不能だった場合は、失敗IDと固定済み暫定候補集合をホストがsnapshotと照合してcheckpoint履歴へ残します。通常のarXiv配信遅延を吸収するため、トークンを使わない公式source事前確認だけは初回15分、次に4時間、18時間、36時間、以後最大72時間のbackoffで再試行し、待機中はCodexを起動しません。待機後はまずホストが候補e-printを実GET・安全抽出します。取得helper自身が型付きで報告した通信・配信不能、または明示的に安全な抽出形式非対応の場合だけ、同じIDの版固定公式PDFを独立`HEAD`確認してPDF経路へ進めます。e-printとPDFの両方が利用不能な場合はbackoffを延長します。取得済みsourceは次のrun固有`/tmp`へ置き、モデルに同じ取得を繰り返させません。危険なarchive path、容量超過、権限、disk、redirect、validation等の予期しないエラーは、messageに`network`、`timeout`、`5xx`等の語が含まれてもPDF fallbackへ落とさず安全停止します。
+- 起動前のPDF/e-print一括確認は行いません。個別本文の可用性はその論文の評価根拠だけを決め、当日版全体の公開可否は決めません。本文を確認できた場合だけ`full_text_major_sections`、確認できなければ`title_authors_abstract`とし、後者は点数上限とsource URL契約を厳格に守ります。
+- モデル、metadata、Git通信等でカテゴリ自体が完了しなかった通常失敗は、1時間、4時間、12時間、以後24時間上限のbackoffで再試行します。PDF単体の失敗にはこのbackoffを適用しません。archive path、容量、権限、disk、redirect、schema、公式日付・ID集合・件数等の決定的異常は緩和せず安全停止します。
 
 ## 本番構成
 
 ```text
-launchd（平日11:30・16:30 JST）
+launchd（平日11:30・16:30 JST + ログイン時 + 毎時確認）
   → daily-arxiv-data-publisher/scripts/run-local-automation.mjs
   → origin/mainを認証付きで確認
   → ホストがarXiv公式3一覧を取得
      日付・New ID全件・New/Cross件数をsnapshot化
   → 未公開日が複数ならpastweekから最古の完全な1日を選択
-  → 公開済みならNO_CHANGE（Codex未使用）
-  → v1 PDF canaryが未配信ならAUTOMATION_DEFERRED。e-printだけ不調ならPDF fallbackで続行
+  → host lockで同時実行を拒否し、公開済みならNO_CHANGE（Codex未使用）
   → quant-ph → gr-qc → hep-thの固定順で未完了カテゴリだけを処理
   → fresh generationなら、ホストが全IDの版固定absを1件ずつ取得し、5項目のmetadataを厳格検証（全件揃わなければCodex未起動）
   → 最初のモデル起動直前に別のdaily-arxiv-data-agent worktreeをorigin/mainへ同期
   → 各カテゴリをCodex CLI（GPT-5.6-Sol / High）で、ホスト検証済みmetadataだけから全abstract一次評価
-  → 暫定上位12件の公式v1 PDF確認 + 公式e-print TeXのbounded抽出（追加package不要）
-  → 個別本文が取得不能なら候補receiptを検証保存。cooldown後はe-printを先取りし、抽出不能でも版固定PDFが確認できればPDF経路で再開
+  → 最大12件の公式v1 PDF確認 + 公式e-print TeXのbounded抽出（追加package不要）
+  → 個別本文が取得・解析不能ならその論文を要旨評価のまま掲載し、次の論文へ続行
   → run固有/tmpのカテゴリ専用stagingへ正確な1 JSON（outboxは空のまま）
-  → カテゴリ単位で、最大4回の番号付き構造監査（最大3回の一括修正）により全論文の必須キー・得点分布・合計・順位・全文確認状態を確定してから、文章専用の番号付き言語監査・schema・公式snapshot照合
+  → カテゴリ単位で単一self-checkを行い、固定validatorを1回実行。schema・公式snapshot・ID・件数・順位・得点合計・根拠tupleを決定的に照合
   → Application Support内の日付・snapshot・runtime別checkpointへ検証済みレポートを保存
   → 失敗時は完成済みカテゴリを再利用し、次回runで未完了カテゴリから再開
   → 3カテゴリが揃ったら空のホスト専用stagingへ安全に結合して全体を再検証
@@ -97,11 +96,11 @@ aged checkpoint復旧では、旧sourceの固定identity・所有者・mode・in
 
 snapshotとfingerprintの契約は従来どおり日付・primary-New ID集合・件数であり、全件metadataはそのID集合に厳密に拘束する別のdigest付き入力です。metadataの導入によってsnapshot対象を追加・削除・置換しません。
 
-1日分のjobは、announcement dateと公式snapshotのSHA-256で親ディレクトリを選び、その中を評価runtimeのSHA-256で分離した`jobs/<date>-<snapshot-fingerprint>/<runtime-fingerprint>/`に置きます。`job.json`、`snapshot.json`、共有`evaluationRunId`は初回に固定し、既存値を上書きしません。通常のpastweek選択でも明示的旧snapshot復旧でも、モデル起動前にライブの公式head・発表日列・完全snapshot列・target fingerprintを検証し、内容digestをファイル名に持つ0600のdurable authorizationを`recovery-authorizations/`へ排他的に保存します。作成途中の内容は同一filesystem上の非active stagingへfsyncしてから`link(2)`で公開するため、途中終了した部分ファイルをactive authorizationとして読みません。受理した各カテゴリは`reports/<category>.json`とdigest付き`<category>.receipt.json`として保存します。通常の失敗draftは`drafts/<attemptId>.<category>.json`とdigest付きreceiptとして不変保存し、本文link直後の停止でreceiptだけが欠けた場合は次回runが同じ検証を再実行してreceiptを追記します。本文取得不能draftだけは、暫定report、固定候補receipt、attempt stage、snapshot・runtime・runId、report digestを1個のcontent-addressed `*.source-draft.json` envelopeへ入れて排他的に公開します。この関連付けは単一原子的artifactなので、ホスト停止時にもsource draftを通常修復draftへ誤分類しません。追記専用のretry監査eventだけが欠けた場合はenvelopeから再構成します。モデル試行は`attempts/*.json`、公開試行は`publication/*.json`へ追記し、content-addressedな`.writes/*.blob`も含め既存記録を削除・置換しません。
+1日分のjobは、announcement dateと公式snapshotのSHA-256で親ディレクトリを選び、その中を評価runtimeのSHA-256で分離した`jobs/<date>-<snapshot-fingerprint>/<runtime-fingerprint>/`に置きます。`job.json`、`snapshot.json`、共有`evaluationRunId`は初回に固定し、既存値を上書きしません。通常のpastweek選択でも明示的旧snapshot復旧でも、モデル起動前にライブの公式head・発表日列・完全snapshot列・target fingerprintを検証し、内容digestをファイル名に持つ0600のdurable authorizationを`recovery-authorizations/`へ排他的に保存します。作成途中の内容は同一filesystem上の非active stagingへfsyncしてから`link(2)`で公開するため、途中終了した部分ファイルをactive authorizationとして読みません。受理した各カテゴリは`reports/<category>.json`とdigest付き`<category>.receipt.json`として保存します。通常の失敗draftは`drafts/<attemptId>.<category>.json`とdigest付きreceiptとして不変保存し、本文link直後の停止でreceiptだけが欠けた場合は次回runが同じ検証を再実行してreceiptを追記します。fresh運用では本文失敗を待つdurable source draft／receiptを新規作成しません。source/PDF専用の終端失敗だけは完成reportと要旨評価tupleへ結び付いた一時receiptで分類し、ホストがreportとreceiptを再検証してcheckpoint取込に成功した後、そのrun自身のreceiptだけを消費します。旧runtimeが既に保存したcontent-addressed `*.source-draft.json`は削除・変換せず、snapshot・runtime・runId・digestを検証できる既存checkpointの互換復旧に限って読み取ります。モデル試行は`attempts/*.json`、公開試行は`publication/*.json`へ追記し、content-addressedな`.writes/*.blob`も含め既存記録を削除・置換しません。
 
-次の定時runでは、public latestDateと一致するactive authorizationを自動検出し、同じsnapshot、runtime fingerprint、evaluationRunIdのjobを開きます。同じanchorのauthorizationが複数ある、digest・0600 mode・canonical内容が変わった、公開anchorやruntimeが一致しない場合はfail closedです。完成済みカテゴリのdigestとschemaを再検証し、有効なカテゴリはCodexを呼ばず再利用して、`quant-ph`、`gr-qc`、`hep-th`の順で最初の未完了カテゴリから再開します。
+次の毎時・定時・ログイン時runでは、public latestDateと一致するactive authorizationを自動検出し、同じsnapshot、runtime fingerprint、evaluationRunIdのjobを開きます。同じanchorのauthorizationが複数ある、digest・0600 mode・canonical内容が変わった、公開anchorやruntimeが一致しない場合はfail closedです。完成済みカテゴリのdigestとschemaを再検証し、有効なカテゴリはCodexを呼ばず再利用して、`quant-ph`、`gr-qc`、`hep-th`の順で最初の未完了カテゴリから再開します。
 
-本文取得receiptに結び付いた有効な暫定draftがあれば、固定候補の公式source事前確認を15分→4時間→18時間→36時間→72時間の独立backoffで先に行い、その後は全abstract評価を繰り返さない`source_resume`へ切り替えます。初期screening時だけ固定候補が暫定上位N件と一致することを検証し、部分的な全文再採点後に候補が現在順位N位より下へ落ちてもreceiptの同じID集合を維持して続行します。版固定PDFだけが確認できる候補はPDF経路で再開します。`category_source_resume`の通常失敗と5時間以上terminal eventのない開始記録は、source事前確認とは分離した従来の18→36→72時間のbackoff対象にし、無制限にモデルを再起動しません。その他の有効な失敗draftは、新規調査、arXiv再取得、再採点、再順位付けを禁止した修復専用runへ切り替えます。許可するのは欠けた`arxivVersion`、`submissionType`、`url`の決定的追加と、既存の事実・根拠を変えない読者向け日本語の修復だけです。同じcheckpoint job・カテゴリの修復系列で終端失敗が4回に達すると、各失敗で有効な後継draftのdigestが変わっていても回数をリセットせず、最新draftをcontent-addressed checkpointに残したまま自動的に新規generationへ切り替えます。修復失敗も共通retry履歴へ数えるため、この切替は直ちにモデルを再起動せず、最新失敗から最大72時間のtoken-free backoffを必ず通ります。最初の切替時だけ`CATEGORY_REGENERATION_FALLBACK`、`AUTOMATIC_RECOVERY_NOTICE`とmacOS通知を出し、その後も定時runが自動再試行します。開始記録だけでstreamが切れた修復試行は4回の回数へ加えません。通常修復runは高コストな新規generationではないため4回まではgeneration backoffとsource prefetchを迂回します。通常のdraftなしgeneration失敗にも同じbackoffを適用し、11:30と16:30に高コストな全件評価をblindに繰り返しません。レビュー済みruntimeまたは固定Codex identityが変わった場合はauthorizationと一致しないため自動継続せず安全停止します。3カテゴリがすべて有効になった後だけ、空のhost stagingへmaterializeして公開します。公開のネットワーク処理だけが失敗または延期された場合は、次回runでモデルを起動せず公開処理だけを再試行します。`published`記録が一度追記されたjobからは二重公開しません。
+旧source draftに結び付いたcheckpointは互換復旧としてのみ開き、内容を独立検証した上で現行の要旨評価継続経路へ戻します。fresh runはsource事前確認、候補prefetch、PDF待ちbackoff、`source_resume`を開始しません。その他の有効な失敗draftは、新規調査、arXiv再取得、再採点、再順位付けを禁止した修復専用runへ切り替えます。通常の未完了カテゴリは失敗時刻から1時間→4時間→12時間→24時間上限の共通backoffで再試行し、毎時確認は期限前ならモデルを起動せず終了します。レビュー済みruntimeまたは固定Codex identityが変わった場合はauthorizationと一致しないため自動継続せず安全停止します。3カテゴリがすべて有効になった後だけ、空のhost stagingへmaterializeして公開します。公開のネットワーク処理だけが失敗した場合は、次回runでモデルを起動せず公開処理だけを再試行します。`published`記録が一度追記されたjobからは二重公開しません。
 
 ### Codexの固定条件
 
@@ -137,12 +136,11 @@ AIの評価内容を機械的に証明することはできませんが、次は
 - 再注入後のreport書誌情報が同じmetadataと完全一致し、metadata入力のdigestがモデル終了後も変わっていないこと
 - generation前後で、選択したpastweek日付のsnapshot fingerprintが同一であること
 - 各モデル終了後もoutboxが空で、カテゴリ専用stagingがホストsnapshotの日付・カテゴリに対応する正確な1レポートだけを含むこと
-- 各カテゴリで`<category>-structure-audit-1.json`から番号順に最大4回の固定構造監査を実行し、非ゼロの監査1〜3の後だけ最大3回の一括修正を行い、最初の`issues=0`で後続の構造監査を作らず終了したこと。得点分布と得点・順位・上位10件の全文確認tuple・件数・URLの修正はこの構造段階だけで完了したこと。その後、現在のレポート構造とrun IDを各pass直前に正規validatorで再検証する文章専用の番号付き言語監査が5回以内に`issues=0`となり（非ゼロ言語監査後のwhole-field一括修正は4回以内）、単一カテゴリvalidatorが成功し、その後にホストが公式ID集合・件数・digestを独立検証してcheckpointしたこと
+- 各カテゴリが単一self-checkを完了し、続く固定validator 1回でschema、日付、カテゴリ、公式ID集合、New/Cross件数、全論文の必須キー、4軸得点合計、決定的順位、評価根拠tuple、版固定URLを検証したこと。英単語、文章多様性、テンプレート重複、点数分布は診断可能な品質情報として残すが、それだけでは構造的に有効な公開を停止しないこと
 - 完成した3レポートがschema 1.4、Daily arXiv rubric 3.0、同じrunId、固定モデル情報を持つこと
 - checkpointのjob・snapshot・receipt・report digestが整合し、3カテゴリすべてが揃うまでpublisherを起動しないこと
 - 全論文が4軸と正確に対応する4キーの`scoreReasons`を持ち、`audit.scoreRubric`が`Daily arXiv rubric 3.0`で始まること
-- 各最終上位10件に全文確認記録があること
-- 各カテゴリの全文確認件数が12件以下であること
+- 各カテゴリの`fullTextEvaluatedCount`が詳細レコードの実数と一致し、0〜12件であること。`true`は`full_text_major_sections`・版固定PDF URL・確認範囲を、`false`は`title_authors_abstract`・版固定abs URLだけを持つこと
 - 秘密情報、PDF、symlink、nested `.git`、10 MiB超ファイルがないこと
 - commit対象が日付に対応する正確な6ファイルだけであること
 - push直前までHEADと`origin/main`が競合していないこと。公開失敗後の再試行でも同じcheckpointを再検証すること
@@ -203,9 +201,9 @@ node scripts/configure-macos-schedule.mjs print
 node scripts/configure-macos-schedule.mjs install
 ```
 
-`install`は検証済みCodexを内容SHA-256別の固定runtimeへ複製し、その複製でも認証・設定・権限probeを通してからserviceを読み込みます。日次checkpointのruntime fingerprintにはリポジトリ内の固定runtime fileだけでなく、このCodex SHA-256とversionも含めます。直後にも追いつき確認が1回走ります。既に公開済みならCodexを呼ばず`NO_CHANGE`で終了します。当日一覧に対して公式本文の配信がまだなら、Codexを呼ばず`AUTOMATION_DEFERRED`で終了し、次の定時runに再確認します。
+`install`は検証済みCodexを内容SHA-256別の固定runtimeへ複製し、その複製でも認証・設定・権限probeを通してからserviceを読み込みます。日次checkpointのruntime fingerprintにはリポジトリ内の固定runtime fileだけでなく、このCodex SHA-256とversionも含めます。直後にも追いつき確認が1回走ります。既に公開済みならCodexを呼ばず`NO_CHANGE`で終了します。個別本文が未配信でも当日全体を延期せず、該当論文を要旨評価として処理します。
 
-未公開日が複数ある場合は最古の1日だけを処理しますが、その時点で完全確認できた後続の非空snapshotも`expectedLatestDate → targetDate`の順序付きauthorizationと空checkpointへ先に保存します。各authorizationは直前のeditionが公開されたときだけactivateされます。したがって最古の1日がpastweek外へ落ちるほど遅延しても、既に捕捉済みの後続日はlive windowへ戻らず順に再開できます。定時runで公式headが進んだ場合も、既存キュー末尾がpastweek内にある間に新しい後続日を追加します。Macがpastweek全体より長く停止して未捕捉の日が生じた場合だけは、日付を推測せず手動確認で停止します。途中で終了しても次の定時runは有効なcheckpointを再利用し、同じ日付の未完了カテゴリから続けます。以後もMac再起動後のユーザーログイン時に同じ確認を行います。
+未公開日が複数ある場合は最古の1日だけを処理しますが、その時点で完全確認できた後続の非空snapshotも`expectedLatestDate → targetDate`の順序付きauthorizationと空checkpointへ先に保存します。各authorizationは直前のeditionが公開されたときだけactivateされます。したがって最古の1日がpastweek外へ落ちるほど遅延しても、既に捕捉済みの後続日はlive windowへ戻らず順に再開できます。毎時・定時runで公式headが進んだ場合も、既存キュー末尾がpastweek内にある間に新しい後続日を追加します。Macがpastweek全体より長く停止して未捕捉の日が生じた場合だけは、日付を推測せず手動確認で停止します。途中で終了しても次の毎時・定時・ログイン時runは有効なcheckpointを再利用し、同じ日付の未完了カテゴリから続けます。
 
 公式`pastweek`は直近5発表日の見出しを提供しますが、最古日は一覧の時間境界で一部だけの場合があります。最古日は公開済み日を特定する基準として使い、復元には3カテゴリすべてが完全表示された後続日だけを使います。公開済み日が5発表日の範囲外なら、自動で日付を飛ばさず手動確認を求めます。
 
@@ -225,7 +223,7 @@ node scripts/run-local-automation.mjs --recover-aged-checkpoint \
 
 受理条件は、公開済み日の直後の平日がtarget、targetの直後の平日が現在のpastweek最古日であること、現在windowの全発表日が3カテゴリで完全かつtargetより新しいこと、`/new`とpastweekのheadが一致することです。sourceは指定date・snapshot fingerprint・runtime fingerprint・evaluationRunIdで一意な、report・draft・publicationを含まないsnapshot-only checkpointに限ります。その所有者、0700/0400 mode、symlink不在、artifactとcontent-addressed blobのidentity・digest・時刻を、現runtimeのdestination checkpointを用意する前にprovenanceとして封印します。
 
-モデル起動前かつdestination job作成前に、保存targetと現在windowの後続非空snapshot全部を最古から最新の連続durable planとして検証し、原子的に保存します。先頭は`aged_checkpoint_recovery`、最初のlive後続だけは`aged_window_continuation`、以後は`normal`とし、authorizationは最新側から作成してactive headを最後に原子的に公開します。このため途中停止で未完のheadはactivateされず、次の無引数runは保存済みplanから再開できます。旧jobのreport・draftは移植せず、現runtimeの新しいjobで評価します。初日の公開後は無引数の定時・login runが1回1日で次のauthorizationをactivateし、スリープや再起動の後も同じ連続planから再開します。中間日、部分window、source provenance不一致のどれかがあれば、モデルを起動せずfail closedです。
+モデル起動前かつdestination job作成前に、保存targetと現在windowの後続非空snapshot全部を最古から最新の連続durable planとして検証し、原子的に保存します。先頭は`aged_checkpoint_recovery`、最初のlive後続だけは`aged_window_continuation`、以後は`normal`とし、authorizationは最新側から作成してactive headを最後に原子的に公開します。このため途中停止で未完のheadはactivateされず、次の無引数runは保存済みplanから再開できます。旧jobのreport・draftは移植せず、現runtimeの新しいjobで評価します。初日の公開後は無引数の毎時・定時・login runが1回1日で次のauthorizationをactivateし、スリープや再起動の後も同じ連続planから再開します。中間日、部分window、source provenance不一致のどれかがあれば、モデルを起動せずfail closedです。
 
 作成対象:
 
@@ -248,10 +246,13 @@ service停止、plist削除、古いdirty agent worktree整理は対象削除を
 
 ## スケジュールと日課
 
+登録するLaunchAgentは、平日11:30・16:30、ユーザーログイン時、毎時確認のすべてで同じランナーを起動します。重なった起動は同時実行lockで直ちに終了し、既発表・公開済み日はno-opです。
+
 ```text
 月〜金 11:30 JST  主run
 月〜金 16:30 JST  retry
 ユーザーログイン時  最古の未公開1日を追いつき確認
+毎時  未公開日・期限到来retry・公開済みno-opを確認
 毎日 09:17・21:17 JST  GitHub Actionsが最新mainをPagesへ再配信
 ```
 
@@ -273,7 +274,7 @@ node scripts/apply-published-prose-correction.mjs \
 
 二つのrenameの間にSIGKILLや電源断が起きた場合、未commitの片方だけが変わっている可能性があります。この場合はcommitやpushをせず、`git diff -- data/reports/YYYY-MM-DD-<category>.json public/data/YYYY-MM-DD.json`と`npm run validate`で不整合を検出し、確認済みの同じ訂正入力でコマンドを再実行します。それでも検証できなければ、Git上の公開済み二ファイルを人が確認して復元してからやり直します。コマンド自体はGit操作を行わないため、差分確認、commit、pushは別の承認済み手順です。
 
-ログイン直後にネットワークやSSH認証がまだ利用できなければ、その追いつき確認は安全に失敗します。常駐retryは行わず、次の11:30または16:30の定時runで再試行します。
+ログイン直後にネットワークやSSH認証がまだ利用できなければ、その追いつき確認は安全に失敗します。次の毎時確認または11:30・16:30の定時runで再試行します。
 
 ```bash
 tail -n 200 "$HOME/Library/Application Support/Daily arXiv/logs/launchd.stdout.log"
@@ -281,9 +282,9 @@ tail -n 200 "$HOME/Library/Application Support/Daily arXiv/logs/launchd.stderr.l
 git -C /Users/hiroki/Desktop/Daily_arXiv/daily-arxiv-data status --short --branch
 ```
 
-正常時は`CHECKPOINT_CREATED`が日付jobの開始、`CATEGORY_CHECKPOINTED`がカテゴリ受理、`CHECKPOINT_RESUMED`と`CATEGORY_CHECKPOINT_REUSED`が完成済みカテゴリを使った再開を示します。report保存直後に異常終了して通常receiptだけが未作成だった場合は、次回runがreportを再検証して`CATEGORY_CHECKPOINT_RECOVERED`を記録し、モデルで再生成しません。本文取得不能draftでは暫定reportとsource receiptを単一の原子的envelopeとして保存し、別のretry監査eventが欠けた停止もenvelopeからsource associationを復元します。`DURABLE_CONTINUATION_AUTHORIZED`は公式照合済みの欠落日キュー保存、`DURABLE_CONTINUATION_QUEUE_VERIFIED`は既存キューと追加headの再検証、`DURABLE_CONTINUATION_SELECTED`は無引数runでの再開、`CHECKPOINT_RECOVERY_SELECTED`は人が確認した旧snapshot復旧を示します。`SOURCE_CANDIDATES_PREFETCHED`はcooldown後の固定候補本文先取りまたは版固定PDF fallback確認です。本文取得receipt時は全abstract評価済み暫定draftも保存し、次のモデルrunは`source_resume`で固定候補の全文評価から続けるため、全abstract評価を繰り返しません。`CATEGORY_REGENERATION_FALLBACK`は同じjob・カテゴリの修復系列で4回の終端失敗（途中の後継draft digest変更を含む）に達した後も最新draftを保護したまま、共通backoffを経由する新規generationへ自動移行したことを示します。`AUTOMATION_PUBLISHED`がpush完了、公開処理だけを再試行する場合は`PUBLISH_RETRY`です。
+正常時は`CHECKPOINT_CREATED`が日付jobの開始、`CATEGORY_CHECKPOINTED`がカテゴリ受理、`CHECKPOINT_RESUMED`と`CATEGORY_CHECKPOINT_REUSED`が完成済みカテゴリを使った再開を示します。report保存直後に異常終了して通常receiptだけが未作成だった場合は、次回runがreportを再検証して`CATEGORY_CHECKPOINT_RECOVERED`を記録し、モデルで再生成しません。`DURABLE_CONTINUATION_AUTHORIZED`は公式照合済みの欠落日キュー保存、`DURABLE_CONTINUATION_QUEUE_VERIFIED`は既存キューと追加headの再検証、`DURABLE_CONTINUATION_SELECTED`は無引数runでの再開、`CHECKPOINT_RECOVERY_SELECTED`は人が確認した旧snapshot復旧を示します。旧ログの`SOURCE_CANDIDATES_PREFETCHED`と`source_resume`は旧source-draft互換復旧の証跡です。fresh運用の`SOURCE_INCOMPLETE_DOWNGRADED`と`SOURCE_INCOMPLETE_RECEIPT_CONSUMED`は、PDF待ちではなく、完成済み要旨レポートを即checkpoint化して一時receiptを消費したことを示します。`AUTOMATION_PUBLISHED`がpush完了、公開処理だけを再試行する場合は`PUBLISH_RETRY`です。
 
-既発表、公式本文の配信待ち、カテゴリbackoff、候補prefetch未完了はいずれも`NO_CHANGE`または`AUTOMATION_DEFERRED`で、Codexを起動しません。通常の`NO_CHANGE`と`AUTOMATION_DEFERRED`ではデスクトップ通知を出しませんが、同一カテゴリのsource障害または当日full-text readiness延期が3回目、その後も3回増えるごとに通知し、自動bounded retry自体は維持します。また、同じjob・カテゴリの修復上限から新規generationへ自動移行した最初の1回だけ、draft保持とcooldown後の自動再試行を通知します。通常generation failureをsource障害の回数へ混ぜません。push完了時の通知はPages公開完了ではなく、GitHub Actionsによる検証・配信開始を示します。失敗時は`ACTION_REQUIRED:`で始まり、完成済みcheckpoint、`current.json`、`origin/main`を維持します。
+既発表・公開済み、同時実行lock、または通常backoff期限前は`NO_CHANGE`または`AUTOMATION_DEFERRED`でCodexを起動しません。個別PDF/e-printの取得・解析失敗は延期理由ではなく、その論文を要旨評価にする理由です。通常失敗は1時間→4時間→12時間→24時間上限で自動再試行します。push完了時の通知はPages公開完了ではなく、GitHub Actionsによる検証・配信開始を示します。日付・ID・schema・秘密情報・公開原子性などの厳格条件に失敗した場合は`ACTION_REQUIRED:`で始まり、完成済みcheckpoint、`current.json`、`origin/main`を維持します。
 
 異常終了したlockはすぐ削除せず保存します。元processが存在せず5時間以上経過したlockだけを`stale-locks`へ移し、午後または翌日のrunを継続します。正常lockも削除せず`lock-history`へ移して監査履歴にします。
 ごく稀に、5時間超の有効なlockに記録されたPIDが別processへ再利用され、そのprocessが長時間存続している場合は、実行重複を避けるため`ACTION_REQUIRED`として停止し、lockと該当PIDを手動確認します。

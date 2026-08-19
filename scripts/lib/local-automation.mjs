@@ -35,7 +35,6 @@ import {
   fetchOfficialPastweekWindow,
   fingerprintCategoryMetadata,
   fingerprintSnapshot,
-  probeOfficialFullTextReadiness,
   selectAgedCheckpointRecoverySnapshot,
   selectAuthorizedContinuationSnapshot,
   selectBackfillSnapshot,
@@ -57,14 +56,12 @@ import {
   materializeCheckpointReports,
   openCheckpointJob,
   preserveCheckpointCategoryDraft,
-  preserveCheckpointCategorySourceDraft,
   recoverIncompleteCheckpointReports,
 } from "./checkpoint.mjs";
 import {
   MODEL_SOURCE_FAILURE_CLASS,
   ORPHANED_GENERATION_STALE_MS,
   computeSourceRetryBackoff,
-  createHostSourceProbeFailureReceipt,
   decodeSourceBlockerEventMessage,
   encodeSourceBlockerEventMessage,
   validateCheckpointSourceBlockerReceipt,
@@ -86,14 +83,10 @@ import {
   runWithBoundedGitNetworkRetries,
 } from "./git-network-retry.mjs";
 import {
-  CURRENT_QUALITY_GATE_EFFECTIVE_DATE,
-  MAX_LANGUAGE_AUDIT_PASSES,
-  MAX_STRUCTURE_AUDIT_PASSES,
   PRODUCTION_SCHEMA,
   RUBRIC_3_MARKER,
   SCORE_KEYS,
   comparePapers,
-  findProductionScoreDistributionIssues,
   parseJsonFile,
   productionFullTextEvaluationLimit,
   validateEvaluationRun,
@@ -725,14 +718,6 @@ export function buildCategoryAutomationPrompt({
     category: structuredClone(snapshot.categories[slug]),
   };
   const reportPath = join(staging, `${date}-${slug}.json`);
-  const structureCommands = Array.from({ length: MAX_STRUCTURE_AUDIT_PASSES }, (_, index) => {
-    const pass = index + 1;
-    return `${pass}. node scripts/preflight-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId} "$TMPDIR/${slug}-structure-audit-${pass}.json"`;
-  }).join("\n");
-  const auditCommands = Array.from({ length: MAX_LANGUAGE_AUDIT_PASSES }, (_, index) => {
-    const pass = index + 1;
-    return `${pass}. node scripts/audit-staged-language.mjs ${date} ${staging} "$TMPDIR/${slug}-language-audit-${pass}.json" ${slug} ${evaluationRunId}`;
-  }).join("\n");
   return `You are one resumable category stage of the Daily arXiv production automation.
 
 Host-enforced runtime contract:
@@ -753,30 +738,24 @@ Never translate, render, normalize, or unescape title, author, category, version
 
 Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely and follow rubric 3.0, full-text, natural-Japanese, field-budget, safety, and schema 1.4 requirements. This host prompt intentionally narrows the daily transaction to one resumable category: any wording in the document that says to create or audit all three reports is replaced for this process by the one-category commands below. Do not inspect historical reports, public data, pipeline implementation, or tests as examples, and do not reuse prior rankings or prose.
 
-Screen every assigned abstract from the complete host metadata above. Do not use export.arxiv.org, any /api/query endpoint, Web search, or a bulk or per-paper /abs fetch; do not rehydrate or verify metadata over the network. Network access is reserved for the existing bounded exact-v1 full-text helper after the provisional candidate set is fixed. After provisional scoring, fix the provisional top min(12, totalNew) candidate IDs in deterministic rank order. Before the first full-text fetch, write a complete provisional schema 1.4 report to ${reportPath}: it must contain every assigned paper, its abstract-supported prose and scores, the fixed provisional ranking, and truthful fullTextEvaluated/evaluationBasis/sourceUrls values for the evidence actually reviewed so far. Keep this provisional report current after each successful full-text review. Then inspect official v1 full text for exactly the fixed provisional candidates and finalize the ranking so every final top min(10, totalNew) paper is fully reviewed and belongs to that fixed candidate set. Derive every score and sentence from the assigned paper's title, abstract, and where required full text. Never derive or spread scores from an arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula. If evidence is unavailable, fail instead of fabricating data.
+Screen every assigned abstract from the complete host metadata above. Do not use export.arxiv.org, any /api/query endpoint, Web search, or a bulk or per-paper /abs fetch; do not rehydrate or verify metadata over the network. Network access is reserved for the existing bounded exact-v1 full-text helper after the provisional candidate set is fixed. After provisional scoring, fix the provisional top min(12, totalNew) candidate IDs in deterministic rank order. Before the first full-text fetch, write a complete provisional schema 1.4 report to ${reportPath}: it must contain every assigned paper, its abstract-supported prose and scores, the fixed provisional ranking, and truthful fullTextEvaluated/evaluationBasis/sourceUrls values for the evidence actually reviewed so far. Keep this report current after every candidate attempt.
+
+Attempt official v1 full-text review for each fixed candidate independently. A missing, delayed, malformed, encrypted, unsupported, or otherwise unusable source/PDF is a paper-local limitation, not a category failure: leave that paper as fullTextEvaluated=false with evaluationBasis="title_authors_abstract", omit fullTextReviewStatus and the PDF URL, keep its claims within abstract evidence and its abstract-only score bounds, and continue with the next fixed candidate. Finish after all fixed candidates have either been reviewed or truthfully left abstract-only. The final top min(10, totalNew) may therefore contain abstract-only papers when their official v1 full text was unusable. Derive every score and sentence from the evidence actually available for that paper. Never derive or spread scores from an arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula, and never fabricate full-text evidence.
+
+If a source/PDF-only command or transport failure would nevertheless force this category stage to stop nonzero, first leave a complete current report at ${reportPath}, with the failed paper using the exact abstract-only tuple above, and run exactly one terminal classification command of this form, substituting only the failed ID and the comma-separated fixed candidate IDs in their original deterministic order:
+node scripts/record-source-incomplete.mjs ${slug} <failed-arxiv-id> ${MODEL_SOURCE_FAILURE_CLASS} <comma-separated-provisional-candidate-ids>
+After it prints SOURCE_INCOMPLETE_RECORDED, stop without another filesystem action and respond exactly SOURCE_INCOMPLETE_RECORDED. This terminal source-only classification is the sole exception to the final-validator path below. The host validates the receipt/report association and checkpoints the truthful report immediately without source cooldown. Never use this receipt for scoring, language, schema, authentication, or any other non-source problem.
 
 Use exactly ${MODEL_ID}, ${MODEL_DISPLAY_NAME}, ${REASONING_EFFORT}, modelSelectionVerified=true, and runId=${evaluationRunId} in evaluationRun. Write only ${reportPath} inside the category staging directory. Do not create a placeholder, marker, scratch file, or another report there. Official source extraction may write only bounded temporary text under $TMPDIR as specified by the helper. Do not modify the Git worktree, use an API key, run npm test, run git, invoke the publisher, or write credentials or PDFs to the repository.
 
 Before fetching a provisional full-text candidate, first check whether the host already materialized bounded official source text at $TMPDIR/sources/<arxivId>. Reuse that text and do not refetch that ID when it exists.
 
-If and only if every assigned abstract has been screened, the exact provisional top min(12, totalNew) candidate IDs have been fixed, a complete current provisional report already exists at ${reportPath}, and one of those candidates still has no usable official v1 full text after the bounded pathways required by docs/SCHEDULED_TASK_PROMPT.md, leave that report in place and run exactly one command of this form, substituting only the failed ID and the comma-separated fixed candidate IDs in the same deterministic order as the report's first min(12, totalNew) ranks:
-node scripts/record-source-incomplete.mjs ${slug} <failed-arxiv-id> ${MODEL_SOURCE_FAILURE_CLASS} <comma-separated-provisional-candidate-ids>
-After it prints SOURCE_INCOMPLETE_RECORDED, stop without another filesystem action and respond exactly SOURCE_INCOMPLETE_RECORDED. The host validates both the receipt and the provisional report against its immutable official snapshot, preserves the report outside the model-write area, and will resume from it after a token-free cooldown and source prefetch. Never create this receipt for a scoring, language, schema, authentication, or non-source problem.
+After creating the report, perform one complete self-check of totals, exact paper keys, deterministic ranking, score sums, full-text flags, evidence-specific scoreReasons, source URLs, and natural Japanese. Every paper, not only the first paper or the fully reviewed papers, must contain the exact schema 1.4 paper-key set. In particular, verify url, arxivVersion, and submissionType on every paper, the exact four keys in both scores and scoreReasons, and the conditional presence of fullTextReviewStatus. Repair any issue found in that single self-check as one batch. Do not run the legacy numbered structural or language audit scripts; subjective prose style or score-distribution preferences must not block an otherwise truthful structurally valid daily edition.
 
-After creating the report, self-check totals, deterministic ranking, full-text flags, evidence-specific scoreReasons, and score distribution once. Every paper, not only the first paper or the fully reviewed papers, must contain the exact schema 1.4 paper-key set. In particular, verify url, arxivVersion, and submissionType on every paper, the exact four keys in both scores and scoreReasons, and the conditional presence of fullTextReviewStatus.
-
-Before any language audit, use these fixed numbered structural-audit commands in order, running only the next command when the preceding audit was nonzero:
-${structureCommands}
-
-Stop immediately at the first structural audit that reports issues=0; do not create a later structural audit. After a nonzero structural audit 1 through ${MAX_STRUCTURE_AUDIT_PASSES - 1}, perform exactly one batch repair covering every listed missing/extra key, nested type/value, score distribution, deterministic rank, canonical top-ten full-text tuple, count, and URL issue. Re-evaluate affected papers from their evidence when score distribution changes; do not mechanically spread scores. Run at most ${MAX_STRUCTURE_AUDIT_PASSES} structural audits and ${MAX_STRUCTURE_AUDIT_PASSES - 1} structural repair batches. If structural audit ${MAX_STRUCTURE_AUDIT_PASSES} is nonzero, stop with an error. Only after a structural audit reports issues=0, use the following fixed numbered language-audit commands in order, running only the next command when the preceding audit was nonzero:
-${auditCommands}
-
-Stop immediately at the first language audit that reports issues=0; do not run or create any later numbered audit. After a nonzero language audit 1 through ${MAX_LANGUAGE_AUDIT_PASSES - 1}, perform exactly one whole-field batch repair covering every listed item. A leaf message is only the first surfaced diagnostic for that field. Reread the complete current field and remove every untranslated general English term, Japanese-boundary ASCII space, known unnatural expression, evaluator-provenance phrase, and other reported defect while preserving the paper-specific facts. Do not merely replace the quoted trigger, do not use a global token-substitution table, and do not rewrite unrelated valid fields. For a category-scoped prose issue, rewrite the complete listed affected set in that same batch as specified in docs/SCHEDULED_TASK_PROMPT.md; score and rank changes are confined to the preceding structural stage. Run at most ${MAX_LANGUAGE_AUDIT_PASSES} language audits and ${MAX_LANGUAGE_AUDIT_PASSES - 1} whole-field batch repairs. If language audit ${MAX_LANGUAGE_AUDIT_PASSES} is nonzero, stop with an error and do not repair again.
-
-Only after an audit reports issues=0, run this read-only validator exactly once as the last command:
+Then run this read-only validator exactly once as the last command:
 node scripts/validate-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId}
 
-After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. The host ignores success prose and independently validates the sole regular JSON file before importing it into a protected checkpoint. Except for the exact source-incomplete receipt path above, on any uncertainty or failure, exit nonzero and leave the previous public edition unchanged.
+After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. The host ignores success prose and independently validates the sole regular JSON file before importing it into a protected checkpoint. On any non-PDF uncertainty or failure, exit nonzero and leave the previous public edition unchanged.
 `;
 }
 
@@ -802,14 +781,6 @@ export function buildCategorySourceResumePrompt({
   });
   const date = validateDate(snapshot.announcementDate);
   const reportPath = join(staging, `${date}-${slug}.json`);
-  const structureCommands = Array.from({ length: MAX_STRUCTURE_AUDIT_PASSES }, (_, index) => {
-    const pass = index + 1;
-    return `${pass}. node scripts/preflight-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId} "$TMPDIR/${slug}-structure-audit-${pass}.json"`;
-  }).join("\n");
-  const auditCommands = Array.from({ length: MAX_LANGUAGE_AUDIT_PASSES }, (_, index) => {
-    const pass = index + 1;
-    return `${pass}. node scripts/audit-staged-language.mjs ${date} ${staging} "$TMPDIR/${slug}-language-audit-${pass}.json" ${slug} ${evaluationRunId}`;
-  }).join("\n");
   const categorySnapshot = {
     announcementDate: date,
     category: structuredClone(snapshot.categories[slug]),
@@ -829,24 +800,14 @@ Host-enforced resume identity:
 The host restored a complete provisional schema 1.4 report whose date, category, runId, exact official ID set, abstract-evidence bounds, deterministic provisional ranks, and candidate set were independently checked. The authoritative identity snapshot is:
 ${JSON.stringify(categorySnapshot, null, 2)}
 
-Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely for rubric 3.0, full-text, natural-Japanese, field-budget, safety, and schema 1.4 requirements. Preserve the existing abstract screening and every noncandidate paper's evidence claims. Do not repeat the all-paper screening, replace the fixed candidate set, introduce a new paper, or use historical reports. Inspect official v1 full text only for the fixed candidate IDs above, reusing bounded host source text at $TMPDIR/sources/<arxivId> whenever present. Complete or correct candidate-specific scores, reasons, summaries, and ranking from that evidence. The final top min(10, totalNew) must all be fully reviewed and must belong to the fixed candidate set. A noncandidate may not enter the final top min(10, totalNew).
+Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely for rubric 3.0, natural-Japanese, field-budget, safety, and schema 1.4 requirements. Preserve the existing abstract screening and every noncandidate paper's evidence claims. Do not repeat the all-paper screening, replace the fixed candidate set, introduce a new paper, or use historical reports. Inspect official v1 full text only for the fixed candidate IDs above, reusing bounded host source text at $TMPDIR/sources/<arxivId> whenever present. Complete or correct candidate-specific scores, reasons, summaries, and ranking from the evidence actually available.
 
-Keep ${reportPath} current after every successful candidate review. If one fixed candidate still has no usable official v1 full text after the bounded official source and exact-v1 PDF pathways, leave the complete current provisional report in place and run exactly:
-node scripts/record-source-incomplete.mjs ${slug} <failed-arxiv-id> ${MODEL_SOURCE_FAILURE_CLASS} ${receipt.provisionalCandidateIds.join(",")}
-After SOURCE_INCOMPLETE_RECORDED, stop without another filesystem action and respond exactly SOURCE_INCOMPLETE_RECORDED. Never use the receipt for a scoring, language, schema, authentication, or non-source problem.
+Treat each candidate independently. If official v1 full text is still unusable, keep that candidate's existing abstract-only tuple (fullTextEvaluated=false, evaluationBasis="title_authors_abstract", no fullTextReviewStatus, no PDF URL) and continue. Do not create another source-incomplete receipt. The final top min(10, totalNew) may include such abstract-only papers. A noncandidate may not be marked full-text evaluated.
 
-After every fixed candidate is resolved, self-check totals, deterministic ranking, full-text flags, evidence-specific scoreReasons, and score distribution once. Then use these fixed structural audits in order, stopping at the first issues=0 result and making at most one complete batch repair after each nonzero result:
-${structureCommands}
-If structural audit ${MAX_STRUCTURE_AUDIT_PASSES} is nonzero, stop with an error.
-
-Only after structural issues=0, use these fixed language audits in order, stopping at the first issues=0 result and making at most one whole-field batch repair after each nonzero result:
-${auditCommands}
-If language audit ${MAX_LANGUAGE_AUDIT_PASSES} is nonzero, stop with an error.
-
-Only after an audit reports issues=0, run this read-only validator exactly once as the last command:
+Keep ${reportPath} current after every candidate attempt. After every fixed candidate is resolved or truthfully left abstract-only, perform one complete self-check of totals, exact keys, deterministic ranks, score sums, evidence flags, source URLs, and natural Japanese, repairing any issues in one batch. Do not run legacy numbered structural or language audit scripts. Then run this read-only validator exactly once as the last command:
 node scripts/validate-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId}
 
-After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. On uncertainty, fail closed; the previous public edition and protected provisional draft remain unchanged.
+After a successful validator, stop without another filesystem action and respond exactly STAGED_CATEGORY_VALID. On non-PDF uncertainty, fail closed; the previous public edition and protected provisional draft remain unchanged.
 `;
 }
 
@@ -867,14 +828,6 @@ export function buildCategoryRepairPrompt({
   }
   const date = validateDate(snapshot.announcementDate);
   const reportPath = join(staging, `${date}-${slug}.json`);
-  const structureCommands = Array.from({ length: MAX_STRUCTURE_AUDIT_PASSES }, (_, index) => {
-    const pass = index + 1;
-    return `${pass}. node scripts/preflight-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId} "$TMPDIR/${slug}-structure-audit-${pass}.json"`;
-  }).join("\n");
-  const auditCommands = Array.from({ length: MAX_LANGUAGE_AUDIT_PASSES }, (_, index) => {
-    const pass = index + 1;
-    return `${pass}. node scripts/audit-staged-language.mjs ${date} ${staging} "$TMPDIR/${slug}-language-audit-${pass}.json" ${slug} ${evaluationRunId}`;
-  }).join("\n");
   const categorySnapshot = {
     announcementDate: date,
     category: structuredClone(snapshot.categories[slug]),
@@ -897,17 +850,7 @@ Read AGENTS.md and docs/SCHEDULED_TASK_PROMPT.md completely for schema 1.4 and J
 
 You may only (a) add a missing arxivVersion="v1", submissionType="new", or url="https://arxiv.org/abs/<arxivId>" value directly implied by the protected official ID, and (b) repair the natural Japanese of already-supported reader-facing prose while preserving its factual meaning. Do not add, remove, or alter any other structural field. A scoreReasons sentence may be rewritten for Japanese quality and specificity, but its score and evidence claim must not change. Modify only ${reportPath}; do not create another report or write to the outbox, Git worktree, checkpoint directories, or public data.
 
-Use these fixed numbered structural audits in order, running only the next command when the preceding audit was nonzero:
-${structureCommands}
-
-Stop at the first structural audit reporting issues=0 and do not create a later audit. After a nonzero audit 1 through ${MAX_STRUCTURE_AUDIT_PASSES - 1}, repair every listed deterministic structural issue in one batch without changing protected research judgments, then run only the next audit. The protected draft's scores, ranks, and full-text evidence are not repairable in this mode: if an audit requests score-distribution repair, rescoring, reranking, a full-text tuple that requires new evidence, or any other protected research change, stop with an error. Run at most ${MAX_STRUCTURE_AUDIT_PASSES} structural audits and ${MAX_STRUCTURE_AUDIT_PASSES - 1} deterministic structural-repair batches. If audit ${MAX_STRUCTURE_AUDIT_PASSES} remains nonzero, stop with an error.
-
-Only after structural issues=0, use these numbered language audits in order:
-${auditCommands}
-
-Stop at the first audit reporting issues=0. After a nonzero audit 1 through ${MAX_LANGUAGE_AUDIT_PASSES - 1}, make exactly one whole-field batch repair for every listed prose field, preserving facts and scores, then run only the next audit. Run at most ${MAX_LANGUAGE_AUDIT_PASSES} audits and ${MAX_LANGUAGE_AUDIT_PASSES - 1} language-repair batches. If audit ${MAX_LANGUAGE_AUDIT_PASSES} remains nonzero, or an audit asks for evidence-based rescoring, stop with an error.
-
-Only after an audit reports issues=0, run this read-only validator exactly once as the last command:
+Perform one complete self-check of the exact schema keys, deterministic identity fields, and natural Japanese. Make at most one batch repair confined to the changes allowed above. Do not run legacy numbered structural or language audit scripts, and do not alter scores or evidence to satisfy subjective style or score-distribution preferences. Then run this read-only validator exactly once as the last command:
 node scripts/validate-staged-category.mjs ${date} ${slug} ${staging} ${evaluationRunId}
 
 After it prints STAGED_CATEGORY_VALID, stop without any further filesystem action and respond exactly STAGED_CATEGORY_VALID. On any uncertainty, fail closed so the protected draft remains available for the bounded next repair attempt and the public edition remains unchanged.
@@ -2259,6 +2202,56 @@ export function validateCategorySourceBlockerLayout({
   return validateModelSourceIncompleteReceipt(receipt, { snapshot, category: slug });
 }
 
+export function consumeCheckpointedCategorySourceBlocker({
+  job,
+  blockerDirectory,
+  blockerPath,
+  stagingDirectory,
+  outboxDirectory,
+  expectedReceipt,
+  snapshot,
+  slug,
+}) {
+  if (!job || typeof job !== "object" || Array.isArray(job)) {
+    fail("Source-blocker consumption requires a loaded checkpoint job.");
+  }
+  const current = loadCheckpointJob({
+    controlRoot: job.controlRoot,
+    reportDate: job.manifest?.reportDate,
+    snapshotFingerprint: job.manifest?.snapshotFingerprint,
+    runtimeFingerprint: job.manifest?.runtimeFingerprint,
+    evaluationRunId: job.evaluationRunId,
+  });
+  if (fingerprintSnapshot(snapshot) !== current.manifest.snapshotFingerprint) {
+    fail("Refusing to consume a source receipt against a different checkpoint snapshot.");
+  }
+  if (!current.completeCategories.includes(slug)) {
+    fail(`Refusing to consume the ${slug} source receipt before its checkpoint report is complete.`);
+  }
+  const actualReceipt = validateCategorySourceBlockerLayout({
+    blockerDirectory,
+    blockerPath,
+    stagingDirectory,
+    outboxDirectory,
+    snapshot,
+    slug,
+    allowProvisionalReport: true,
+  });
+  const normalizedExpected = validateCheckpointSourceBlockerReceipt(expectedReceipt, {
+    snapshot,
+    category: slug,
+  });
+  if (!sameSourceReceipt(actualReceipt, normalizedExpected)) {
+    fail(`Refusing to consume a changed ${slug} source receipt after checkpoint import.`);
+  }
+  unlinkSync(blockerPath);
+  fsyncDirectory(blockerDirectory);
+  if (readdirSync(blockerDirectory).length !== 0) {
+    fail("Source blocker directory was not empty after exact receipt consumption.");
+  }
+  return actualReceipt;
+}
+
 export function assertGenericCategoryDraftRescueAllowed(sourceBlockerPath) {
   if (typeof sourceBlockerPath !== "string" || !isAbsolute(sourceBlockerPath)) {
     fail("Generic category-draft rescue requires an absolute source-blocker path.");
@@ -2327,7 +2320,15 @@ export function computeCategoryRetryState({ execution, attempts, category, now =
     fail("Category retry planning requires a generation, source-resume, or repair execution.");
   }
   if (execution.mode === "repair") return null;
-  return computeSourceRetryBackoff({ attempts, category, now });
+  const retryState = computeSourceRetryBackoff({ attempts, category, now });
+  if (execution.mode === "source_resume" && retryState.sourceBlocker !== null) {
+    return Object.freeze({
+      ...retryState,
+      shouldDefer: false,
+      sourceCooldownBypassed: retryState.shouldDefer,
+    });
+  }
+  return retryState;
 }
 
 export function sourceFailureNeedsAttention(previousFailureCount) {
@@ -2564,7 +2565,7 @@ export function validateCategoryDraftAssociation({
   evaluationRunId,
   snapshot,
   path = "categoryDraft",
-  allowIncompleteFullText = false,
+  allowIncompleteFullText = true,
 }) {
   validateDate(date);
   if (!CATEGORIES.includes(slug)) fail(`Unsupported Daily arXiv category: ${slug}`);
@@ -2722,9 +2723,9 @@ export function validateCategoryDraftAssociation({
   if (!allowIncompleteFullText && ranked.slice(0, topCount).some((paper) => !paper.fullTextEvaluated)) {
     fail(`${path}.papers omit full-text review from a protected top-${topCount} paper.`);
   }
-  if (date >= CURRENT_QUALITY_GATE_EFFECTIVE_DATE && findProductionScoreDistributionIssues(report).length > 0) {
-    fail(`${path}.papers have an invalid protected score distribution.`);
-  }
+  // Score-distribution and prose-style heuristics are quality signals, not
+  // identity or safety invariants. They must never hold an otherwise truthful
+  // daily edition hostage.
 
   exactKeys(report.audit, [
     "listingUrl",
@@ -2796,6 +2797,22 @@ export function validateCategorySourceResumeDraft({
     path,
     allowIncompleteFullText: true,
   });
+  const failedPaper = report.papers.find(({ arxivId }) => arxivId === normalizedReceipt.arxivId);
+  const expectedAbstractUrl = `https://arxiv.org/abs/${normalizedReceipt.arxivId}v1`;
+  if (
+    failedPaper === undefined
+    || failedPaper.fullTextEvaluated !== false
+    || failedPaper.evaluationBasis !== "title_authors_abstract"
+    || Object.hasOwn(failedPaper, "fullTextReviewStatus")
+    || !Array.isArray(failedPaper.sourceUrls)
+    || failedPaper.sourceUrls.length !== 1
+    || failedPaper.sourceUrls[0] !== expectedAbstractUrl
+  ) {
+    fail(
+      `${path} receipt-targeted paper ${normalizedReceipt.arxivId} must retain the exact abstract-only `
+      + "evidence tuple without fullTextReviewStatus or a PDF URL.",
+    );
+  }
   if (candidateOrderRequired) {
     const rankedCandidateIds = [...report.papers]
       .sort(comparePapers)
@@ -4617,60 +4634,12 @@ export async function runAutomation({
     }
 
     if (!job?.isComplete) {
-      const readiness = await probeOfficialFullTextReadiness(snapshot, { fetchImpl });
-      const readinessDisposition = classifyFullTextReadiness(readiness, {
-        isLatestAnnouncement: snapshot.announcementDate === currentSnapshot.announcementDate,
-      });
-      if (!["ready", "ready_pdf_fallback"].includes(readinessDisposition)) {
-        const unavailable = readiness.unavailable;
-        const status = unavailable.status === null ? "network error" : `HTTP ${unavailable.status}`;
-        if (readinessDisposition === "defer") {
-          const previousReadinessDefers = new Set(job.attempts.filter((event) => (
-            event.stage === "full_text_readiness"
-            && event.status === "deferred"
-          )).map(({ attemptId }) => attemptId)).size;
-          appendCheckpointAttempt({
-            job,
-            attemptId: runId,
-            stage: "full_text_readiness",
-            status: "deferred",
-            message: `Official ${unavailable.kind} for ${readiness.arxivId}v1 was not ready (${status}).`,
-          });
-          const attentionRequired = sourceFailureNeedsAttention(previousReadinessDefers);
-          console.log(
-            `AUTOMATION_DEFERRED: official ${unavailable.kind} for ${readiness.arxivId}v1 is not ready (${status}); `
-            + `Codex was not started (runId ${runId}).`,
-          );
-          if (attentionRequired) {
-            console.error(
-              `ATTENTION_REQUIRED: ${snapshot.announcementDate} has reached `
-              + `${previousReadinessDefers + 1} full-text readiness deferrals; automatic retries remain enabled.`,
-            );
-          }
-          return Object.freeze({
-            status: "deferred",
-            runId,
-            date: snapshot.announcementDate,
-            reason: "full_text_not_ready",
-            arxivId: readiness.arxivId,
-            attentionRequired,
-          });
-        }
-        fail(
-          `Official ${unavailable.kind} for ${readiness.arxivId}v1 is unavailable (${status}) `
-          + `after its announcement propagation window.`,
-        );
-      }
-      if (readinessDisposition === "ready_pdf_fallback") {
-        console.log(
-          `FULL_TEXT_PDF_FALLBACK_READY: official v1 PDF canary ${readiness.arxivId} passed while e-print `
-          + `was unavailable; candidate-level exact-v1 PDF fallback remains enabled (runId ${runId}).`,
-        );
-      } else {
-        console.log(`FULL_TEXT_READY: official v1 PDF and e-print canary ${readiness.arxivId} passed before Codex start (runId ${runId}).`);
-      }
+      console.log(
+        `FULL_TEXT_BEST_EFFORT: ${snapshot.announcementDate}; no global PDF/source canary is required. `
+        + `Unavailable candidate full text remains abstract-only and cannot defer the edition (runId ${runId}).`,
+      );
     } else {
-      console.log(`PUBLISH_RETRY: ${snapshot.announcementDate}; complete checkpoints bypass full-text readiness and model generation.`);
+      console.log(`PUBLISH_RETRY: ${snapshot.announcementDate}; complete checkpoints bypass model generation.`);
     }
 
     console.log(
@@ -4780,59 +4749,10 @@ export async function runAutomation({
           ) {
             fail("Latest source backoff receipt does not match the protected source-resume candidate set.");
           }
-          const prefetch = await prefetchSourceBlockerCandidates({
-            receipt: retryState.sourceBlocker.receipt,
-            snapshot,
-            slug,
-            paths,
-            env,
-            fallbackProbe: (arxivId) => probeOfficialVersionFixedPdf(arxivId, { fetchImpl }),
-          });
-          if (!prefetch.ready) {
-            const observedAt = new Date();
-            const refreshedReceipt = createHostSourceProbeFailureReceipt(
-              retryState.sourceBlocker.receipt,
-              {
-                snapshot,
-                category: slug,
-                failedArxivId: prefetch.arxivId,
-              },
-            );
-            appendCheckpointAttempt({
-              job,
-              attemptId: runId,
-              stage: "category_source_probe",
-              status: "failed",
-              category: slug,
-              message: encodeSourceBlockerEventMessage(refreshedReceipt, { observedAt }),
-            });
-            const attentionRequired = sourceFailureNeedsAttention(retryState.sourceFailureCount);
-            console.log(
-              `AUTOMATION_DEFERRED: official e-print extraction and exact-v1 PDF fallback are still unavailable `
-              + `for ${prefetch.arxivId}; Codex was not started and the token-free backoff was extended `
-              + `(runId ${runId}).`,
-            );
-            if (attentionRequired) {
-              console.error(
-                `ATTENTION_REQUIRED: ${snapshot.announcementDate} ${slug} has reached `
-                + `${retryState.sourceFailureCount + 1} source failures; automatic bounded retries remain enabled.`,
-              );
-            }
-            removeTokenFreeDeferredRunArtifacts(paths);
-            return Object.freeze({
-              status: "deferred",
-              runId,
-              date: snapshot.announcementDate,
-              category: slug,
-              reason: "candidate_full_text_not_ready",
-              arxivId: prefetch.arxivId,
-              attentionRequired,
-            });
-          }
           console.log(
-            `SOURCE_CANDIDATES_PREFETCHED: ${prefetch.prefetchedCount} official source archive(s) are local for `
-            + `${snapshot.announcementDate} ${slug}; ${prefetch.unsupported.length} candidate(s) have an `
-            + `independently verified exact-v1 official PDF fallback (runId ${runId}).`,
+            `SOURCE_RESUME_BEST_EFFORT: ${snapshot.announcementDate} ${slug}; a legacy source receipt exists, `
+            + `but unavailable candidate full text will remain abstract-only instead of deferring the edition `
+            + `(runId ${runId}).`,
           );
         }
       } else {
@@ -4928,6 +4848,7 @@ export async function runAutomation({
                 + `Started ${slug} full regeneration after ${execution.regenerationFallback.repairFailureCount} `
                 + `terminal repair failures and bounded backoff with host metadata SHA-256 ${categoryMetadataSha256}.`,
       });
+      let sourceReceiptToConsume = null;
       try {
         await invokeCodexCategory({
           codexBin,
@@ -4980,7 +4901,11 @@ export async function runAutomation({
             policy,
             evaluationRunId: job.evaluationRunId,
             snapshot,
-            candidateOrderRequired: execution.mode === "generation",
+            // Fresh reports may legitimately reorder the fixed candidates
+            // after earlier full-text reviews.  The receipt still fixes a
+            // bounded snapshot ID set, and every full-text flag must belong to
+            // that set; do not confuse final rank with provisional order.
+            candidateOrderRequired: false,
             path: `sourceIncompleteDraft.${slug}`,
           });
           if (categoryMetadata !== null) {
@@ -4995,88 +4920,12 @@ export async function runAutomation({
               path: `sourceIncompleteResume.${slug}`,
             });
           }
-          let checkpointMetadataBinding = null;
-          const sourceDraft = preserveCheckpointCategorySourceDraft({
-            job,
-            category: slug,
-            sourcePath: realpathSync(provisionalLayout.path),
-            sourceReceipt,
-            attemptId: runId,
-            normalizeReport: categoryMetadata === null
-              ? undefined
-              : (candidate) => {
-                checkpointMetadataBinding = bindCategoryReportForCheckpoint({
-                  report: candidate,
-                  categoryMetadata,
-                });
-                return checkpointMetadataBinding.report;
-              },
-            validateDraft: (candidate, context) => {
-              validateCategorySourceResumeDraft({
-                report: candidate,
-                receipt: sourceReceipt,
-                date: context.reportDate,
-                slug: context.category,
-                policy,
-                evaluationRunId: context.evaluationRunId,
-                snapshot: context.snapshot,
-                candidateOrderRequired: execution.mode === "generation",
-                path: `checkpointSourceIncompleteDraft.${context.category}`,
-              });
-              if (categoryMetadata !== null) {
-                validateCategoryReportAgainstMetadata(candidate, categoryMetadata);
-              }
-              if (execution.mode === "source_resume") {
-                validateCategorySourceResumeMutation({
-                  source: execution.draft.report,
-                  resumed: candidate,
-                  receipt: execution.sourceReceipt,
-                  requireComplete: false,
-                  path: `checkpointSourceIncompleteResume.${context.category}`,
-                });
-              }
-              return true;
-            },
-          });
-          if (checkpointMetadataBinding !== null) {
-            console.log(
-              `CATEGORY_METADATA_BOUND: ${snapshot.announcementDate} ${slug}; host restored `
-              + `${checkpointMetadataBinding.correctedFields} immutable field value(s) before preserving the source draft `
-              + `(source ${checkpointMetadataBinding.sourceValueSha256}, `
-              + `bound ${checkpointMetadataBinding.boundValueSha256}, runId ${runId}).`,
-            );
-          }
-          const observedAt = new Date();
-          appendCheckpointAttempt({
-            job,
-            attemptId: runId,
-            stage: execution.stage,
-            status: "failed",
-            category: slug,
-            message: encodeSourceBlockerEventMessage(sourceReceipt, { observedAt }),
-          });
-          const attentionRequired = sourceFailureNeedsAttention(retryState?.sourceFailureCount ?? 0);
+          sourceReceiptToConsume = sourceReceipt;
           console.log(
-            `AUTOMATION_DEFERRED: ${snapshot.announcementDate} ${slug} could not obtain official v1 full text `
-            + `for ${sourceReceipt.arxivId}; provisional screening draft ${sourceDraft.sha256} and its fixed `
-            + `candidate set were preserved for a token-free `
-            + `cooldown and source prefetch (runId ${runId}).`,
+            `SOURCE_INCOMPLETE_DOWNGRADED: ${snapshot.announcementDate} ${slug} could not obtain official v1 `
+            + `full text for ${sourceReceipt.arxivId}; the validated complete report will be checkpointed with `
+            + `that paper left abstract-only instead of deferring the edition (runId ${runId}).`,
           );
-          if (attentionRequired) {
-            console.error(
-              `ATTENTION_REQUIRED: ${snapshot.announcementDate} ${slug} has reached `
-              + `${(retryState?.sourceFailureCount ?? 0) + 1} source failures; automatic bounded retries remain enabled.`,
-            );
-          }
-          return Object.freeze({
-            status: "deferred",
-            runId,
-            date: snapshot.announcementDate,
-            category: slug,
-            reason: "source_incomplete",
-            arxivId: sourceReceipt.arxivId,
-            attentionRequired,
-          });
         }
         const layout = validateCategoryModelOutputLayout({
           stagingDirectory: paths.categoryStaging[slug],
@@ -5103,6 +4952,19 @@ export async function runAutomation({
           categoryMetadata,
           path: layout.path,
         });
+        if (sourceReceiptToConsume !== null) {
+          validateCategorySourceResumeDraft({
+            report,
+            receipt: sourceReceiptToConsume,
+            date: snapshot.announcementDate,
+            slug,
+            policy,
+            evaluationRunId: job.evaluationRunId,
+            snapshot,
+            candidateOrderRequired: false,
+            path: `sourceReceiptOutput.${slug}`,
+          });
+        }
         if (execution.mode === "repair") {
           validateCategoryRepairMutation({
             source: execution.draft.report,
@@ -5114,7 +4976,7 @@ export async function runAutomation({
             source: execution.draft.report,
             resumed: report,
             receipt: execution.sourceReceipt,
-            requireComplete: true,
+            requireComplete: false,
             path: `sourceResumeOutput.${slug}`,
           });
         }
@@ -5144,6 +5006,19 @@ export async function runAutomation({
               categoryMetadata,
               path: `checkpoint.${context.category}`,
             });
+            if (sourceReceiptToConsume !== null) {
+              validateCategorySourceResumeDraft({
+                report: candidate,
+                receipt: sourceReceiptToConsume,
+                date: context.reportDate,
+                slug: context.category,
+                policy,
+                evaluationRunId: context.evaluationRunId,
+                snapshot: context.snapshot,
+                candidateOrderRequired: false,
+                path: `checkpointSourceReceipt.${context.category}`,
+              });
+            }
             if (execution.mode === "repair") {
               validateCategoryRepairMutation({
                 source: execution.draft.report,
@@ -5155,7 +5030,7 @@ export async function runAutomation({
                 source: execution.draft.report,
                 resumed: candidate,
                 receipt: execution.sourceReceipt,
-                requireComplete: true,
+                requireComplete: false,
                 path: `checkpointSourceResume.${context.category}`,
               });
             }
@@ -5190,6 +5065,22 @@ export async function runAutomation({
               + `${checkpointMetadataBinding.sourceValueSha256}, bound value SHA-256 `
               + `${checkpointMetadataBinding.boundValueSha256}.`,
         });
+        if (sourceReceiptToConsume !== null) {
+          consumeCheckpointedCategorySourceBlocker({
+            job,
+            blockerDirectory: paths.blockers,
+            blockerPath: paths.sourceBlockers[slug],
+            stagingDirectory: paths.categoryStaging[slug],
+            outboxDirectory: paths.outbox,
+            expectedReceipt: sourceReceiptToConsume,
+            snapshot,
+            slug,
+          });
+          console.log(
+            `SOURCE_INCOMPLETE_RECEIPT_CONSUMED: ${snapshot.announcementDate} ${slug}; `
+            + `checkpoint import completed before exact receipt removal (runId ${runId}).`,
+          );
+        }
         console.log(`CATEGORY_CHECKPOINTED: ${snapshot.announcementDate} ${slug}; next retry will not regenerate it.`);
       } catch (error) {
         let preservedDraft;
@@ -5242,7 +5133,7 @@ export async function runAutomation({
                   source: execution.draft.report,
                   resumed: candidate,
                   receipt: execution.sourceReceipt,
-                  requireComplete: true,
+                  requireComplete: false,
                   path: `failedSourceResumeDraft.${context.category}`,
                 });
               }

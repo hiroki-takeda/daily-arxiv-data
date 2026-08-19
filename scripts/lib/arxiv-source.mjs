@@ -417,6 +417,27 @@ function citationAuthorMatchesVisibleBody(citationAuthor, bodyAuthor, index) {
     compactNaturalAuthorIdentity(citationNaturalOrder, `citation author ${index + 1}`);
 }
 
+function parseCitationAuthors(tokens, arxivId) {
+  const authors = metaContents(tokens, "citation_author", { multiple: true });
+  if (authors.length > METADATA_TEXT_LIMITS.authors) {
+    fail(
+      "SOURCE_TOO_LARGE",
+      `${arxivId} citation metadata authors exceed ${METADATA_TEXT_LIMITS.authors} names; observed ${authors.length}.`,
+    );
+  }
+  return authors.map((author, index) => {
+    const canonical = canonicalMetadataText(
+      author,
+      `citation author ${index + 1}`,
+      METADATA_TEXT_LIMITS.author,
+    );
+    // Reject an empty punctuation shell even when the string itself is non-empty.
+    // This check applies to the canonical source, not to the advisory body rendering.
+    authorIdentitySignature(canonical, `citation author ${index + 1}`);
+    return canonical;
+  });
+}
+
 function parseBodyAuthors(tokens, arxivId) {
   const authorsElement = exactlyOneElementWithClass(tokens, "div", "authors", "arXiv authors");
   const authors = [];
@@ -485,11 +506,16 @@ function parseBodyAuthors(tokens, arxivId) {
     authorTokenIndexes.push(index);
     index = endIndex;
   }
-  if (authors.length === 0 || authors.length > METADATA_TEXT_LIMITS.authors) {
+  if (authors.length === 0) {
     fail(
       "SOURCE_INCOMPLETE",
-      `${arxivId} authors must contain 1 through ${METADATA_TEXT_LIMITS.authors} linked names; `
-      + `observed ${authors.length}.`,
+      `${arxivId} authors must contain at least one linked name.`,
+    );
+  }
+  if (authors.length > METADATA_TEXT_LIMITS.authors) {
+    fail(
+      "SOURCE_TOO_LARGE",
+      `${arxivId} visible authors exceed ${METADATA_TEXT_LIMITS.authors} linked names; observed ${authors.length}.`,
     );
   }
   if ((longAuthorToggle === null) !== (hiddenList === null)) {
@@ -512,6 +538,35 @@ function parseBodyAuthors(tokens, arxivId) {
     }
   }
   return authors;
+}
+
+function canonicalAuthorsWithBodyRendering(tokens, arxivId) {
+  const citationAuthors = parseCitationAuthors(tokens, arxivId);
+  let bodyAuthors;
+  try {
+    bodyAuthors = parseBodyAuthors(tokens, arxivId);
+  } catch (error) {
+    // The visible author block is presentation HTML and has changed shape on
+    // otherwise identity-pinned official arXiv pages.  Only an incomplete or
+    // unrecognised author rendering may fall back to bounded citation metadata;
+    // oversized values and unrelated parser failures remain fail-closed.
+    if (!(error instanceof ArxivSourceError) || error.code !== "SOURCE_INCOMPLETE") throw error;
+    return citationAuthors;
+  }
+
+  if (citationAuthors.length !== bodyAuthors.length) return citationAuthors;
+  try {
+    if (bodyAuthors.every((bodyAuthor, index) => (
+      citationAuthorMatchesVisibleBody(citationAuthors[index], bodyAuthor, index)
+    ))) {
+      // Preserve natural display order only when every visible identity is an
+      // independently consistent rendering of the canonical ordered list.
+      return bodyAuthors;
+    }
+  } catch (error) {
+    if (!(error instanceof ArxivSourceError) || error.code !== "SOURCE_INCOMPLETE") throw error;
+  }
+  return citationAuthors;
 }
 
 function automaticLinkifierHref(tokens, startIndex, endIndex, path) {
@@ -602,10 +657,12 @@ function validateVisibleBodyField(tokens, element, { descriptor, path, maxCharac
 
 /**
  * Parse one exact, version-pinned official arXiv abstract page.  Citation
- * metadata is canonical for title/abstract because arXiv renders TeX and
- * automatic links differently in the visible body.  The body must still have
- * the expected non-empty bounded structure, exact descriptors, v1 marker,
- * category, and independently ordered author identities.
+ * metadata is canonical for title/abstract/authors because arXiv renders TeX,
+ * automatic links, and some author lists differently in the visible body.  A
+ * consistent visible author list supplies natural display order; otherwise the
+ * bounded ordered citation list is retained.  Page identity, the exact v1
+ * marker, canonical URLs, visible title/abstract structure, and primary
+ * category remain independently fail-closed.
  */
 export function parseArxivAbstractPage(html, { arxivId, slug } = {}) {
   supportedSlug(slug);
@@ -658,20 +715,7 @@ export function parseArxivAbstractPage(html, { arxivId, slug } = {}) {
   });
   const metaTitle = canonicalMetadataText(metaContents(tokens, "citation_title"), "citation_title", METADATA_TEXT_LIMITS.title);
 
-  const bodyAuthors = parseBodyAuthors(tokens, arxivId);
-  const metaAuthors = metaContents(tokens, "citation_author", { multiple: true });
-  if (metaAuthors.length !== bodyAuthors.length) {
-    fail(
-      "SOURCE_CONTENT_MISMATCH",
-      `${arxivId} author count disagrees between citation metadata (${metaAuthors.length}) `
-      + `and the visible body (${bodyAuthors.length}).`,
-    );
-  }
-  for (const [index, bodyAuthor] of bodyAuthors.entries()) {
-    if (!citationAuthorMatchesVisibleBody(metaAuthors[index], bodyAuthor, index)) {
-      fail("SOURCE_CONTENT_MISMATCH", `${arxivId} author ${index + 1} disagrees between citation metadata and the visible body.`);
-    }
-  }
+  const canonicalAuthors = canonicalAuthorsWithBodyRendering(tokens, arxivId);
 
   const metaAbstract = canonicalMetadataText(
     metaContents(tokens, "citation_abstract"),
@@ -699,7 +743,7 @@ export function parseArxivAbstractPage(html, { arxivId, slug } = {}) {
     url: expectedUrl,
     sourceUrl: `${expectedUrl}v1`,
     title: metaTitle,
-    authors: Object.freeze([...bodyAuthors]),
+    authors: Object.freeze([...canonicalAuthors]),
     abstract: metaAbstract,
     comments: parseBodyComments(tokens, arxivId),
     primaryCategory: slug,

@@ -1459,25 +1459,81 @@ test("abstract-page parser returns canonical v1 metadata and preserves natural a
   }).comments, null);
 });
 
-test("abstract-page parser tolerates only an exactly reconstructable citation-author surname split", () => {
+test("abstract-page parser preserves a consistent natural-order rendering of citation authors", () => {
   const paper = parseArxivAbstractPage(abstractPageHtml({
     arxivId: "2608.06359",
     authors: ["Ivana Đorđević", "Jovan Potrebić"],
     metaAuthors: ["ević, Ivana Đorđ", "Potrebić, Jovan"],
   }), { arxivId: "2608.06359", slug: "quant-ph" });
   assert.deepEqual(paper.authors, ["Ivana Đorđević", "Jovan Potrebić"]);
+});
 
-  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+test("canonical citation authors survive visible-body count, identity, and structure drift", () => {
+  const countMismatch = parseArxivAbstractPage(abstractPageHtml({
+    metaAuthors: ["  Example,   Alice  "],
+  }), { arxivId: "2607.07798", slug: "quant-ph" });
+  assert.deepEqual(countMismatch.authors, ["Example, Alice"]);
+
+  const identityMismatch = parseArxivAbstractPage(abstractPageHtml({
     arxivId: "2608.06359",
     authors: ["Ivana Đorđević", "Jovan Potrebić"],
     metaAuthors: ["ević, Ivana Wrong Đorđ", "Potrebić, Jovan"],
-  }), { arxivId: "2608.06359", slug: "quant-ph" }), /author 1 disagrees/);
+  }), { arxivId: "2608.06359", slug: "quant-ph" });
+  assert.deepEqual(identityMismatch.authors, ["ević, Ivana Wrong Đorđ", "Potrebić, Jovan"]);
+
+  const missingBodyAuthors = abstractPageHtml()
+    .replace('class="authors"', 'class="contributors"');
+  assert.deepEqual(parseArxivAbstractPage(missingBodyAuthors, {
+    arxivId: "2607.07798",
+    slug: "quant-ph",
+  }).authors, ["Example, Alice", "Researcher, Bob Q."]);
+
+  const authorless = (options = {}) => abstractPageHtml(options)
+    .replace('class="authors"', 'class="contributors"');
+  for (const [html, pattern] of [
+    [authorless({ metaId: "2607.09999" }), /citation_arxiv_id/],
+    [authorless({ version: "v2" }), /matching arXiv:2607\.07798v1/],
+    [authorless({ canonicalUrl: "https://example.com/abs/2607.07798" }), /canonical URL/],
+    [authorless({ citationPdfUrl: "https://arxiv.org/pdf/2607.09999" }), /citation_pdf_url/],
+    [authorless({ slug: "gr-qc" }), /primary category/],
+  ]) {
+    assert.throws(() => parseArxivAbstractPage(html, {
+      arxivId: "2607.07798",
+      slug: "quant-ph",
+    }), pattern);
+  }
 
   assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
-    arxivId: "2608.06359",
-    authors: ["Aditi कि", "Jovan Potrebić"],
-    metaAuthors: ["क, Aditi", "Potrebić, Jovan"],
-  }), { arxivId: "2608.06359", slug: "quant-ph" }), /author 1 disagrees/);
+    metaAuthors: [],
+  }), { arxivId: "2607.07798", slug: "quant-ph" }), /at least one meta\[name=citation_author\]/);
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    authors: ["Alice Example"],
+    metaAuthors: [""],
+  }), { arxivId: "2607.07798", slug: "quant-ph" }), /citation author 1 must be non-empty/);
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    authors: ["Alice Example"],
+    metaAuthors: ["---"],
+  }), { arxivId: "2607.07798", slug: "quant-ph" }), /no comparable name tokens/);
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    authors: ["Alice Example"],
+    metaAuthors: ["x".repeat(513)],
+  }), { arxivId: "2607.07798", slug: "quant-ph" }), (error) => error.code === "SOURCE_TOO_LARGE");
+
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    authors: ["x".repeat(513)],
+    metaAuthors: ["Example, Alice"],
+  }), { arxivId: "2607.07798", slug: "quant-ph" }), (error) => error.code === "SOURCE_TOO_LARGE");
+
+  const tooManyVisibleAuthors = Array.from({ length: 5_001 }, (_, index) => `Visible Member ${index + 1}`);
+  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+    authors: tooManyVisibleAuthors,
+    metaAuthors: ["Example, Alice"],
+  }), { arxivId: "2607.07798", slug: "quant-ph" }), (error) => (
+    error.code === "SOURCE_TOO_LARGE" && /visible authors exceed 5000/.test(error.message)
+  ));
 });
 
 test("abstract-page parser accepts a bounded large-collaboration author list", () => {
@@ -1507,7 +1563,7 @@ test("abstract-page parser accepts a bounded large-collaboration author list", (
   assert.equal(paper.authors.at(-1), "Member 1808");
 });
 
-test("abstract-page parser keeps the expanded collaboration list bounded and self-consistent", () => {
+test("citation author bounds stay fail-closed while collaboration rendering defects fall back", () => {
   const oversizedAuthors = Array.from({ length: 5_001 }, (_, index) => `Member ${index + 1}`);
   const oversizedMetaAuthors = Array.from({ length: 5_001 }, (_, index) => `${index + 1}, Member`);
   const boundedPaper = parseArxivAbstractPage(abstractPageHtml({
@@ -1523,7 +1579,9 @@ test("abstract-page parser keeps the expanded collaboration list bounded and sel
     slug: "gr-qc",
     authors: oversizedAuthors,
     metaAuthors: oversizedMetaAuthors,
-  }), { arxivId: "2608.11620", slug: "gr-qc" }), /observed 5001/);
+  }), { arxivId: "2608.11620", slug: "gr-qc" }), (error) => (
+    error.code === "SOURCE_TOO_LARGE" && /observed 5001/.test(error.message)
+  ));
 
   const malformedToggle = abstractPageHtml({
     arxivId: "2608.11620",
@@ -1532,10 +1590,10 @@ test("abstract-page parser keeps the expanded collaboration list bounded and sel
     metaAuthors: ["Example, Alice", "Researcher, Bob"],
     collapsedAuthorCount: 1,
   }).replaceAll("1 additional authors not shown", "2 additional authors not shown");
-  assert.throws(() => parseArxivAbstractPage(malformedToggle, {
+  assert.deepEqual(parseArxivAbstractPage(malformedToggle, {
     arxivId: "2608.11620",
     slug: "gr-qc",
-  }), /toggle count disagrees/);
+  }).authors, ["Example, Alice", "Researcher, Bob"]);
 
   const missingToggle = abstractPageHtml({
     arxivId: "2608.11620",
@@ -1544,26 +1602,26 @@ test("abstract-page parser keeps the expanded collaboration list bounded and sel
     metaAuthors: ["Example, Alice", "Researcher, Bob"],
     collapsedAuthorCount: 1,
   }).replace(/<a href="javascript:toggleAuthorList[^\n]+<\/a>/u, "");
-  assert.throws(() => parseArxivAbstractPage(missingToggle, {
+  assert.deepEqual(parseArxivAbstractPage(missingToggle, {
     arxivId: "2608.11620",
     slug: "gr-qc",
-  }), /must occur together/);
+  }).authors, ["Example, Alice", "Researcher, Bob"]);
 
-  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+  assert.deepEqual(parseArxivAbstractPage(abstractPageHtml({
     arxivId: "2608.11620",
     slug: "gr-qc",
     authors: ["LIGO Scientific Collaboration"],
     metaAuthors: ["The LIGO Scientific Collaboration"],
     bodyAuthorPrefixes: ["garbage, The "],
-  }), { arxivId: "2608.11620", slug: "gr-qc" }), /author 1 disagrees/);
+  }), { arxivId: "2608.11620", slug: "gr-qc" }).authors, ["The LIGO Scientific Collaboration"]);
 
-  assert.throws(() => parseArxivAbstractPage(abstractPageHtml({
+  assert.deepEqual(parseArxivAbstractPage(abstractPageHtml({
     arxivId: "2608.11620",
     slug: "gr-qc",
     authors: ["LIGO Scientific Collaboration"],
     metaAuthors: ["The LIGO Scientific Collaboration"],
     bodyAuthorPrefixes: ["; The "],
-  }), { arxivId: "2608.11620", slug: "gr-qc" }), /author 1 disagrees/);
+  }), { arxivId: "2608.11620", slug: "gr-qc" }).authors, ["The LIGO Scientific Collaboration"]);
 });
 
 test("citation title and abstract stay canonical across known arXiv visible-rendering differences", () => {
@@ -1599,14 +1657,12 @@ test("comments preserve a strictly recognized arXiv linkifier href", () => {
   }), { arxivId: "2607.07798", slug: "quant-ph" }), /malformed automatic URL-linkifier anchor/);
 });
 
-test("abstract-page parser cross-checks ID, v1, URLs, ordered authors, body structure, category, and comments", async (t) => {
+test("abstract-page parser pins ID, v1, URLs, body structure, category, and comments", async (t) => {
   const cases = [
     ["citation ID", { metaId: "2607.09999" }, /citation_arxiv_id/],
     ["version", { version: "v2" }, /matching arXiv:2607\.07798v1/],
     ["canonical URL", { canonicalUrl: "https://example.com/abs/2607.07798" }, /canonical URL/],
     ["PDF ID", { citationPdfUrl: "https://arxiv.org/pdf/2607.09999" }, /citation_pdf_url/],
-    ["author count", { metaAuthors: ["Example, Alice"] }, /author count disagrees/],
-    ["author identity", { metaAuthors: ["Wrong, Alice", "Researcher, Bob Q."] }, /author 1 disagrees/],
     ["category", { slug: "gr-qc" }, /primary category/],
   ];
   for (const [name, options, pattern] of cases) {

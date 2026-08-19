@@ -27,9 +27,12 @@ import {
 import {
   MAX_UNCHANGED_DRAFT_REPAIR_FAILURES,
   computeCategoryRetryState,
+  consumeCheckpointedCategorySourceBlocker,
+  invokeCodexCategory,
   prepareCategoryExecution,
   validateCategoryDraftAssociation,
   validateCategoryRepairMutation,
+  validateCategorySourceBlockerLayout,
   validateCategorySourceResumeDraft,
   validateCategorySourceResumeMutation,
 } from "../scripts/lib/local-automation.mjs";
@@ -430,6 +433,173 @@ test("a source interruption resumes from the protected screening draft and fixed
   }), /changed protected abstract-screening content/);
 });
 
+test("a source receipt requires its failed paper to retain the exact abstract-only tuple", () => {
+  const provisional = provisionalFixtureReport();
+  const snapshot = fixtureSnapshot(provisional);
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: provisional.papers[0].arxivId,
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: [provisional.papers[0].arxivId],
+  };
+  assert.equal(validateCategorySourceResumeDraft({
+    report: provisional,
+    receipt,
+    date: DATE,
+    slug: CATEGORY,
+    policy: validPolicy(),
+    evaluationRunId: RUN_ID,
+    snapshot,
+    candidateOrderRequired: true,
+  }), true);
+
+  const contradictory = fixtureReport();
+  assert.throws(() => validateCategorySourceResumeDraft({
+    report: contradictory,
+    receipt,
+    date: DATE,
+    slug: CATEGORY,
+    policy: validPolicy(),
+    evaluationRunId: RUN_ID,
+    snapshot: fixtureSnapshot(contradictory),
+    candidateOrderRequired: true,
+  }), /receipt-targeted paper .* exact abstract-only evidence tuple/u);
+});
+
+test("a fresh terminal source receipt converges to a checkpoint before exact receipt consumption", async () => {
+  const root = realpathSync(await mkdtemp(join(tmpdir(), "daily-arxiv-fresh-source-test-")));
+  const controlRoot = join(root, "control");
+  mkdirSync(controlRoot, { mode: 0o700 });
+  const provisional = provisionalFixtureReport();
+  const snapshot = fixtureSnapshot(provisional);
+  snapshot.categories["gr-qc"] = {
+    slug: "gr-qc",
+    sourceUrl: "https://arxiv.org/list/gr-qc/new",
+    newCount: 1,
+    crosslistCount: 0,
+    newIds: ["2099.00002"],
+  };
+  const job = openCheckpointJob({
+    controlRoot,
+    snapshot,
+    snapshotFingerprint: fingerprintSnapshot(snapshot),
+    runtimeFingerprint: RUNTIME,
+    evaluationRunId: RUN_ID,
+    now: new Date("2099-01-05T12:00:00.000Z"),
+  });
+  const policy = validPolicy();
+  const staging = join(root, "fresh-source-staging");
+  const blockers = join(root, "fresh-source-blockers");
+  const outbox = join(root, "fresh-source-outbox");
+  mkdirSync(staging, { mode: 0o700 });
+  mkdirSync(blockers, { mode: 0o700 });
+  mkdirSync(outbox, { mode: 0o700 });
+  const reportPath = writeSource(staging, `${DATE}-${CATEGORY}.json`, `${JSON.stringify(provisional)}\n`);
+  const blockerPath = join(blockers, `${CATEGORY}.json`);
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: provisional.papers[0].arxivId,
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: [provisional.papers[0].arxivId],
+  };
+  startCategoryAttempt(job, RUN_ID);
+  const completion = await invokeCodexCategory({
+    codexBin: "/usr/bin/false",
+    worktree: root,
+    runRoot: root,
+    logPath: join(root, "fresh-source-codex.log"),
+    prompt: "bounded fresh source classification test",
+    sourceBlockerPath: blockerPath,
+    commandRunner: async () => {
+      writeFileSync(blockerPath, `${JSON.stringify(receipt)}\n`, { mode: 0o600 });
+      return { status: 7, signal: null, stdout: "", stderr: "official v1 source unavailable" };
+    },
+  });
+  assert.equal(completion, "", "a classified source-only nonzero exit proceeds to host validation");
+
+  assert.throws(() => consumeCheckpointedCategorySourceBlocker({
+    job,
+    blockerDirectory: blockers,
+    blockerPath,
+    stagingDirectory: staging,
+    outboxDirectory: outbox,
+    expectedReceipt: receipt,
+    snapshot,
+    slug: CATEGORY,
+  }), /before its checkpoint report is complete/u);
+  assert.equal(existsSync(blockerPath), true, "a failed or absent checkpoint import cannot consume the receipt");
+
+  importCheckpointCategoryReport({
+    job,
+    category: CATEGORY,
+    sourcePath: reportPath,
+    attemptId: RUN_ID,
+    validateReport: (candidate, context) => validateCategorySourceResumeDraft({
+      report: candidate,
+      receipt,
+      date: context.reportDate,
+      slug: context.category,
+      policy,
+      evaluationRunId: context.evaluationRunId,
+      snapshot: context.snapshot,
+      candidateOrderRequired: false,
+    }),
+  });
+  assert.throws(() => consumeCheckpointedCategorySourceBlocker({
+    job,
+    blockerDirectory: blockers,
+    blockerPath,
+    stagingDirectory: staging,
+    outboxDirectory: outbox,
+    expectedReceipt: { ...receipt, failureClass: "host_source_probe_failed" },
+    snapshot,
+    slug: CATEGORY,
+  }), /changed .* source receipt after checkpoint import/u);
+  assert.equal(existsSync(blockerPath), true, "a changed receipt is never unlinked");
+  assert.deepEqual(consumeCheckpointedCategorySourceBlocker({
+    job,
+    blockerDirectory: blockers,
+    blockerPath,
+    stagingDirectory: staging,
+    outboxDirectory: outbox,
+    expectedReceipt: receipt,
+    snapshot,
+    slug: CATEGORY,
+  }), receipt);
+  assert.equal(existsSync(blockerPath), false);
+  assert.deepEqual(readdirSync(blockers), [], "the next category can create its own sole receipt");
+  const nextStaging = join(root, "fresh-source-next-staging");
+  mkdirSync(nextStaging, { mode: 0o700 });
+  const nextBlockerPath = join(blockers, "gr-qc.json");
+  const nextReceipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: "2099.00002",
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: ["2099.00002"],
+  };
+  writeFileSync(nextBlockerPath, `${JSON.stringify(nextReceipt)}\n`, { mode: 0o600 });
+  assert.deepEqual(validateCategorySourceBlockerLayout({
+    blockerDirectory: blockers,
+    blockerPath: nextBlockerPath,
+    stagingDirectory: nextStaging,
+    outboxDirectory: outbox,
+    snapshot,
+    slug: "gr-qc",
+    allowProvisionalReport: true,
+  }), nextReceipt, "a second category receipt no longer collides with the consumed first receipt");
+  const loaded = loadCheckpointJob({
+    controlRoot,
+    reportDate: DATE,
+    snapshotFingerprint: fingerprintSnapshot(snapshot),
+    runtimeFingerprint: RUNTIME,
+    evaluationRunId: RUN_ID,
+  });
+  assert.deepEqual(loaded.completeCategories, [CATEGORY]);
+});
+
 test("source-incomplete rescue binds a protected copy without rewriting its provisional source", async () => {
   const { root, snapshot, job, policy } = await fixtureJob();
   const provisional = provisionalFixtureReport();
@@ -637,7 +807,7 @@ test("partial full-text rescoring may move a fixed candidate below provisional t
   const receipt = {
     schemaVersion: "1.0",
     status: "source_incomplete",
-    arxivId: initialCandidateIds[1],
+    arxivId: initialCandidateIds.at(-1),
     failureClass: MODEL_SOURCE_FAILURE_CLASS,
     provisionalCandidateIds: initialCandidateIds,
   };
@@ -874,7 +1044,7 @@ test("four terminally failed repairs retain the draft and fall back through capp
   assert.equal(retry.active, true);
   assert.equal(retry.shouldDefer, true);
   assert.equal(retry.failureCount, MAX_UNCHANGED_DRAFT_REPAIR_FAILURES);
-  assert.equal(retry.delayHours, 72);
+  assert.equal(retry.delayHours, 24);
 
   appendCheckpointAttempt({
     job,

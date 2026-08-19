@@ -201,10 +201,8 @@ test("manual published correction never exempts a different invalid category", (
   const editionPath = resolve(root, `public/data/${OLD_DATE}.json`);
   const invalidReport = JSON.parse(readFileSync(reportPath, "utf8"));
   const invalidEdition = JSON.parse(readFileSync(editionPath, "utf8"));
-  invalidReport.papers[0].scoreReasons.technicalStrength =
-    "三準位緩和fitと光子数校正により、検査中の緩和率と測定誤差を定量化した。";
-  invalidEdition.categories["gr-qc"].topPapers[0].scoreReasons.technicalStrength =
-    invalidReport.papers[0].scoreReasons.technicalStrength;
+  invalidReport.papers[0].totalScore += 1;
+  invalidEdition.categories["gr-qc"].topPapers[0].totalScore = invalidReport.papers[0].totalScore;
   writeFileSync(reportPath, serializeJson(invalidReport));
   writeFileSync(editionPath, serializeJson(invalidEdition));
   const { path } = correctionInput({
@@ -214,7 +212,7 @@ test("manual published correction never exempts a different invalid category", (
   });
   assert.throws(
     () => applyCorrection({ root, date: OLD_DATE, category: "quant-ph", correctedReportPath: path }),
-    /general English prose term "fit"/,
+    /totalScore.*four-score sum/,
   );
 });
 

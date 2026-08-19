@@ -259,7 +259,7 @@
       const normalizedTitle=value=>String(value??'').normalize('NFKC').trim().replace(/\s+/g,' ').toLocaleLowerCase('en-US');
       const originalTitle=nonEmpty(paper.title)&&normalizedTitle(paper.title)!==normalizedTitle(title)?paper.title:'';
       const pendingDetail=source==='report'&&!paper.scores;
-      const evaluationBadge=paper.fullTextEvaluated===true?'<span class="badge full">全文評価</span>':paper.fullTextEvaluated===false?'<span class="badge abstract">要旨評価</span>':'';
+      const evaluationBadge=paper.fullTextEvaluated===true?'<span class="badge full">全文評価</span>':paper.fullTextEvaluated===false?'<span class="badge abstract">本文未評価（要旨評価）</span>':'';
       const stars=(summary.eminentAuthors||[]).map(eminentAuthorName).filter(Boolean);
       return `<details class="paper-row${pendingDetail?' pending-detail':''}" data-paper-id="${esc(summary.arxivId)}" data-source="${source}" ${open?'open':''}>
         <summary data-focus-id="${esc(summary.arxivId)}">

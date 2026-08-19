@@ -2,6 +2,7 @@ import { realpathSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 
 export const LAUNCHD_LABEL = "com.hiroki.daily-arxiv";
+export const START_INTERVAL_SECONDS = 60 * 60;
 
 export function assertPrivateDirectoryMode(mode, label = "Directory") {
   if (!Number.isInteger(mode) || (mode & 0o077) !== 0) {
@@ -141,6 +142,8 @@ export function renderLaunchdPlist({
   <array>
 ${calendarXml()}
   </array>
+  <key>StartInterval</key>
+  <integer>${START_INTERVAL_SECONDS}</integer>
   <key>RunAtLoad</key>
   <true/>
   <key>ProcessType</key>

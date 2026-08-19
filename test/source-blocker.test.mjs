@@ -5,6 +5,8 @@ import {
   MODEL_SOURCE_FAILURE_CLASS,
   ORPHANED_GENERATION_STALE_HOURS,
   SOURCE_BLOCKER_MESSAGE_PREFIX,
+  SOURCE_PROBE_RETRY_BACKOFF_HOURS,
+  SOURCE_RETRY_BACKOFF_HOURS,
   computeSourceRetryBackoff,
   createHostSourceProbeFailureReceipt,
   decodeSourceBlockerEventMessage,
@@ -202,22 +204,27 @@ test("event decoder rejects malformed reserved messages, noncanonical time, and 
   );
 });
 
-test("one ordinary category-generation failure defers for 18 hours", () => {
+test("ordinary failures use the success-priority schedule without changing source-probe pacing", () => {
+  assert.deepEqual(SOURCE_RETRY_BACKOFF_HOURS, [1, 4, 12, 24]);
+  assert.deepEqual(SOURCE_PROBE_RETRY_BACKOFF_HOURS, [0.25, 4, 18, 36, 72]);
+});
+
+test("one ordinary category-generation failure defers for 1 hour", () => {
   const state = computeSourceRetryBackoff({
     attempts: [attempt({
       at: "2026-07-27T09:00:00.000Z",
       attemptId: "run-one",
     })],
     category: CATEGORY,
-    now: new Date("2026-07-27T10:00:00.000Z"),
+    now: new Date("2026-07-27T09:30:00.000Z"),
   });
   assert.equal(state.active, true);
   assert.equal(state.shouldDefer, true);
   assert.equal(state.kind, "generation_failure");
   assert.equal(state.failureCount, 1);
-  assert.equal(state.delayHours, 18);
-  assert.equal(state.retryAt, "2026-07-28T03:00:00.000Z");
-  assert.equal(state.remainingMs, 17 * 60 * 60 * 1_000);
+  assert.equal(state.delayHours, 1);
+  assert.equal(state.retryAt, "2026-07-27T10:00:00.000Z");
+  assert.equal(state.remainingMs, 0.5 * 60 * 60 * 1_000);
 });
 
 test("ordinary and orphaned source-resume failures use the same bounded backoff", () => {
@@ -238,12 +245,12 @@ test("ordinary and orphaned source-resume failures use the same bounded backoff"
   const terminal = computeSourceRetryBackoff({
     attempts: [started, failed],
     category: CATEGORY,
-    now: new Date("2026-07-27T11:00:00.000Z"),
+    now: new Date("2026-07-27T10:30:00.000Z"),
   });
   assert.equal(terminal.active, true);
   assert.equal(terminal.shouldDefer, true);
   assert.equal(terminal.failureCount, 1);
-  assert.equal(terminal.delayHours, 18);
+  assert.equal(terminal.delayHours, 1);
   assert.equal(terminal.observedAt, failed.at);
 
   const orphaned = computeSourceRetryBackoff({
@@ -258,13 +265,13 @@ test("ordinary and orphaned source-resume failures use the same bounded backoff"
     now: new Date("2026-07-27T14:00:00.000Z"),
   });
   assert.equal(orphaned.active, true);
-  assert.equal(orphaned.shouldDefer, true);
+  assert.equal(orphaned.shouldDefer, false);
   assert.equal(orphaned.failureCount, 1);
-  assert.equal(orphaned.delayHours, 18);
+  assert.equal(orphaned.delayHours, 1);
   assert.equal(orphaned.observedAt, "2026-07-27T09:00:00.000Z");
 });
 
-test("backoff advances 18h, 36h, then caps at 72h across distinct failed attempts", () => {
+test("ordinary backoff advances 1h, 4h, 12h, then caps at 24h", () => {
   const attempts = [
     attempt({ at: "2026-07-27T01:00:00.000Z", attemptId: "run-one" }),
     attempt({ at: "2026-07-27T02:00:00.000Z", attemptId: "run-two" }),
@@ -275,22 +282,22 @@ test("backoff advances 18h, 36h, then caps at 72h across distinct failed attempt
     attempts: attempts.slice(0, 1),
     category: CATEGORY,
     now: new Date("2026-07-27T04:00:00.000Z"),
-  }).delayHours, 18);
+  }).delayHours, 1);
   assert.equal(computeSourceRetryBackoff({
     attempts: attempts.slice(0, 2),
     category: CATEGORY,
     now: new Date("2026-07-27T04:00:00.000Z"),
-  }).delayHours, 36);
+  }).delayHours, 4);
   assert.equal(computeSourceRetryBackoff({
     attempts: attempts.slice(0, 3),
     category: CATEGORY,
     now: new Date("2026-07-27T04:00:00.000Z"),
-  }).delayHours, 72);
+  }).delayHours, 12);
   assert.equal(computeSourceRetryBackoff({
     attempts,
     category: CATEGORY,
     now: new Date("2026-07-27T04:00:00.000Z"),
-  }).delayHours, 72);
+  }).delayHours, 24);
 });
 
 test("structured blocker uses its host observation time and is exposed to orchestration", () => {
@@ -409,7 +416,7 @@ test("ordinary and source failures advance independent retry schedules", () => {
   assert.equal(firstState.failureCount, 3);
   assert.equal(firstState.sourceFailureCount, 2);
   assert.equal(firstState.kind, "generation_failure");
-  assert.equal(firstState.delayHours, 18);
+  assert.equal(firstState.delayHours, 1);
 
   const secondState = computeSourceRetryBackoff({
     attempts: [...sourceAttempts, firstOrdinary, secondOrdinary],
@@ -418,7 +425,7 @@ test("ordinary and source failures advance independent retry schedules", () => {
   });
   assert.equal(secondState.failureCount, 4);
   assert.equal(secondState.sourceFailureCount, 2);
-  assert.equal(secondState.delayHours, 36);
+  assert.equal(secondState.delayHours, 4);
 });
 
 test("elapsed cooldown remains active history but no longer requests deferral", () => {
@@ -435,7 +442,7 @@ test("elapsed cooldown remains active history but no longer requests deferral", 
   assert.equal(state.remainingMs, 0);
 });
 
-test("terminal repair failures force full regeneration through the shared 72-hour cap", () => {
+test("terminal repair failures force full regeneration through the shared 24-hour cap", () => {
   const attempts = Array.from({ length: 4 }, (_, index) => attempt({
     at: `2026-07-27T${String(9 + index).padStart(2, "0")}:00:00.000Z`,
     attemptId: `run-repair-${index + 1}`,
@@ -452,9 +459,9 @@ test("terminal repair failures force full regeneration through the shared 72-hou
   assert.equal(state.failureCount, 4);
   assert.equal(state.sourceFailureCount, 0);
   assert.equal(state.kind, "repair_failure");
-  assert.equal(state.delayHours, 72);
+  assert.equal(state.delayHours, 24);
   assert.equal(state.observedAt, "2026-07-27T12:00:00.000Z");
-  assert.equal(state.retryAt, "2026-07-30T12:00:00.000Z");
+  assert.equal(state.retryAt, "2026-07-28T12:00:00.000Z");
 });
 
 test("an old unterminated generation start becomes one distinct retry failure after the lock-stale interval", () => {
@@ -483,11 +490,11 @@ test("an old unterminated generation start becomes one distinct retry failure af
     now: new Date("2026-07-27T14:00:00.000Z"),
   });
   assert.equal(stale.active, true);
-  assert.equal(stale.shouldDefer, true);
+  assert.equal(stale.shouldDefer, false);
   assert.equal(stale.failureCount, 1);
   assert.equal(stale.kind, "generation_failure");
   assert.equal(stale.observedAt, startedAt);
-  assert.equal(stale.retryAt, "2026-07-28T03:00:00.000Z");
+  assert.equal(stale.retryAt, "2026-07-27T10:00:00.000Z");
 });
 
 test("an explicit terminal event prevents an old started event from double-counting as orphaned", () => {

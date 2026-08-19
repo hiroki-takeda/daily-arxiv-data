@@ -29,6 +29,7 @@ const EXPECTED = Object.freeze({
     { weekday: 5, hour: 11, minute: 30 },
     { weekday: 5, hour: 16, minute: 30 },
   ],
+  startInterval: 3600,
   runAtLoad: true,
   processType: "Background",
   throttleInterval: 300,
@@ -98,6 +99,7 @@ function launchctlFixture() {
 
 \tdomain = gui/501 [100016]
 \tminimum runtime = ${EXPECTED.throttleInterval}
+\trun interval = ${EXPECTED.startInterval} seconds
 \tevent triggers = {
 ${triggers}
 \t}
@@ -122,6 +124,7 @@ test("launchctl service parser extracts exact top-level structure", () => {
     EXPECTED.calendarIntervals,
   );
   assert.equal(parsed.runAtLoad, true);
+  assert.equal(parsed.startInterval, 3600);
   assert.equal(parsed.processType, "Background");
   assert.equal(parsed.throttleInterval, 300);
   assert.deepEqual(assertLaunchctlPrintServiceMatches(launchctlFixture(), EXPECTED), parsed);
@@ -291,6 +294,33 @@ test("loaded service comparison rejects substring, argument, and environment sub
     assert.throws(
       () => parseLaunchctlPrintService(duplicate),
       /exactly one top-level minimum runtime/,
+    );
+  });
+
+  await context.test("StartInterval run interval mutation and malformed values fail closed", () => {
+    const changed = launchctlFixture().replace(
+      "\trun interval = 3600 seconds",
+      "\trun interval = 7200 seconds",
+    );
+    assert.throws(
+      () => assertLaunchctlPrintServiceMatches(changed, EXPECTED),
+      /StartInterval\/run interval does not exactly match/,
+    );
+    const malformed = launchctlFixture().replace(
+      "\trun interval = 3600 seconds",
+      "\trun interval = 03600 seconds",
+    );
+    assert.throws(
+      () => parseLaunchctlPrintService(malformed),
+      /positive canonical number of seconds/,
+    );
+    const duplicate = launchctlFixture().replace(
+      "\trun interval = 3600 seconds",
+      "\trun interval = 3600 seconds\n\trun interval = 3600 seconds",
+    );
+    assert.throws(
+      () => parseLaunchctlPrintService(duplicate),
+      /exactly one top-level run interval/,
     );
   });
 });

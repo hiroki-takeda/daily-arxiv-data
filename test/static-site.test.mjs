@@ -33,6 +33,7 @@ test("the dashboard script compiles and exposes expandable full-rank details", (
   assert.doesNotMatch(html, /class="detail-heading"/);
   assert.match(html, /評価根拠/);
   assert.match(html, /評価基準/);
+  assert.match(html, /本文未評価（要旨評価）/);
   for (const label of ["科学的重要性", "分野への貢献", "独創性", "厳密性・信頼性"]) {
     assert.match(html, new RegExp(label));
   }
@@ -110,7 +111,7 @@ test("the dashboard renders and joins a lower-ranked report without browser-only
   const loadedRow = context.paperRow(lowerSummary, "report");
   assert.doesNotMatch(loadedRow, /pending-detail/);
   assert.match(loadedRow, /class="mini-scores"/);
-  assert.match(loadedRow, />要旨評価<|>全文評価</);
+  assert.match(loadedRow, />本文未評価（要旨評価）<|>全文評価</);
   assert.doesNotMatch(loadedRow, /選択して詳細を表示|>詳細表示</);
   assert.match(loadedRow, new RegExp(`class="paper-title"[^>]*>${escapeRegExp(escapeHtml(lower.titleJa))}</strong><span class="paper-original-title" lang="en">${escapeRegExp(escapeHtml(context.displayOriginalTitle(lower.title)))}</span><span class="paper-authors">${escapeRegExp(escapeHtml(lower.authors.join(", ")))}</span>`));
   assert.equal((loadedRow.match(/class="paper-title"/g) ?? []).length, 1);

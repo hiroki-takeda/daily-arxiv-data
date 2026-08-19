@@ -1,21 +1,48 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 import {
   CATEGORIES,
   comparePapers,
   findCategoryTemplateSkeletonIndices,
+  findProductionScoreDistributionIssues,
   findTotalScoreDistributionIssues,
   validateDate,
   validateJstTimestamp,
   validateModelPolicy,
+  validateProductionPaperProse,
+  validateProductionReportProseDiversity,
   validateProductionReportSet,
 } from "../scripts/lib/pipeline.mjs";
-import { DATE, validPolicy, validReportSet } from "./helpers.mjs";
+import { DATE, validPolicy, validReportSet, writeProductionRepository } from "./helpers.mjs";
 
 function rejectsMutation(mutator, pattern) {
   const reports = validReportSet();
   mutator(reports);
   assert.throws(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }), pattern);
+}
+
+function runQualityDiagnostics(reports) {
+  for (const [slug, report] of Object.entries(reports)) {
+    report.papers.forEach((paper, index) => {
+      validateProductionPaperProse(paper, `${slug}.papers[${index}]`);
+    });
+    validateProductionReportProseDiversity(report, slug);
+  }
+}
+
+function qualityFindingDoesNotBlock(reports, pattern) {
+  assert.throws(() => runQualityDiagnostics(reports), pattern);
+  const date = Object.values(reports)[0].reportDate;
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date, policy: validPolicy() }));
+}
+
+function rejectsQualityMutation(mutator, pattern) {
+  const reports = validReportSet();
+  mutator(reports);
+  qualityFindingDoesNotBlock(reports, pattern);
 }
 
 function makeCategoryProseDiverse(reports) {
@@ -123,8 +150,8 @@ test("invalid score shape, range, and total are rejected", () => {
 
 test("schema 1.4 requires exact Japanese score reasons and the stable rubric marker", () => {
   rejectsMutation((reports) => { delete reports["hep-th"].papers[0].scoreReasons.originality; }, /scoreReasons.*exactly/);
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].scoreReasons.originality = "English only"; }, /natural Japanese/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => { reports["hep-th"].papers[0].scoreReasons.originality = "English only"; }, /natural Japanese/);
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].scoreReasons.broadImpact = "主題の分野横断的な射程を評価。";
   }, /generic rationale phrase|missing sahen inflection/);
   for (const phrase of [
@@ -132,7 +159,7 @@ test("schema 1.4 requires exact Japanese score reasons and the stable rubric mar
     "固有の成果を得た。波及先はこの成果が直接扱う対象と隣接する理論・実装課題である。",
     "固有の方法を構成した。本文の主要節で成立条件を確認した。",
   ]) {
-    rejectsMutation((reports) => {
+    rejectsQualityMutation((reports) => {
       reports["hep-th"].papers[0].scoreReasons.originality = phrase;
     }, /generic rationale phrase/);
   }
@@ -149,7 +176,7 @@ test("schema 1.4 score reasons describe paper evidence rather than evaluator pro
     "誤差解析は含むが、要旨上は新しい証明を主張しない。",
     "主定理は示されるが、独立再導出していない。",
   ]) {
-    rejectsMutation((reports) => {
+    rejectsQualityMutation((reports) => {
       reports["quant-ph"].papers[0].scoreReasons.technicalStrength = phrase;
     }, /evaluator review provenance/);
   }
@@ -160,36 +187,36 @@ test("schema 1.4 score reasons describe paper evidence rather than evaluator pro
 });
 
 test("schema 1.4 reader prose keeps review provenance in the dedicated status field", () => {
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].conclusion = "主要結果は有望だが、頑健性は要旨から確認できない。";
   }, /paper content rather than evaluator review provenance/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].assessment = "中心成果は有用である。ただし公式概要だけの評価であり、適用域は未確認である。";
   }, /paper content rather than evaluator review provenance/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].abstractLines[2] = "主要結果を報告するが、誤差評価は本文未確認である。";
   }, /paper content rather than evaluator review provenance/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].conclusion = "二つの指標は異なる応答を示すが、要旨の記述には解釈上の不整合が残る。";
   }, /paper content rather than evaluator review provenance/);
 });
 
 test("schema 1.4 rejects repeated reasons within a paper or across a category", () => {
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
     paper.scoreReasons.originality = paper.scoreReasons.broadImpact;
   }, /four distinct per-axis reasons/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     const papers = reports["hep-th"].papers;
     for (let index = 1; index < 3; index += 1) {
       papers[index].scoreReasons.broadImpact = papers[0].scoreReasons.broadImpact;
     }
   }, /scoreReasons\.broadImpact.*maximum 25%/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     const papers = reports["hep-th"].papers;
     for (let index = 1; index < 3; index += 1) papers[index].assessment = papers[0].assessment;
   }, /assessment.*maximum 25%/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     const papers = reports["hep-th"].papers;
     for (let index = 1; index < 3; index += 1) papers[index].fullTextReviewStatus = papers[0].fullTextReviewStatus;
   }, /fullTextReviewStatus.*maximum 25%/);
@@ -207,37 +234,37 @@ test("schema 1.4 diversity limit is strictly greater than 25 percent", () => {
 
 test("schema 1.4 requires Japanese prose in every reader-facing evaluation field", () => {
   for (const field of ["titleJa", "paperType", "curiosity", "concept", "conclusion", "assessment"]) {
-    rejectsMutation((reports) => { reports["hep-th"].papers[0][field] = "English only"; }, /natural Japanese/);
+    rejectsQualityMutation((reports) => { reports["hep-th"].papers[0][field] = "English only"; }, /natural Japanese/);
   }
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].abstractLines[1] = "English only"; }, /natural Japanese/);
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].titleJa = "量 QCD"; }, /at least 2/);
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].curiosity = "問いです。"; }, /at least 6/);
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].abstractLines[1] = "方法です。"; }, /at least 6/);
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].scoreReasons.originality = "根拠です。"; }, /at least 12/);
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].assessment = "評価です。"; }, /at least 12/);
-  rejectsMutation((reports) => { reports["hep-th"].papers[0].fullTextReviewStatus = "English only"; }, /natural Japanese/);
+  rejectsQualityMutation((reports) => { reports["hep-th"].papers[0].abstractLines[1] = "English only"; }, /natural Japanese/);
+  rejectsQualityMutation((reports) => { reports["hep-th"].papers[0].titleJa = "量 QCD"; }, /at least 2/);
+  rejectsQualityMutation((reports) => { reports["hep-th"].papers[0].curiosity = "問いです。"; }, /at least 6/);
+  rejectsQualityMutation((reports) => { reports["hep-th"].papers[0].abstractLines[1] = "方法です。"; }, /at least 6/);
+  rejectsQualityMutation((reports) => { reports["hep-th"].papers[0].scoreReasons.originality = "根拠です。"; }, /at least 12/);
+  rejectsQualityMutation((reports) => { reports["hep-th"].papers[0].assessment = "評価です。"; }, /at least 12/);
+  rejectsQualityMutation((reports) => { reports["hep-th"].papers[0].fullTextReviewStatus = "English only"; }, /natural Japanese/);
 });
 
 test("schema 1.4 caps reader-facing prose to control recurring output usage", () => {
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].assessment = "中心成果の価値と主要な制約を具体的に記述する。".repeat(20);
   }, /at most 160 characters/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["gr-qc"].papers[0].abstractLines[0] = "対象となる物理問題と前提条件を説明する。".repeat(20);
   }, /at most 120 characters/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].scoreReasons.originality = "最も近い既存研究との差分と継承部分を具体的に説明する。".repeat(20);
   }, /at most 180 characters/);
 });
 
-test("schema 1.4 rejects untranslated lowercase English in Japanese evaluation prose", () => {
-  rejectsMutation((reports) => {
+test("schema 1.4 reports untranslated lowercase English without blocking publication", () => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].scoreReasons.broadImpact = "冷却原子でreservoir engineeringを用いて散逸を制御し、境界蓄積を検証した。";
   }, /lowercase English phrase/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].concept = "局所dephasingによる位相緩和を測定し、境界蓄積との関係を示した。";
   }, /lowercase English token/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].fullTextReviewStatus = "公式v1全文でnull行列の導出と数値検証を確認した。";
   }, /lowercase English token/);
 
@@ -246,7 +273,7 @@ test("schema 1.4 rejects untranslated lowercase English in Japanese evaluation p
   assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
 });
 
-test("schema 1.4 translates general English terms while preserving proper names and standard abbreviations", () => {
+test("schema 1.4 reports general English terms without blocking publication", () => {
   for (const phrase of [
     "depolarizing雑音",
     "truncated Wigner近似",
@@ -257,7 +284,7 @@ test("schema 1.4 translates general English terms while preserving proper names 
     "rank-1射影",
     "polar CSS符号",
   ]) {
-    rejectsMutation((reports) => {
+    rejectsQualityMutation((reports) => {
       reports["quant-ph"].papers[0].concept = `${phrase}を中心手法として量子状態を解析する。`;
     }, /general English prose term/);
   }
@@ -268,12 +295,12 @@ test("schema 1.4 translates general English terms while preserving proper names 
   assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
 });
 
-test("schema 1.4 translates fit and echo when they are ordinary prose terms", () => {
-  rejectsMutation((reports) => {
+test("schema 1.4 reports fit and echo without blocking publication", () => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].scoreReasons.technicalStrength =
       "三準位緩和fitと光子数校正により、検査中の緩和率と測定誤差を定量化した。";
   }, /general English prose term "fit"/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].fullTextReviewStatus =
       "主要導出、Hahn echo、無作為化基準試験、検査誘起緩和を確認した。";
   }, /general English prose term "echo"/);
@@ -288,14 +315,14 @@ test("schema 1.4 translates fit and echo when they are ordinary prose terms", ()
   assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
 });
 
-test("schema 1.4 rejects ASCII spaces at Japanese word boundaries", () => {
-  rejectsMutation((reports) => {
+test("schema 1.4 reports ASCII spaces at Japanese word boundaries without blocking publication", () => {
+  rejectsQualityMutation((reports) => {
     reports["gr-qc"].papers[0].concept = "全 相対論的 離心 波形を用いて環境効果を識別する。";
   }, /ASCII spaces at Japanese word boundaries/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].assessment = "de Sitter 時空での解析は有用だが、適用範囲が限られる。";
   }, /ASCII spaces at Japanese word boundaries/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].scoreReasons.technicalStrength = "128 無秩序 シミュレーションと実験比較で中心主張を検証した。";
   }, /ASCII spaces at Japanese word boundaries/);
 
@@ -304,7 +331,7 @@ test("schema 1.4 rejects ASCII spaces at Japanese word boundaries", () => {
   assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
 });
 
-test("schema 1.4 rejects known literal or nonstandard Japanese phrases", () => {
+test("schema 1.4 reports known literal or nonstandard Japanese phrases without blocking publication", () => {
   for (const phrase of [
     "一ループ",
     "模型切断",
@@ -313,19 +340,19 @@ test("schema 1.4 rejects known literal or nonstandard Japanese phrases", () => {
     "無質量フェルミオンSchwinger対の電流",
     "ローレンツ時空スレッド",
   ]) {
-    rejectsMutation((reports) => {
+    rejectsQualityMutation((reports) => {
       reports["hep-th"].papers[0].assessment = `中心成果は${phrase}を含むが、適用範囲には制約が残る。`;
     }, /known unnatural Japanese phrase/);
   }
 });
 
-test("schema 1.4 rejects only high-confidence missing sahen inflections", () => {
+test("schema 1.4 reports only high-confidence missing sahen inflections without blocking publication", () => {
   for (const phrase of [
     "有限系の応答を解析。",
     "理論予測と観測値を比較、適用範囲を評価した。",
     "主定理を証明；数値例で境界条件を検証した。",
   ]) {
-    rejectsMutation((reports) => {
+    rejectsQualityMutation((reports) => {
       reports["hep-th"].papers[0].concept = phrase;
     }, /missing sahen inflection/);
   }
@@ -347,32 +374,32 @@ test("schema 1.4 rejects only high-confidence missing sahen inflections", () => 
   assert.doesNotThrow(() => validateProductionReportSet(nominalLabels, { date: DATE, policy: validPolicy() }));
 });
 
-test("schema 1.4 requires a Japanese display title rather than a mixed or repeated original", () => {
-  rejectsMutation((reports) => {
+test("schema 1.4 diagnoses mixed or repeated display titles without blocking publication", () => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = reports["hep-th"].papers[0].title;
   }, /distinct from the original/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = "macroscopic systemのquantum stochastic thermodynamics：algebraic approach";
   }, /general English title word|lowercase English token/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = "量子systemの検証";
   }, /general English title word|lowercase English token/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = "量子bootstrap検証";
   }, /general English title word|lowercase English token/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = "Quantum Field Theoryの検証";
   }, /general English title word/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = "量子gasの検証";
   }, /general English title word/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = "Quantum-Fieldの検証";
   }, /general English title word/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = `日本語題名：${reports["hep-th"].papers[0].title}`;
   }, /must not contain or concatenate the original title/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].titleJa = "日本語表示：Entropic Bell inequalities";
   }, /general English title word|lowercase English token/);
 
@@ -387,63 +414,57 @@ test("schema 1.4 requires a Japanese display title rather than a mixed or repeat
   assert.doesNotThrow(() => validateProductionReportSet(accepted, { date: DATE, policy: validPolicy() }));
 });
 
-test("schema 1.4 assessment is narrative and never repeats numeric score summaries", () => {
-  rejectsMutation((reports) => {
+test("schema 1.4 diagnoses numeric score summaries without blocking publication", () => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].assessment = "総合92/100。中心成果は有用だが、適用範囲は限定される。";
   }, /without repeating total or axis scores/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].assessment = "中心成果は有用である。独創性23/25：既存手法との差がある。";
   }, /without repeating total or axis scores/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].assessment = "総合評定は９２／１００。中心成果は有用だが、適用範囲は限定される。";
   }, /without repeating total or axis scores/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].assessment = "中心成果は有用である。技術的信頼性は23点で、適用範囲は限定される。";
   }, /without repeating total or axis scores/);
 });
 
-test("schema 1.4 assessment cannot repeat the title or use generic filler", () => {
-  rejectsMutation((reports) => {
+test("schema 1.4 diagnoses title repetition and generic filler without blocking publication", () => {
+  rejectsQualityMutation((reports) => {
     const paper = reports["quant-ph"].papers[0];
     paper.assessment = `${paper.titleJa}に関する結果を報告する。点に価値があるが、本文を未確認のため、主張の頑健性は判断していない。`;
   }, /complete Japanese display title|generic rationale phrase/);
 });
 
-test("schema 1.4 rejects discovered batch templates in questions and assessments", () => {
-  rejectsMutation((reports) => {
+test("schema 1.4 diagnoses discovered batch templates without blocking publication", () => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].curiosity = "既存手法では届かなかった何を、どの仕組みで実現できるか。";
   }, /generic rationale phrase/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].assessment = "要旨は対象に焦点を絞り、比較可能な問いへ具体化している。一方、誤差評価、条件依存性、既存法との差の全体は本文確認を要する。";
   }, /generic rationale phrase|paper content rather than evaluator review provenance/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["quant-ph"].papers[0].assessment = "問題設定から中心手法、定量的または厳密な主結果までを結んだ点が強みである。一方、適用範囲は限定される。";
   }, /generic rationale phrase/);
 });
 
-test("schema 1.4 rejects a repeated question skeleton with paper-specific insertions", () => {
+test("schema 1.4 diagnoses a repeated question skeleton without blocking publication", () => {
   const reports = validReportSet({ count: 20 });
   reports["quant-ph"].papers.forEach((paper, index) => {
     paper.curiosity = `論文${index + 1}の固有問題では到達しない量は何か、提案機構によって観測可能域をどこまで拡張できるか。`;
   });
-  assert.throws(
-    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
-    /papers\.curiosity.*sentence skeleton/,
-  );
+  qualityFindingDoesNotBlock(reports, /papers\.curiosity.*sentence skeleton/);
 });
 
-test("schema 1.4 rejects repeated score-reason scaffolding around distinct claims", () => {
+test("schema 1.4 diagnoses repeated score-reason scaffolding without blocking publication", () => {
   const reports = validReportSet({ count: 20 });
   reports["quant-ph"].papers.forEach((paper, index) => {
     paper.scoreReasons.broadImpact = `論文${index + 1}の成果は固有領域との接点を持つが、異分野への効果は間接的である。一方、個別条件${index + 1}に依存する。この条件が主な制約である。`;
   });
-  assert.throws(
-    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
-    /scoreReasons\.broadImpact.*sentence skeleton/,
-  );
+  qualityFindingDoesNotBlock(reports, /scoreReasons\.broadImpact.*sentence skeleton/);
 });
 
-test("schema 1.4 rejects a category template skeleton hidden by lexical substitutions", () => {
+test("schema 1.4 diagnoses a category template skeleton without blocking publication", () => {
   const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
   const subjects = ["量子相関", "ブラックホール", "重力波", "位相転移", "量子補正", "宇宙膨張"];
   const targets = ["冷却原子", "Kerr時空", "LISA観測", "格子模型", "表面符号", "初期宇宙"];
@@ -452,13 +473,10 @@ test("schema 1.4 rejects a category template skeleton hidden by lexical substitu
     reports["quant-ph"].papers[index].assessment =
       `${subjects[index]}は${targets[index]}へ応用できるが、${limits[index]}の仮定に依存する。`;
   }
-  assert.throws(
-    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
-    /papers\.assessment.*category-level template skeleton for 6 of 20 papers/,
-  );
+  qualityFindingDoesNotBlock(reports, /papers\.assessment.*category-level template skeleton for 6 of 20 papers/);
 });
 
-test("schema 1.4 rejects a short template skeleton shared by most of a category", () => {
+test("schema 1.4 diagnoses a short template skeleton without blocking publication", () => {
   const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
   const subjects = [
     "量子相関", "重力波", "宇宙膨張", "位相転移", "量子補正", "熱輸送", "時空曲率",
@@ -472,13 +490,13 @@ test("schema 1.4 rejects a short template skeleton shared by most of a category"
     reports["quant-ph"].papers[index].conclusion =
       `${subjects[index]}を示した。ただし、${limits[index]}に限られる。`;
   }
-  assert.throws(
-    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+  qualityFindingDoesNotBlock(
+    reports,
     /papers\.conclusion.*category-level template skeleton for 13 of 20 papers.*shared short skeleton/,
   );
 });
 
-test("schema 1.4 checks template reuse within the full-text-reviewed subset", () => {
+test("schema 1.4 diagnoses full-text status template reuse without blocking publication", () => {
   const reports = makeCategoryProseDiverse(validReportSet({ count: 20 }));
   const reviewed = reports["quant-ph"].papers.filter((paper) => paper.fullTextEvaluated);
   reviewed.forEach((paper, index) => {
@@ -486,13 +504,13 @@ test("schema 1.4 checks template reuse within the full-text-reviewed subset", ()
       `主要節${index + 1}の導出を確認した。ただし、独立検証${index + 1}は実施していない。`;
   });
   assert.equal(reviewed.length, 10);
-  assert.throws(
-    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+  qualityFindingDoesNotBlock(
+    reports,
     /papers\.fullTextReviewStatus.*category-level template skeleton for 10 of 10 papers.*shared short skeleton/,
   );
 });
 
-test("schema 1.4 rejects abstract-line reuse disguised by connective substitutions", () => {
+test("schema 1.4 diagnoses abstract-line reuse without blocking publication", () => {
   const abstractLines = [
     "信号と同じHilbert空間で作用する雑音は検出不能誤りとして感度を損なう。",
     "次元を受動的に拡張し信号を傷つけず消失化できる必要十分条件を導いた。",
@@ -505,7 +523,7 @@ test("schema 1.4 rejects abstract-line reuse disguised by connective substitutio
     ["assessment", "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復したことが主要な成果である一方、条件を満たさない雑音成分は除去できない。"],
     ["scoreReasons.broadImpact", "単一光子位相測定で変換可能重み0.5のPauli雑音下に標準量子限界を回復したため、量子計測への波及が見込まれる。条件を満たさない雑音成分は除去できない。"],
   ]) {
-    rejectsMutation((reports) => {
+    rejectsQualityMutation((reports) => {
       const paper = reports["quant-ph"].papers[0];
       paper.abstractLines = abstractLines;
       if (path.startsWith("scoreReasons.")) paper.scoreReasons.broadImpact = value;
@@ -514,7 +532,7 @@ test("schema 1.4 rejects abstract-line reuse disguised by connective substitutio
   }
 });
 
-test("the latest prose gates apply to daily reports starting on 2026-08-03", () => {
+test("the latest prose diagnostics remain available but never block publication", () => {
   function reportSet(date) {
     const reports = validReportSet({ date });
     const paper = reports["quant-ph"].papers[0];
@@ -529,10 +547,7 @@ test("the latest prose gates apply to daily reports starting on 2026-08-03", () 
     date: "2026-08-02",
     policy: validPolicy(),
   }));
-  assert.throws(() => validateProductionReportSet(reportSet("2026-08-03"), {
-    date: "2026-08-03",
-    policy: validPolicy(),
-  }), /normalized trigram coverage/);
+  qualityFindingDoesNotBlock(reportSet("2026-08-03"), /normalized trigram coverage/);
 });
 
 test("schema 1.4 abstract reuse check permits field-specific reasoning over shared terminology", () => {
@@ -629,21 +644,21 @@ test("schema 1.4 structural diversity permits shared terminology and exactly 25 
   assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }));
 });
 
-test("schema 1.4 rejects duplicated summary sections, copied conclusions, and generic assessments", () => {
-  rejectsMutation((reports) => {
+test("schema 1.4 diagnoses duplicated sections and generic assessments without blocking publication", () => {
+  rejectsQualityMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
     paper.abstractLines[0] = paper.curiosity;
   }, /must not (?:exactly duplicate|copy abstractLines\[0\] verbatim)/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
     paper.assessment = `証拠を総合した。${paper.conclusion}`;
   }, /must not copy the conclusion/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     reports["hep-th"].papers[0].assessment = "物理的内容を確認し、分野内での重要度を評価した。";
   }, /generic rationale phrase/);
 });
 
-test("schema 1.4 rejects substantial verbatim reuse of abstract lines in evaluation fields", () => {
+test("schema 1.4 diagnoses verbatim reuse without blocking publication", () => {
   const line0 = "有限温度量子系における長距離相関の成立条件と観測可能性を具体的に調べる。";
   const line1 = "対称性分解と数値対角化を組み合わせ、有限サイズ依存性と既知極限を比較する。";
   const line2 = "臨界近傍で新しい尺度則を得たが、非一様雑音を含む条件への適用は確立していない。";
@@ -653,30 +668,30 @@ test("schema 1.4 rejects substantial verbatim reuse of abstract lines in evaluat
     ["conclusion", 2],
     ["assessment", 2],
   ]) {
-    rejectsMutation((reports) => {
+    rejectsQualityMutation((reports) => {
       const paper = reports["hep-th"].papers[0];
       paper.abstractLines = [line0, line1, line2];
       paper[field] = `論文固有の説明として、${paper.abstractLines[lineIndex]}`;
     }, new RegExp(`must not copy abstractLines\\[${lineIndex}\\] verbatim`));
   }
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
     paper.abstractLines = [line0, line1, line2];
     paper.scoreReasons.technicalStrength = `技術的根拠として、${line1}`;
   }, /scoreReasons\.technicalStrength.*must not copy abstractLines\[1\] verbatim/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
     paper.abstractLines[1] = "対称性を用いて有限系の応答を解析した。";
     paper.concept = `方法の核として、${paper.abstractLines[1]}`;
   }, /concept.*must not copy abstractLines\[1\] verbatim/);
-  rejectsMutation((reports) => {
+  rejectsQualityMutation((reports) => {
     const paper = reports["hep-th"].papers[0];
     paper.scoreReasons.broadImpact = "有限温度で新しい尺度則を確認した。";
     paper.assessment = `総合すると、${paper.scoreReasons.broadImpact}一方で、非一様雑音への適用条件が主要な限界である。`;
   }, /assessment.*must not copy scoreReasons\.broadImpact verbatim/);
 });
 
-test("schema 1.4 rejects severe score plateaus instead of using arXiv IDs as the effective ranking", () => {
+test("schema 1.4 diagnoses severe score plateaus without blocking publication", () => {
   const reports = validReportSet({ count: 20 });
   const papers = reports["quant-ph"].papers;
   for (let index = 0; index < 8; index += 1) {
@@ -692,10 +707,11 @@ test("schema 1.4 rejects severe score plateaus instead of using arXiv IDs as the
   papers.forEach((paper, index) => {
     paper.rank = index + 1;
   });
-  assert.throws(
-    () => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }),
+  assert.match(
+    findProductionScoreDistributionIssues(reports["quant-ph"])[0].message,
     /must not assign one total score to 8 of 20 papers/,
   );
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }));
 });
 
 test("public-edition total-score guard can detect plateaus without four-axis details", () => {
@@ -730,8 +746,9 @@ test("historical schema 1.3 remains valid but cannot bypass new-publication chec
   );
 });
 
-test("every final top-ten paper must be full-text reviewed", () => {
-  rejectsMutation((reports) => {
+test("a final top-ten paper may remain a bounded abstract evaluation", () => {
+  const reports = validReportSet();
+  {
     const paper = reports["quant-ph"].papers[9];
     paper.fullTextEvaluated = false;
     paper.evaluationBasis = "title_authors_abstract";
@@ -741,7 +758,34 @@ test("every final top-ten paper must be full-text reviewed", () => {
     paper.totalScore = Object.values(paper.scores).reduce((sum, value) => sum + value, 0);
     reports["quant-ph"].fullTextEvaluatedCount -= 1;
     reports["quant-ph"].audit.fullTextEvaluatedCount -= 1;
-  }, /final top-10/);
+  }
+  assert.doesNotThrow(() => validateProductionReportSet(reports, { date: DATE, policy: validPolicy() }));
+});
+
+test("the public edition reports the actual full-text count and keeps abstract-only top papers", (t) => {
+  const root = mkdtempSync(join(tmpdir(), "daily-arxiv-abstract-top-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const reports = validReportSet();
+  const paper = reports["quant-ph"].papers[9];
+  paper.fullTextEvaluated = false;
+  paper.evaluationBasis = "title_authors_abstract";
+  delete paper.fullTextReviewStatus;
+  paper.sourceUrls = [`${paper.url}v1`];
+  paper.scores.technicalStrength = 17;
+  paper.totalScore = Object.values(paper.scores).reduce((sum, value) => sum + value, 0);
+  reports["quant-ph"].fullTextEvaluatedCount -= 1;
+  reports["quant-ph"].audit.fullTextEvaluatedCount -= 1;
+
+  writeProductionRepository(root, reports);
+  const edition = JSON.parse(readFileSync(join(root, "public/data/current.json"), "utf8"));
+  const expectedFullTextCount = Object.values(reports).reduce(
+    (sum, report) => sum + report.fullTextEvaluatedCount,
+    0,
+  );
+  assert.match(edition.statusMessage, new RegExp(`うち${expectedFullTextCount}件はPDF全文を確認`));
+  assert.match(edition.statusMessage, /本文取得・解析不能な論文はタイトル・著者・要旨に基づく評価のまま掲載/);
+  assert.equal(edition.categories["quant-ph"].topPapers[9].fullTextEvaluated, false);
+  assert.equal(edition.categories["quant-ph"].topPapers[9].evaluationBasis, "title_authors_abstract");
 });
 
 test("rubric 3.0 caps scores that lack full-text evidence", () => {

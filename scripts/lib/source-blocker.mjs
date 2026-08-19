@@ -1,7 +1,7 @@
 export const SOURCE_BLOCKER_SCHEMA_VERSION = "1.0";
 export const SOURCE_BLOCKER_STATUS = "source_incomplete";
 export const SOURCE_BLOCKER_MESSAGE_PREFIX = "DAILY_ARXIV_SOURCE_BLOCKER_V1:";
-export const SOURCE_RETRY_BACKOFF_HOURS = Object.freeze([18, 36, 72]);
+export const SOURCE_RETRY_BACKOFF_HOURS = Object.freeze([1, 4, 12, 24]);
 export const SOURCE_PROBE_RETRY_BACKOFF_HOURS = Object.freeze([0.25, 4, 18, 36, 72]);
 export const MODEL_SOURCE_FAILURE_CLASS = "all_official_full_text_pathways_unavailable";
 export const HOST_SOURCE_PROBE_FAILURE_CLASS = "host_source_probe_failed";

@@ -74,7 +74,10 @@ import {
   fetchArxivSourceArchive,
   parseArxivSourceArchive,
 } from "../scripts/extract-arxiv-source.mjs";
-import { MODEL_SOURCE_FAILURE_CLASS } from "../scripts/lib/source-blocker.mjs";
+import {
+  MODEL_SOURCE_FAILURE_CLASS,
+  encodeSourceBlockerEventMessage,
+} from "../scripts/lib/source-blocker.mjs";
 import { validPolicy, validReport, validRun } from "./helpers.mjs";
 
 const RUN_ID = "run-20990105T123456Z-abcdef123456";
@@ -1206,36 +1209,22 @@ test("category prompt binds one resumable category and forbids ID/index fallback
   assert.match(prompt, /Do not create a placeholder, marker, scratch file/);
   assert.match(prompt, /provisional top min\(12, totalNew\)/);
   assert.match(prompt, /arXiv ID, input index, rank, hash, random value, cyclic template, or fallback formula/);
-  assert.match(prompt, /record-source-incomplete\.mjs quant-ph/);
-  assert.match(prompt, new RegExp(MODEL_SOURCE_FAILURE_CLASS, "u"));
-  assert.doesNotMatch(prompt, /<failure-class>/u);
-  assert.match(prompt, /token-free cooldown and source prefetch/);
+  assert.match(prompt, /paper-local limitation, not a category failure/);
+  assert.match(prompt, /continue with the next fixed candidate/);
+  assert.match(prompt, /final top min\(10, totalNew\) may therefore contain abstract-only papers/);
+  assert.match(prompt, /source\/PDF-only command or transport failure/);
+  assert.match(prompt, /node scripts\/record-source-incomplete\.mjs quant-ph/);
+  assert.match(prompt, /checkpoints the truthful report immediately without source cooldown/);
+  assert.match(prompt, /Never use this receipt for scoring, language, schema, authentication/);
   assert.match(prompt, /Every paper, not only the first paper or the fully reviewed papers, must contain the exact schema 1\.4 paper-key set/);
   assert.match(prompt, /url, arxivVersion, and submissionType on every paper/);
-  assert.match(prompt, /preflight-staged-category\.mjs 2099-01-05 quant-ph/);
-  assert.match(prompt, /quant-ph-structure-audit-1\.json/);
-  assert.match(prompt, /quant-ph-structure-audit-4\.json/);
-  assert.match(prompt, /one batch repair covering every listed missing\/extra key/);
-  assert.match(prompt, /Run at most 4 structural audits and 3 structural repair batches/);
-  assert.match(prompt, /If structural audit 4 is nonzero, stop with an error/);
-  assert.match(prompt, /audit-staged-language\.mjs 2099-01-05/);
-  assert.match(prompt, /quant-ph-language-audit-1\.json/);
-  assert.match(prompt, /quant-ph-language-audit-5\.json/);
-  assert.match(prompt, /Run at most 5 language audits and 4 whole-field batch repairs/);
-  assert.match(prompt, /Stop immediately at the first language audit that reports issues=0/);
-  assert.match(prompt, /do not run or create any later numbered audit/);
-  assert.match(prompt, /first surfaced diagnostic for that field/);
-  assert.match(prompt, /Do not merely replace the quoted trigger/);
-  assert.match(prompt, /If language audit 5 is nonzero, stop with an error and do not repair again/);
-  assert.doesNotMatch(prompt, /language-issues-(?:before|after)\.json/);
-  assert.doesNotMatch(prompt, /structure-issues-(?:before|after)\.json/);
-  assert.match(prompt, new RegExp(`quant-ph-language-audit-1\\.json" quant-ph ${RUN_ID}`));
+  assert.match(prompt, /one complete self-check/);
+  assert.match(prompt, /single self-check as one batch/);
+  assert.match(prompt, /Do not run the legacy numbered structural or language audit scripts/);
+  assert.doesNotMatch(prompt, /preflight-staged-category\.mjs/u);
+  assert.doesNotMatch(prompt, /audit-staged-language\.mjs/u);
   assert.match(prompt, /validate-staged-category\.mjs 2099-01-05 quant-ph/);
   assert.match(prompt, new RegExp(RUN_ID));
-  assert.ok(
-    prompt.indexOf("structure-audit-4.json") < prompt.indexOf("language-audit-1.json"),
-    "every permitted structural preflight must be listed before every language audit",
-  );
 });
 
 test("host binds canonical immutable metadata without modifying the model file", async () => {
@@ -1279,7 +1268,7 @@ test("host binds canonical immutable metadata without modifying the model file",
   assert.equal(unchanged.sourceValueSha256, unchanged.boundValueSha256);
 });
 
-test("category repair prompt uses the same fixed audit protocol without legacy output names", () => {
+test("category repair prompt uses one bounded self-check and one validator", () => {
   const staging = "/tmp/daily-arxiv-automation-501/run-20990105T123456Z-abcdef123456/staging/quant-ph";
   const prompt = buildCategoryRepairPrompt({
     evaluationRunId: RUN_ID,
@@ -1288,14 +1277,13 @@ test("category repair prompt uses the same fixed audit protocol without legacy o
     slug: "quant-ph",
     draftSha256: "a".repeat(64),
   });
-  assert.match(prompt, /quant-ph-structure-audit-1\.json/);
-  assert.match(prompt, /quant-ph-structure-audit-4\.json/);
-  assert.match(prompt, /quant-ph-language-audit-1\.json/);
-  assert.match(prompt, /quant-ph-language-audit-5\.json/);
-  assert.match(prompt, new RegExp(`quant-ph-language-audit-1\\.json" quant-ph ${RUN_ID}`));
-  assert.doesNotMatch(prompt, /repair-(?:structure|language)/);
-  assert.doesNotMatch(prompt, /structure-issues-(?:before|after)/);
-  assert.match(prompt, /scores, ranks, and full-text evidence are not repairable in this mode/);
+  assert.match(prompt, /one complete self-check/);
+  assert.match(prompt, /at most one batch repair/);
+  assert.match(prompt, /Do not run legacy numbered structural or language audit scripts/);
+  assert.match(prompt, /validate-staged-category\.mjs 2099-01-05 quant-ph/);
+  assert.doesNotMatch(prompt, /structure-audit-/u);
+  assert.doesNotMatch(prompt, /language-audit-/u);
+  assert.match(prompt, /Do not conduct new research/);
 });
 
 test("recoverable checkpoint helper uses the runtime-specific job and receipts an orphan before model orchestration", async () => {
@@ -1384,15 +1372,11 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /Daily arXiv rubric 3\.0/);
   assert.match(specification, /technicalStrength`の18点以上は全文確認/);
   assert.match(specification, /node scripts\/extract-arxiv-source\.mjs/);
-  assert.match(specification, /node scripts\/preflight-staged-category\.mjs YYYY-MM-DD/);
-  assert.match(specification, /<category>-structure-audit-1\.json/);
-  assert.match(specification, /<category>-structure-audit-4\.json/);
   assert.match(specification, /先頭や上位10件だけでなく\*\*全件それぞれ\*\*/);
   assert.match(specification, /特に`url`、`arxivVersion`、`submissionType`を全論文へ入れ/);
-  assert.match(specification, /どれかの構造監査が`issues=0`の場合だけ/);
-  assert.match(specification, /監査4が非ゼロなら追加修正せず異常終了/);
-  assert.match(specification, /言語監査は文章フィールドだけを対象/);
-  assert.match(specification, /<category>-language-audit-5\.json" <category> <evaluation-run-id>/);
+  assert.match(specification, /機械的整合性と自然な日本語を1回だけまとめて自己点検/);
+  assert.match(specification, /旧来の番号付き構造監査と言語監査は実行しません/);
+  assert.match(specification, /本文取得不能、得点分布、文型の類似、一般英語の残存.*理由にカテゴリを延期しません/);
   assert.match(specification, /node scripts\/validate-staged-category\.mjs YYYY-MM-DD/);
   assert.match(specification, /manifest、completion marker、status fileを作らず/);
   assert.match(specification, /outboxは空のまま/);
@@ -1401,12 +1385,16 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /失敗または未完了の最初のカテゴリだけから再開/);
   assert.match(specification, /モデル評価を繰り返さず公開だけを再試行/);
   assert.match(specification, /全文未確認論文の各軸が24点未満かつ`technicalStrength`が17点以下/);
-  assert.match(specification, /`scope: "category"`/);
   assert.match(specification, /`data\/reports\/`、`public\/data\/`、`scripts\/lib\/pipeline\.mjs`、testsを例として読みません/);
   assert.match(specification, /取得成功、ファイルサイズ、節名の検索だけを全文確認の代用にしてはいけません/);
   assert.match(specification, /暫定候補全件へ一括`HEAD`/);
-  assert.match(specification, /同じ全件へ`Range GET`を重ねたりして/);
-  assert.match(specification, /他候補の可用性検査を続けず/);
+  assert.match(specification, /同じ全件へ`Range GET`を重ねたりせず/);
+  assert.match(specification, /その候補だけを`fullTextEvaluated=false`/);
+  assert.match(specification, /次候補へ進みます/);
+  assert.match(specification, /通常は本文取得不能receiptを作りません/);
+  assert.match(specification, /source\/PDF専用コマンドまたは通信の失敗.*終端分類/);
+  assert.match(specification, /同じrunの一時receiptを消費します/);
+  assert.match(specification, /PDF待ち、source draft、backoffには使わず/);
   assert.match(specification, /`titleJa`:[^\n]*日本語として自然に読める表示題名/);
   assert.match(specification, /固有名・数式・標準略語だけを英字で残し/);
   assert.match(specification, /`title`にはarXivの原題を一字一句そのまま保存/);
@@ -1421,9 +1409,6 @@ test("the scheduled specification keeps rubric 3.0 anchors and Japanese quality 
   assert.match(specification, /abstractLines\[0\].*言い換えにはしません/);
   assert.match(specification, /`concept`へ`abstractLines\[1\]`.*一文そのままコピーしてはいけません/);
   assert.match(specification, /接続語差分で再利用したりしてはいけません/);
-  assert.match(specification, /内容語だけを差し替えた短い共通骨格/);
-  assert.match(specification, /全体の35%超へ同じ総合点/);
-  assert.match(specification, /`totalScore`、`scores`、`rank`/);
   assert.match(specification, /assessment.*点数や`scoreReasons`の反復/);
 });
 
@@ -2085,14 +2070,75 @@ test("protected draft repairs bypass generation backoff and source alerts repeat
     execution: { mode: "generation" },
     attempts,
     category: "quant-ph",
-    now: new Date("2026-07-27T10:00:00.000Z"),
+    now: new Date("2026-07-27T09:30:00.000Z"),
   }).shouldDefer, true);
+  assert.equal(computeCategoryRetryState({
+    execution: { mode: "generation" },
+    attempts,
+    category: "quant-ph",
+    now: new Date("2026-07-27T10:00:00.000Z"),
+  }).shouldDefer, false);
   assert.equal(sourceFailureNeedsAttention(0), false);
   assert.equal(sourceFailureNeedsAttention(1), false);
   assert.equal(sourceFailureNeedsAttention(2), true);
   assert.equal(sourceFailureNeedsAttention(3), false);
   assert.equal(sourceFailureNeedsAttention(5), true);
   assert.equal(sourceFailureNeedsAttention(6), false);
+});
+
+test("legacy source-only cooldown is bypassed only for a protected source resume", () => {
+  const receipt = {
+    schemaVersion: "1.0",
+    status: "source_incomplete",
+    arxivId: "2099.00003",
+    failureClass: MODEL_SOURCE_FAILURE_CLASS,
+    provisionalCandidateIds: ["2099.00003"],
+  };
+  const attempts = [{
+    at: "2026-07-27T09:00:00.000Z",
+    attemptId: "run-source-failed",
+    stage: "category_generation",
+    status: "failed",
+    category: "quant-ph",
+    message: encodeSourceBlockerEventMessage(receipt, {
+      observedAt: new Date("2026-07-27T09:00:00.000Z"),
+    }),
+  }];
+  const resumed = computeCategoryRetryState({
+    execution: { mode: "source_resume" },
+    attempts,
+    category: "quant-ph",
+    now: new Date("2026-07-27T09:01:00.000Z"),
+  });
+  assert.equal(resumed.active, true);
+  assert.equal(resumed.shouldDefer, false);
+  assert.equal(resumed.sourceCooldownBypassed, true);
+  assert.deepEqual(resumed.sourceBlocker.receipt, receipt);
+
+  const unprotectedGeneration = computeCategoryRetryState({
+    execution: { mode: "generation" },
+    attempts,
+    category: "quant-ph",
+    now: new Date("2026-07-27T09:01:00.000Z"),
+  });
+  assert.equal(unprotectedGeneration.shouldDefer, true);
+  assert.equal(unprotectedGeneration.sourceBlocker.receipt.arxivId, receipt.arxivId);
+
+  const ordinaryFailure = computeCategoryRetryState({
+    execution: { mode: "source_resume" },
+    attempts: [...attempts, {
+      at: "2026-07-27T09:02:00.000Z",
+      attemptId: "run-schema-failed",
+      stage: "category_source_resume",
+      status: "failed",
+      category: "quant-ph",
+      message: "Schema validation failed after source resume.",
+    }],
+    category: "quant-ph",
+    now: new Date("2026-07-27T09:03:00.000Z"),
+  });
+  assert.equal(ordinaryFailure.shouldDefer, true, "non-source failures retain the ordinary fail-closed cooldown");
+  assert.equal(ordinaryFailure.sourceBlocker, null);
 });
 
 test("repair exhaustion notification states retained draft and automatic cooldown recovery", () => {

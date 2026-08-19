@@ -6,6 +6,7 @@ import { join } from "node:path";
 import test from "node:test";
 import {
   LAUNCHD_LABEL,
+  START_INTERVAL_SECONDS,
   assertJapanTimeZone,
   assertPrivateDirectoryMode,
   calendarIntervals,
@@ -69,8 +70,13 @@ test("launchd plist uses absolute paths and checks for missed work when loaded",
   assert.match(plist, /codex-cli 1\.2\.3/);
   assert.match(plist, /Library\/Application Support\/Daily arXiv\/logs/);
   assert.match(plist, /<key>StartCalendarInterval<\/key>/);
+  assert.match(
+    plist,
+    new RegExp(`<key>StartInterval<\\/key>\\s*<integer>${START_INTERVAL_SECONDS}<\\/integer>`),
+  );
   assert.match(plist, /<key>RunAtLoad<\/key>\s*<true\/>/);
   assert.doesNotMatch(plist, /<key>KeepAlive<\/key>/);
+  assert.doesNotMatch(plist, /pmset/u);
   assert.doesNotMatch(plist, /OPENAI_API_KEY|GITHUB_TOKEN|SSH_AUTH_SOCK/);
 });
 

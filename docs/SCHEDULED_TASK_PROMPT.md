@@ -37,7 +37,7 @@ assigned category
 
 ホスト検証済みmetadataは、全abstract一次評価における原題・著者・abstract・comments・primary categoryの唯一の入力です。モデルは`export.arxiv.org`、`/api/query`、Web検索、一覧ページ、全件のabsページ再取得でmetadataを補完・照合・置換してはいけません。上位候補の全文確認に限り、3.5の版固定公式source/PDF helper経路を使います。
 
-既に公開済みの日付、3カテゴリの日付不一致、全カテゴリ0件はホストがCodex起動前に無変更終了します。未公開日が複数ある場合、ホストは公式の発表日列から最古の1日だけを実行対象にし、その時点で確認できた後続の未公開snapshotも最古から順にactivateされる耐久キューへ先に保存します。ホストは`quant-ph`、`gr-qc`、`hep-th`の固定順で、未完了の最初のカテゴリだけをモデルへ割り当てます。モデルが起動されたrunでは、割当snapshotの全件を評価した完全な1レポートを作るか、本文取得不能時だけ全abstract評価済みの暫定レポートと固定receiptを残して停止するか、何も完成扱いにせず異常終了するかのいずれかです。他カテゴリのレポートを作成、修正、推測してはいけません。
+既に公開済みの日付、3カテゴリの日付不一致、全カテゴリ0件はホストがCodex起動前に無変更終了します。未公開日が複数ある場合、ホストは公式の発表日列から最古の1日だけを実行対象にし、その時点で確認できた後続の未公開snapshotも最古から順にactivateされる耐久キューへ先に保存します。ホストは`quant-ph`、`gr-qc`、`hep-th`の固定順で、未完了の最初のカテゴリだけをモデルへ割り当てます。モデルが起動されたrunでは、割当snapshotの全件を要旨評価した完全な1レポートを作ります。個別の本文取得・解析不能はその論文だけを要旨評価のまま残して続行し、カテゴリ全体を延期しません。他カテゴリのレポートを作成、修正、推測してはいけません。
 
 ## 3. 評価: Daily arXiv rubric 3.0
 
@@ -130,17 +130,15 @@ node scripts/extract-arxiv-source.mjs <unversioned-arXiv-ID>
 
 helperは`https://arxiv.org/e-print/<ID>v1`だけを取得し、最終URLが同じ公式ドメインの版固定`/src/<ID>v1`であることを検証します。run内で最低3秒の要求間隔を保ち、HTTP 429・一時的server error・転送中断をbounded retryします。さらにarchive path、checksum、展開量、UTF-8 text file種別を検証して、ホスト指定run root内の`$TMPDIR/sources/<ID>/`へTeX・参考文献等のbounded textだけを原子的に書きます。PDFやsourceをGit worktreeへ保存しません。追加package、Homebrew、`pdftotext`、Python packageは不要です。取得した主TeXと参照先を実際に読み、導入、前提、導出または手法、主結果、検証・比較、結論、限界、関連付録を確認して再評価します。PDF/sourceの取得成功、ファイルサイズ、節名の検索だけを全文確認の代用にしてはいけません。
 
-ホストはCodex起動前に当日バッチ末尾の版固定PDFとe-printを軽量確認済みです。再試行runでは固定済み候補のうち安全抽出できた公式sourceが`$TMPDIR/sources/<ID>/`へ先取りされている場合があるため、存在するIDはそれを再利用して再取得しません。モデルは暫定候補全件へ一括`HEAD`したり、その後に同じ全件へ`Range GET`を重ねたりして配信準備を再判定しません。候補は1件ずつ上のhelperで確認し、その候補でe-printが取得不能なら同じ候補の公式HTMLまたはPDFだけを確認します。
+ホストは本文の事前可用性をカテゴリ全体の開始条件にしません。再試行runで安全抽出済みの公式sourceが`$TMPDIR/sources/<ID>/`に存在する場合は再利用します。モデルは暫定候補全件へ一括`HEAD`したり、その後に同じ全件へ`Range GET`を重ねたりせず、候補を1件ずつ上のhelperで確認します。e-printが取得不能なら同じ候補の公式HTMLまたはPDFを試せます。
 
-いずれの公式本文経路も利用不能なら他候補の可用性検査を続けず、そこで停止します。全文取得を始める前に、全abstract比較に基づく全論文の暫定得点・順位・読者向け文章と、その時点で実際に確認済みの本文状態をschema 1.4レポートへ書き、候補を1件確認するたびに更新します。ホストのカテゴリプロンプトに`record-source-incomplete.mjs`の固定コマンドが示されている場合は、正確な暫定上位`min(12,totalNew)` ID集合と失敗IDだけをそのコマンドへ渡し、暫定レポートを残したまま`SOURCE_INCOMPLETE_RECORDED`で終了します。failure classはホストがコマンド内へ固定した`all_official_full_text_pathways_unavailable`を一字も変更しません。
-
-ホストはreceiptのexact schema、固定failure class、失敗ID、候補数、候補全IDが公式snapshotの当該カテゴリに属することに加え、初回暫定レポートでは決定的上位候補順とreceiptが完全一致し、本文確認済み論文が候補集合内だけであることを独立検証します。暫定レポートは完成reportと分離したcontent-addressed checkpointへ保存し、トークンを使わない候補source prefetchを初回15分、次に4時間、18時間、36時間、以後最大72時間の独立backoffで行います。通常のモデル再開失敗はこの回数へ混ぜず、従来の18→36→72時間で別に抑制します。cooldown後は全abstract評価を繰り返さず、保護済み暫定レポートと同じ候補集合から全文確認だけを再開します。候補の一部を本文証拠で再採点した結果、その固定候補が現在順位N位より下へ移っても候補集合との結び付けは有効です。候補を現在順位の別論文へ入れ替えず、固定した全候補の確認を続けます。非候補の得点・本文確認状態・原文メタデータは変更せず、候補の全文証拠による再採点と、意味を保つ日本語修復だけを行います。cooldown後にe-print抽出が失敗した場合、取得helper自身が型付きで通信・配信不能と判定したとき、または安全な抽出形式非対応と明示したときだけ、ホストが同じIDの版固定公式PDFを独立確認してPDF経路で再開します。危険なarchive path、容量超過、権限、disk、予期しないredirect、validation等は、エラー文に`network`、`timeout`、`5xx`等が含まれてもfallbackも通常draft救済もせず停止します。このreceiptは本文取得不能専用であり、評価、schema、日本語、認証、設定の失敗には使いません。固定コマンドがない実行経路では`ACTION_REQUIRED: SOURCE_INCOMPLETE`で異常終了します。
+どの公式本文経路も利用できない、PDFが壊れている、暗号化されている、形式が未対応、または安全な抽出ができない場合、その候補だけを`fullTextEvaluated=false`、`evaluationBasis="title_authors_abstract"`のまま残し、`fullTextReviewStatus`とPDF URLを含めず次候補へ進みます。通常は本文取得不能receiptを作りません。source/PDF専用コマンドまたは通信の失敗によってカテゴリstage自体が非ゼロ終了しそうな場合だけ、全論文を含む完成済みreportと失敗論文の正確な要旨評価tupleを先に保存し、ホストpromptで指定された`record-source-incomplete.mjs`を終端分類として1回だけ実行できます。ホストは両者を再検証して直ちにcheckpoint化し、同じrunの一時receiptを消費します。これをPDF待ち、source draft、backoffには使わず、得点・文章・schema・認証などの失敗を偽装してはいけません。危険なarchive path、容量超過、権限逸脱、予期しないredirectなどは当該入力を拒否しますが、検証済みのタイトル・著者・要旨評価は残してカテゴリ処理を続けます。
 
 入力消費を抑えるため、TeX全文や参考文献全体を一度にterminalへ出力しません。まず主ファイルと節構造を特定し、上記の確認対象に対応する前後だけをboundedな範囲で読みます。ただし、節を未読のまま節名だけで内容を推測してはいけません。
 
-公式e-printが提供されない場合は、公式arXiv HTMLまたは実行環境から内容を読める公式PDFで同じ範囲を確認します。いずれの再現可能な本文経路も使えなければ、その論文を全文確認済みとせず異常終了します。いずれの軸も24点以上は全文確認なしに付けません。`technicalStrength`の18点以上は全文確認を必須とします。
+公式e-printが提供されない場合は、公式arXiv HTMLまたは実行環境から内容を読める公式PDFで同じ範囲を確認します。いずれの再現可能な本文経路も使えなければ、その論文を全文確認済みとせず、要旨評価のまま続行します。いずれの軸も24点以上は全文確認なしに付けません。`technicalStrength`の18点以上は全文確認を必須とします。
 
-全文確認後は暫定候補12件の内部で再採点し、最終上位10件を確定します。最終上位10件はすべて全文確認済みでなければならず、各カテゴリの`fullTextEvaluatedCount`は`min(totalNew, 12)`を超えてはいけません。11位以下を含む全論文にはabstractに基づく完全な読者向け情報を残します。必要な一時PDFや抽出テキストはホスト指定run rootの内側だけへ置き、リポジトリ内や他の`/tmp`へ保存しません。モデルの通信は上位候補の版固定全文経路に必要な`arxiv.org`だけに制限し、Web検索は無効にします。
+利用できた全文の確認後は暫定候補12件の内部で再採点し、最終上位10件を確定します。本文を利用できなかった候補が最終上位へ残ることを許可し、その場合は要旨評価であることを正確に記録します。各カテゴリの`fullTextEvaluatedCount`は`min(totalNew, 12)`を超えてはいけません。11位以下を含む全論文にも要旨に基づく完全な読者向け情報を残します。必要な一時PDFや抽出テキストはホスト指定run rootの内側だけへ置き、リポジトリ内や他の`/tmp`へ保存しません。モデルの通信は上位候補の版固定全文経路に必要な`arxiv.org`だけに制限し、Web検索は無効にします。
 
 ### 3.6 自然な日本語と各フィールドの役割
 
@@ -235,7 +233,7 @@ run-20260713T023000Z-a1b2c3d4e5f6
 
 `scoreReasons`は`broadImpact`、`categoryImpact`、`originality`、`technicalStrength`の正確な4キーだけを持つobjectとし、各値は空でない論文固有の日本語文字列にします。キーの欠落、追加キー、点数だけの言い換え、4軸間での同文再利用を禁止します。
 
-上位外でPDF未確認の場合は`evaluationBasis`を`title_authors_abstract`、`fullTextEvaluated`を`false`とし、`fullTextReviewStatus`を含めません。`sourceUrls`には少なくともversion固定のabstract URLを含めます。この場合の`scoreReasons`はタイトル、アブストラクト、commentsから確認できる根拠に限定し、本文の導出や検証を確認したように書きません。
+PDF未確認または取得・解析不能の場合は順位にかかわらず`evaluationBasis`を`title_authors_abstract`、`fullTextEvaluated`を`false`とし、`fullTextReviewStatus`を含めません。`sourceUrls`にはversion固定のabstract URLだけを含めます。この場合の`scoreReasons`はタイトル、アブストラクト、commentsから確認できる根拠に限定し、本文の導出や検証を確認したように書きません。
 
 レポートのトップレベルは次のフィールドだけです。
 
@@ -266,68 +264,33 @@ generatedAtJst
 <category staging>/YYYY-MM-DD-quant-ph.json
 ```
 
-固定監査の前に、機械的な整合性を1回だけ自己点検します。各論文は、先頭や上位10件だけでなく**全件それぞれ**について、上記schema 1.4の全キーを正確に持たなければなりません。特に`url`、`arxivVersion`、`submissionType`を全論文へ入れ、`scores`と`scoreReasons`を正確な4キーだけにし、`fullTextReviewStatus`は`fullTextEvaluated=true`の論文だけに入れます。加えて、`totalScore`が4軸の和であること、順位がtie-breakどおりであること、全文未確認論文の各軸が24点未満かつ`technicalStrength`が17点以下であること、最終上位10件が全文確認済みであること、全文確認数と監査件数が一致することを全件で確認します。16件以上のカテゴリでは、8件以上かつ全体の35%超へ同じ総合点を与えたり、8件以上かつ全体の20%超へ同じ4軸ベクトルを再利用したりしていないことも確認します。違反があれば点数を機械的に散らすのではなく、各abstractまたは本文証拠へ戻って4軸を再評価し、合計・順位をまとめて再計算します。最終validatorをこの自己点検の代用として先に実行しません。
+1ファイルを書いた後、機械的整合性と自然な日本語を1回だけまとめて自己点検し、必要な修正を1回のbatchで行います。各論文は、先頭や上位10件だけでなく**全件それぞれ**について、上記schema 1.4の全キーを正確に持たなければなりません。特に`url`、`arxivVersion`、`submissionType`を全論文へ入れ、`scores`と`scoreReasons`を正確な4キーだけにし、`fullTextReviewStatus`は`fullTextEvaluated=true`の論文だけに入れます。`totalScore`が4軸の和であること、順位がtie-breakどおりであること、全文未確認論文の各軸が24点未満かつ`technicalStrength`が17点以下であること、全文確認数と監査件数が一致することも確認します。
 
-1ファイルを書いた後、文章品質検査に妨げられず、全論文の欠落・追加キー、得点分布、合計・順位、上位10件の全文確認tuple、件数、source URLを含む決定的な値の不整合をまとめて列挙する固定構造監査を実行します。監査のsourceを読まず、番号付き構造監査を1から順に実行します。以下の`<category>`はホスト指定の`quant-ph`、`gr-qc`、`hep-th`のいずれか、`<evaluation-run-id>`はホスト指定の`runId`です。
+本文取得不能、得点分布、文型の類似、一般英語の残存など、論文内容または文章品質に関する問題だけを理由にカテゴリを延期しません。根拠を捏造せず、可能な範囲で自然な日本語へ直します。日付、ID集合、件数、schema、得点合計、決定的順位、評価根拠tuple、source URL、runId、安全境界の不整合は修正または停止が必要です。旧来の番号付き構造監査と言語監査は実行しません。
 
-```bash
-node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id> "$TMPDIR/<category>-structure-audit-1.json"
-```
-
-`issues=0`ならそこで構造段階を終了し、後続番号の構造監査ファイルを作らず言語監査へ進みます。`issues`が非ゼロなら、出力に列挙された全項目を1回のbatchで修正し、次の番号だけを実行します。missing keyは該当論文だけへ追加し、extra keyはschemaに照らして除きます。得点分布の異常は各abstractまたは本文証拠に戻って4軸を再評価し、単に重複を避けるためだけに点数を散らさず、`totalScore`、決定的順位、`rank`をカテゴリ全体で再計算します。合計・順位・上位10件の`fullTextEvaluated`、`evaluationBasis`、`fullTextReviewStatus`、`sourceUrls`の整合したtuple・件数も同じbatchで直します。構造監査を口実に、正常な研究内容や日本語表現を一律に書き換えません。
-
-```bash
-node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id> "$TMPDIR/<category>-structure-audit-2.json"
-node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id> "$TMPDIR/<category>-structure-audit-3.json"
-node scripts/preflight-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id> "$TMPDIR/<category>-structure-audit-4.json"
-```
-
-監査1〜3が非ゼロなら、各監査につき1回だけ一括修正できます。監査4が非ゼロなら追加修正せず異常終了します。4回を超える構造監査、3回を超える構造修正batch、`issues=0`の後に後続番号の監査ファイルを作ることは禁止です。得点分布と得点・順位・全文確認tuple・件数・URLの修正はこの構造段階だけで完了させ、後続の言語監査では変更しません。
-
-どれかの構造監査が`issues=0`の場合だけ、不自然な日本語をカテゴリ全体について一括列挙する文章専用の固定言語監査を、番号順に最大5回実行します。各言語監査は処理開始前に、現在のレポートを正規の構造validatorで再検証し、ホスト指定の`runId`と一致することも確認します。構造、得点、順位、全文確認状態のいずれかが変化していれば、文章監査を行わず異常終了します。言語監査のsourceを読まず、非ゼロの監査出力に列挙された全フィールドを、一つずつではなく1回のbatchで修正します。修正batchは最大4回です。
-
-出力中の通常項目は指定された1論文の`path`だけを修正します。ただし、監査の`message`はそのフィールドで最初に表面化した診断であり、その語だけを直せばフィールド全体が適合するという意味ではありません。列挙された現在値全体を読み直し、未翻訳の一般英語、日本語語境界のASCII空白、サ変活用の欠落、abstract行の接続語だけを変えた再利用、不自然な定型句、評価作業の来歴表現、およびその他の指摘をすべて除き、論文固有の事実を保った自然な日本語へ直します。引用された語だけの置換や全レポートへの一律な置換表を使わず、対象外の良好な文章は書き換えません。
-
-`scope: "category"`で`path`が文章フィールドの場合、`affectedPapers`に列挙された論文が同一文、句読点を軸にした文骨格、または内容語だけを差し替えた短い共通骨格を過剰に再利用していることを示します。論文固有の事実を保ったまま、列挙された対象を同じbatchで異なる自然な日本語構文へ書き直します。言語監査は文章フィールドだけを対象とし、`totalScore`、`scores`、`rank`、全文確認tuple、件数、URLは変更しません。
-
-```bash
-node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-1.json" <category> <evaluation-run-id>
-```
-
-`issues=0`なら、後続番号の監査ファイルを作らず、直ちに下記validatorへ進みます。非ゼロなら全項目を1回のwhole-field batchで修正し、次の番号だけを実行します。監査2〜5の固定名は次のとおりです。
-
-```bash
-node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-2.json" <category> <evaluation-run-id>
-node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-3.json" <category> <evaluation-run-id>
-node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-4.json" <category> <evaluation-run-id>
-node scripts/audit-staged-language.mjs YYYY-MM-DD <category staging> "$TMPDIR/<category>-language-audit-5.json" <category> <evaluation-run-id>
-```
-
-監査1〜4が非ゼロなら各監査につき1回だけ一括修正できます。監査5が非ゼロなら追加修正せず異常終了します。個々のエラーごとに監査を回すこと、6回目を作ること、`issues=0`の後に次の監査を実行することは禁止です。これにより、同じ巨大レポートを無制限に編集して利用枠とログを消費することを防ぎつつ、同じフィールドで順に表面化する複数の違反を有限回で処理できます。
-
-いずれかの番号付き監査が`issues=0`になった場合だけ、次の読取り専用validatorを正確に1回実行します。validatorのsourceを読まず、成功・失敗だけを使います。
+自己点検と最大1回の一括修正後、次の読取り専用validatorを正確に1回実行します。validatorのsourceを読まず、成功・失敗だけを使います。
 
 ```bash
 node scripts/validate-staged-category.mjs YYYY-MM-DD <category> <category staging> <evaluation-run-id>
 ```
 
-`STAGED_CATEGORY_VALID`にならなければ、そのrunではvalidatorを再実行せず異常終了します。監査またはvalidatorを迂回、弱体化、変更しません。`STAGED_CATEGORY_VALID`になった場合は、それを最後のコマンドとして直ちに終了し、以後はfilesystemへ何も書かず、最終応答を正確に`STAGED_CATEGORY_VALID`の1行だけとします。
+`STAGED_CATEGORY_VALID`にならなければ、そのrunではvalidatorを再実行せず異常終了します。validatorを迂回または変更しません。`STAGED_CATEGORY_VALID`になった場合は、それを最後のコマンドとして直ちに終了し、以後はfilesystemへ何も書かず、最終応答を正確に`STAGED_CATEGORY_VALID`の1行だけとします。
 
 ## 5. ホスト側検証と公開
 
 カテゴリ専用stagingには、割当カテゴリの上記1 JSON以外を置きません。manifest、completion marker、status fileを作らず、ホストが作成したoutboxは空のまま残します。ホストはモデルが書いた成功宣言を使用せず、ホスト自身が保持するrunId、snapshotの日付、カテゴリ、staging pathから期待する1ファイル名を決定します。
 
-通常のno-opと完成済みカテゴリの再利用はCodex起動前にホストが処理します。モデルが起動された後は、割当カテゴリの完全な1レポートを作成して固定監査とvalidatorを終えるか、上記の本文取得不能専用receiptと全abstract評価済み暫定レポートを残すか、異常終了するかのいずれかです。日付不一致、モデル設定不一致、評価未完了、schema不確実、その他の失敗時はreceiptで偽装せず、架空データで穴埋めせず異常終了します。
+通常のno-opと完成済みカテゴリの再利用はCodex起動前にホストが処理します。モデルが起動された後は、個別の本文失敗を要旨評価へ縮退させたうえで割当カテゴリの完全な1レポートを作成し、単一validatorを終えるか、本文以外の不整合で異常終了するかのいずれかです。日付不一致、モデル設定不一致、評価未完了、schema不確実を架空データで穴埋めしません。
 
-Codex終了後、通常成功ではホストはoutboxが空であること、カテゴリ専用stagingがsnapshotの日付とカテゴリに対応する正確な1個のregular JSON fileだけを含むこと、そのファイルが10 MiB以下であることを確認します。本文取得receiptの場合もoutboxは空、stagingは正確な1個の暫定report、blocker領域は割当カテゴリの正確な1 regular JSONだけでなければなりません。その後、ホストは同じ検証済みmetadataから原題・自然順全著者・primary category・版・投稿種別・canonical URLだけを決定的に再注入します。arXiv ID、順位、点数、評価根拠、全文確認状態、`sourceUrls`の証拠一覧、読者向け文章は変更せず、未知・欠落・重複IDは修復せず安全停止します。再注入後の通常reportはJSON、schema、runId、モデル情報、公式ID集合、件数と書誌情報がmetadataに完全一致し、metadata入力のdigestも変わっていないことを独立検証してcontent digest付きで完成checkpointへ入れます。source receiptと暫定reportも同じ書誌再注入後にsnapshot、runtime、runId、固定候補集合を照合し、それらとattempt stage、report digestを単一のcontent-addressed source-draft envelopeへ入れて排他的に公開します。追記専用attempt履歴は別に保存しますが、途中停止で履歴eventだけが欠けてもenvelopeから再構成でき、それだけでは公開できません。
+Codex終了後、ホストはoutboxが空であること、カテゴリ専用stagingがsnapshotの日付とカテゴリに対応する正確な1個のregular JSON fileだけを含むこと、そのファイルが10 MiB以下であることを確認します。その後、同じ検証済みmetadataから原題・自然順全著者・primary category・版・投稿種別・canonical URLだけを決定的に再注入します。arXiv ID、順位、点数、評価根拠、全文確認状態、`sourceUrls`の証拠一覧、読者向け文章は変更せず、未知・欠落・重複IDは修復せず安全停止します。再注入後のreportはJSON、schema、runId、モデル情報、公式ID集合、件数と書誌情報がmetadataに完全一致し、metadata入力のdigestも変わっていないことを独立検証してcontent digest付きで完成checkpointへ入れます。
 
 ```text
 ~/Library/Application Support/Daily arXiv/jobs/<YYYY-MM-DD>-<snapshot-fingerprint>/<runtime-fingerprint>/
 ```
 
-ここには不変の`job.json`と`snapshot.json`、カテゴリ別の`reports/*.json`と`*.receipt.json`、厳格検証済みの通常失敗出力を保存する`drafts/<attemptId>.<category>.json`とdigest付きreceipt、本文取得不能出力を一体保存する`drafts/<attemptId>.<category>.source-draft.json`、追記専用の`attempts/*.json`と`publication/*.json`、content-addressedな`.writes/*.blob`を保持します。既存checkpointを削除、上書きしません。通常draft本文の保存直後に停止してreceiptだけが欠けた場合は、次回runが本文を厳格に再検証して通常receiptだけを追記します。source draftは暫定reportとsource receiptを別々に公開せず、常に単一envelopeとして保存します。同じsnapshotでもリポジトリ内runtimeまたは固定CodexのSHA-256・versionが変われば、旧jobを保存したまま別のruntime用jobを開始し、旧runtimeのdraftは再利用しません。次の定時runは同じruntimeでdigestを再検証した完成済みカテゴリをCodexなしで再利用します。
+ここには不変の`job.json`と`snapshot.json`、カテゴリ別の`reports/*.json`と`*.receipt.json`、厳格検証済みの通常失敗出力を保存する`drafts/<attemptId>.<category>.json`とdigest付きreceipt、追記専用の`attempts/*.json`と`publication/*.json`、content-addressedな`.writes/*.blob`を保持します。既存checkpointを削除、上書きしません。通常draft本文の保存直後に停止してreceiptだけが欠けた場合は、次回runが本文を厳格に再検証して通常receiptだけを追記します。旧runtimeが作った`*.source-draft.json`は互換復旧のため読めますが、新規runは本文取得不能を待つsource draft／receiptを永続化しません。上記のsource/PDF専用終端分類receiptは、完成reportのcheckpoint取込成功後に同じrun内で消費され、attempt履歴のsource backoffには使われません。同じsnapshotでもリポジトリ内runtimeまたは固定CodexのSHA-256・versionが変われば、旧jobを保存したまま別のruntime用jobを開始し、旧runtimeのdraftは再利用しません。次の定時runは同じruntimeでdigestを再検証した完成済みカテゴリをCodexなしで再利用します。
 
-本文取得receiptに結び付いたdraftは、固定候補sourceを先取りした後に専用`source_resume`として復元し、全abstract評価を再実行しません。初回だけ固定候補が決定的上位N件であることを検証し、部分的な全文再採点後は固定候補が現在順位N位より下へ移っても同じID集合を維持します。`source_resume`の通常失敗と、開始後5時間以上terminal eventがない試行も18→36→72時間上限のbackoff対象にし、定時runごとに無制限にモデルを再起動しません。それ以外の有効なdraftは、新規調査、Web検索、arXiv再取得、source抽出、再採点、再順位付けを禁止し、欠けた`arxivVersion`、`submissionType`、`url`の決定的追加と、既存根拠を変えない読者向け日本語の修復だけを行います。同じcheckpoint job・カテゴリの修復系列で終端失敗が4回に達した後は、各失敗で別SHA-256の有効な後継draftが保存されていても回数をリセットせず、最新draftを削除・上書きせずcheckpointへ保持し、修復失敗を含む共通の18→36→72時間上限backoffを必ず経て、未完了カテゴリの通常評価を新規generationとして自動再開します。開始記録だけで応答streamが途切れた修復試行は4回の回数へ加えません。draftがなければ失敗または未完了の最初のカテゴリだけから再開し、通常評価を行います。
+旧runtimeの本文取得receiptに結び付いたdraftは専用`source_resume`として復元し、全abstract評価を再実行しません。固定候補の本文をbest-effortで試し、利用不能な候補は要旨評価のまま完成させます。本文prefetchの失敗だけで再延期しません。それ以外の有効なdraftは、新規調査、Web検索、arXiv再取得、source抽出、再採点、再順位付けを禁止し、欠けた`arxivVersion`、`submissionType`、`url`の決定的追加と、既存根拠を変えない読者向け日本語の修復だけを行います。通常のモデル失敗は1→4→12→24時間の短いbackoffで再試行します。同じcheckpoint job・カテゴリの修復系列で終端失敗が4回に達した後も最新draftを削除・上書きせず保持し、同じbackoff後に未完了カテゴリの通常評価を新規generationとして自動再開します。開始記録だけで応答streamが途切れた修復試行は4回の回数へ加えません。draftがなければ失敗または未完了の最初のカテゴリだけから再開し、通常評価を行います。
 
 3カテゴリが同じsnapshot fingerprintとrunIdで揃った場合だけ、ホストは空のhost stagingへ3レポートをmaterializeして全体を再検証します。publisherのfetch、commit、pushだけが失敗した場合もcheckpointを保持し、次の定時runはモデル評価を繰り返さず公開だけを再試行します。`published`記録が追記された後は同じjobから二重公開しません。
 

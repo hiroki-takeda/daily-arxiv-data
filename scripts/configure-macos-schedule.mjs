@@ -31,6 +31,7 @@ import {
 } from "./lib/codex-runtime.mjs";
 import {
   LAUNCHD_LABEL,
+  START_INTERVAL_SECONDS,
   assertJapanTimeZone,
   assertPrivateDirectoryMode,
   calendarIntervals,
@@ -148,6 +149,15 @@ function parseProcessType(lines) {
     throw new Error(`launchctl print spawn type has an unsupported ProcessType mapping: ${value}`);
   }
   return "Background";
+}
+
+function parseStartInterval(lines) {
+  const value = uniqueTopLevelScalar(lines, "run interval");
+  const match = /^([1-9][0-9]*) seconds$/u.exec(value);
+  if (!match) {
+    throw new Error("launchctl print run interval must be a positive canonical number of seconds.");
+  }
+  return parseCanonicalUnsignedInteger(match[1], "run interval");
 }
 
 function calendarIntervalKey({ weekday, hour, minute }) {
@@ -305,6 +315,7 @@ export function parseLaunchctlPrintService(output) {
     stderrPath: uniqueTopLevelScalar(lines, "stderr path"),
     environment: Object.freeze(environment),
     calendarIntervals: parseCalendarIntervals(lines, service),
+    startInterval: parseStartInterval(lines),
     runAtLoad: parseRunAtLoad(lines),
     processType: parseProcessType(lines),
     throttleInterval: parseCanonicalUnsignedInteger(
@@ -333,6 +344,7 @@ export function assertLaunchctlPrintServiceMatches(output, expected) {
     ["workingDirectory", "working directory"],
     ["stdoutPath", "stdout path"],
     ["stderrPath", "stderr path"],
+    ["startInterval", "StartInterval/run interval"],
     ["runAtLoad", "RunAtLoad"],
     ["processType", "ProcessType"],
     ["throttleInterval", "ThrottleInterval/minimum runtime"],
@@ -608,6 +620,7 @@ function assertLoadedServiceMatches(output, codexIdentity) {
     stdoutPath: paths.stdoutPath,
     stderrPath: paths.stderrPath,
     calendarIntervals: calendarIntervals(),
+    startInterval: START_INTERVAL_SECONDS,
     runAtLoad: true,
     processType: "Background",
     throttleInterval: 300,
@@ -711,7 +724,7 @@ function install() {
     `${materialized.reused ? "REUSED" : "CREATED"}_STABLE_CODEX_RUNTIME: ${stableCodex.path}`,
     `LOADED: ${service}`,
     diagnostic.summary,
-    "Schedule: weekdays at 11:30 and 16:30 Asia/Tokyo, plus one catch-up check when the user service loads.",
+    "Schedule: hourly while the user service is available, weekdays at 11:30 and 16:30 Asia/Tokyo, plus one catch-up check when it loads.",
   ].join("\n"));
 }
 
